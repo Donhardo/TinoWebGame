@@ -17,6 +17,7 @@
     T  partenza di Tino      i  cartello (testi in "cartelli", nell'ordine in cui
                                   compaiono: stanza per stanza, riga per riga)
     r  agente col retino     t  agente col timbro
+    1 2 3 4 5  robivecchi: moneta, bottone, graffetta, fiocco, carta di credito scaduta
 */
 window.LIVELLI = [
   {
@@ -33,8 +34,8 @@ window.LIVELLI = [
         touch: 'Spuntoni! Saltali. Poi passa sul pulsante giallo: la porta si apre, ma solo per poco.',
       },
       {
-        pc: 'Un piolo d\'oro! Salta e premi X: la frusta si aggancia. Con ← → prendi lo slancio, con X o ↑ ti stacchi.',
-        touch: 'Un piolo d\'oro! Salta e tocca Frusta: si aggancia. Con ◀ ▶ prendi lo slancio, con Frusta o Salta ti stacchi.',
+        pc: 'Un piolo d\'oro! Salta e premi X: la frusta si aggancia. ← → per lo slancio, ↑ ↓ accorci e allunghi, Spazio o X per staccarti. In fondo luccica qualcosa...',
+        touch: 'Un piolo d\'oro! Salta e tocca Frusta: si aggancia. ◀ ▶ per lo slancio, ▲ ▼ accorci e allunghi, Salta o Frusta per staccarti. In fondo luccica qualcosa...',
       },
       {
         pc: 'Un agente della Tari! Stordiscilo con la frusta (X) e passa. Il pavimento crepato crolla: non fermarti!',
@@ -72,7 +73,7 @@ window.LIVELLI = [
         '................',
         '.K.i...o...o....',
         '####.......#####',
-        '####.......#####',
+        '####...1...#####',
         '####.......#####',
       ],
       [
@@ -85,6 +86,126 @@ window.LIVELLI = [
         '###########~~###',
         '###########..###',
         '###########..###',
+      ],
+    ]],
+  },
+  {
+    nome: 'Il pozzo delle radici',
+    porte: { A: 5 },
+    cartelli: [
+      {
+        pc: 'Lassù c\'è un agente col timbro: lancia bollette! Spazzale via con la frusta (X), oppure salta e stordiscilo.',
+        touch: 'Lassù c\'è un agente col timbro: lancia bollette! Spazzale via con Frusta, oppure salta e stordiscilo.',
+      },
+      {
+        pc: 'Due pioli: dal primo staccati con Spazio e premi subito X per agganciarti al secondo.',
+        touch: 'Due pioli: dal primo staccati con Salta e tocca subito Frusta per agganciarti al secondo.',
+      },
+    ],
+    stanze: [
+      [
+        [
+          '################',
+          '#...............',
+          '#........o...t..',
+          '#....f.....#####',
+          '#.......##......',
+          '#.......##......',
+          '#.....#####.....',
+          '#.T.i.#####..^.2',
+          '################',
+        ],
+        [
+          '################',
+          '......P...P.....',
+          '..i.............',
+          '####............',
+          '#............###',
+          '#.....3.........',
+          '#...............',
+          '#^^^^^^^^^^--...',
+          '###########.....',
+        ],
+      ],
+      [
+        [
+          '################',
+          '#............#..',
+          '#............#..',
+          '#....f.......#..',
+          '#............#..',
+          '#............A..',
+          '#............A..',
+          '#.U.....o....A..',
+          '######~~~~######',
+        ],
+        [
+          '###########.....',
+          '#...............',
+          '#...........####',
+          '#...............',
+          '#...o...........',
+          '#........###....',
+          '................',
+          '......r...K..a..',
+          '################',
+        ],
+      ],
+    ],
+  },
+  {
+    nome: 'La galleria dei pioli',
+    porte: { A: 5 },
+    cartelli: [
+      {
+        pc: 'Il pilastro è alto: accorcia la frusta con ↑ per passarci sopra, poi aggrappati al piolo successivo.',
+        touch: 'Il pilastro è alto: accorcia la frusta con ▲ per passarci sopra, poi aggrappati al piolo successivo.',
+      },
+    ],
+    stanze: [[
+      [
+        '################',
+        '#.....P.....P...',
+        '#...............',
+        '#...............',
+        '#T.i.....#......',
+        '####.....#....##',
+        '####.....#..4.##',
+        '####^^^^^#^^^^##',
+        '################',
+      ],
+      [
+        '################',
+        '................',
+        '........5.......',
+        '...----~~~---...',
+        '..#.............',
+        '.K#...r....r....',
+        '################',
+        '################',
+        '################',
+      ],
+      [
+        '################',
+        '.............A..',
+        '........t....A..',
+        '........#....A..',
+        '.a.K....#....A..',
+        '#####..###..####',
+        '#####^^###^^####',
+        '################',
+        '################',
+      ],
+      [
+        '################',
+        '...............#',
+        '......P........#',
+        '...............#',
+        '....o......r.U.#',
+        '###~~~....######',
+        '###.......######',
+        '###.......######',
+        '###.......######',
       ],
     ]],
   },

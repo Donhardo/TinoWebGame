@@ -22,11 +22,14 @@
   };
   const FRUSTA = {
     portata: 260,      // distanza massima dal piolo per agganciarsi
-    cordaMin: 100,
-    cordaMax: 260,
+    cordaMin: 50,
+    cordaMax: 320,
+    velCorda: 170,     // ↑ accorcia, ↓ allunga la frusta mentre si dondola
+    omegaMax: 7,
     schiocco: 150,     // lunghezza del colpo di frusta senza piolo
     durataSchiocco: 0.24,
     ricarica: 0.3,
+    ricaricaStacco: 0.1, // dopo lo stacco si può riagganciare quasi subito
     spinta: 3.2,       // slancio con ← → mentre si dondola
     smorzamento: 0.12,
     staccoSalto: 220,  // spinta in alto staccandosi con il salto
@@ -38,12 +41,22 @@
     stordito: 3.5,
     festa: 1.2,
     lancio: 2.4,       // secondi tra due bollette
+    tiro: 6 * T,       // l'agente col timbro lancia se Tino è entro questa distanza...
+    tiroAltezza: 2.5 * T, // ...e più o meno alla sua altezza
     volo: 1.0,
     gravitaBolletta: 900,
   };
   const VITA = { iniziali: 3, massimo: 6, invulnerabile: 1.6, ferito: 0.9 };
   const TINO = { w: 34, h: 70, alto: 86, palmo: { x: 19, y: -32 } };
   const CREPA = { trema: 0.6, ritorno: 6 };
+  // Robivecchi: premi nascosti nei punti difficili (nella mappa con le cifre 1-5)
+  const ROBIVECCHI = {
+    1: { nome: 'Moneta', file: 'moneta' },
+    2: { nome: 'Bottone', file: 'bottone' },
+    3: { nome: 'Graffetta', file: 'graffetta' },
+    4: { nome: 'Fiocco', file: 'fiocco' },
+    5: { nome: 'Carta di credito scaduta', file: 'carta-scaduta' },
+  };
   const PORTA = { tempo: 6, apre: 2.5, chiude: 0.9 };
 
   // Cappello e frusta sulle foto di Tino: [x, y, larghezza, rotazione] in pixel dell'immagine.
@@ -62,6 +75,7 @@
   const pannello = $('#pannello');
   const elCeci = $('#ceci');
   const elTitolo = $('#titolo-livello');
+  const elRobi = $('#robivecchi');
 
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const segno = (x) => (x > 0 ? 1 : x < 0 ? -1 : 0);
@@ -92,6 +106,7 @@
     timbro: 'agenti-tari/agente-timbro.svg',
     cece: 'oggetti/cece.svg',
   };
+  for (const [k, r] of Object.entries(ROBIVECCHI)) SORGENTI['robi' + k] = `oggetti/robivecchi/${r.file}.svg`;
   const img = {};
   const caricate = Promise.all(Object.entries(SORGENTI).map(([nome, src]) => new Promise((ok) => {
     const i = new Image();
@@ -168,6 +183,7 @@
     figure.retino = rasterizza(img.retino, 100);
     figure.timbro = rasterizza(img.timbro, 100);
     figure.cece = rasterizza(img.cece, 30);
+    for (const k of Object.keys(ROBIVECCHI)) figure['robi' + k] = rasterizza(img['robi' + k], 40);
   }
 
   // ---------------------------------------------------------------- audio
@@ -203,6 +219,7 @@
     stordito: () => [900, 700, 900].forEach((f, i) => setTimeout(() => suono(f, 0.06, 'triangle', 0.05), i * 70)),
     bolletta: () => suono(500, 0.12, 'triangle', 0.035, 300),
     partenza: () => [523, 784].forEach((f, i) => setTimeout(() => suono(f, 0.12, 'triangle', 0.06), i * 90)),
+    robivecchio: () => [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => suono(f, 0.1, 'triangle', 0.07), i * 70)),
     vittoria: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => suono(f, 0.16, 'triangle', 0.08), i * 120)),
     ko: () => [392, 330, 262, 196].forEach((f, i) => setTimeout(() => suono(f, 0.2, 'sawtooth', 0.045), i * 150)),
   };
@@ -232,6 +249,17 @@
     tempoMorte: 0,
   };
   const sbloccati = () => leggi('sbloccati', 1);
+  const trovati = () => leggi('robivecchi', {});
+  // tutti i robivecchi del gioco, livello per livello (per il menu)
+  function elencoRobivecchi() {
+    const tutti = [];
+    window.LIVELLI.forEach((def, n) => {
+      def.stanze.forEach((riga, sy) => riga.forEach((st, sx) => st.forEach((r, y) => [...r].forEach((ch, x) => {
+        if (ROBIVECCHI[ch]) tutti.push({ n, tipo: ch, chiave: `${n}:${sx * COL + x},${sy * RIG + y}` });
+      }))));
+    });
+    return tutti;
+  }
 
   // ---------------------------------------------------------------- livello
   function costruisci(n) {
@@ -244,7 +272,7 @@
       def, lw, lh, griglia,
       stanzeW: colStanze, stanzeH: righeStanze,
       porte: [], pulsanti: [], crepe: [], ceci: [], pioli: [], torce: [], cartelli: [],
-      controlli: [], agenti: [], uscita: null, partenza: null, ceciTotali: 0,
+      controlli: [], agenti: [], robivecchi: [], uscita: null, partenza: null, ceciTotali: 0,
     };
     for (let y = 0; y < lh; y++) griglia.push(new Array(lw).fill('.'));
     let nCartello = 0;
@@ -265,6 +293,10 @@
             else if (ch === 'o') liv.ceci.push({ x: cx, y: cy, oro: false, preso: false });
             else if (ch === '*') liv.ceci.push({ x: cx, y: cy, oro: true, preso: false });
             else if (ch === 'P') liv.pioli.push({ x: cx, y: cy });
+            else if (ROBIVECCHI[ch]) {
+              const chiave = `${n}:${gx},${gy}`;
+              liv.robivecchi.push({ x: cx, y: cy, tipo: ch, chiave, preso: false, giaTrovato: !!trovati()[chiave] });
+            }
             else if (ch === 'f') liv.torce.push({ x: cx, y: cy });
             else if (ch === 'K') liv.controlli.push({ x: cx, y: (gy + 1) * T, acceso: false });
             else if (ch === 'U') liv.uscita = { x: cx, y: (gy + 1) * T };
@@ -316,7 +348,7 @@
       coyote: 0, buffer: 0, invulnerabile: 0, ferito: 0, schiaccia: 0,
       quotaCaduta: y, presaPausa: 0, spintaMuro: 0,
       appiglio: null, sale: 0, daSale: null,
-      piolo: null, angolo: 0, omega: 0, corda: 0,
+      piolo: null, angolo: 0, omega: 0, corda: 0, lasca: false,
       schiocco: 0, ricarica: 0, passo: 0,
       sicuro: { x, y }, controllo: { x, y },
     };
@@ -342,6 +374,21 @@
     elTitolo.textContent = `${n + 1}. ${G.liv.def.nome}`;
     aggiornaStanza(true);
     aggiornaCeci();
+    aggiornaRobivecchi();
+  }
+
+  function aggiornaRobivecchi() {
+    const liv = G.liv;
+    elRobi.innerHTML = '';
+    if (!liv) return;
+    for (const r of liv.robivecchi) {
+      const im = document.createElement('img');
+      im.src = BASE + SORGENTI['robi' + r.tipo];
+      im.alt = ROBIVECCHI[r.tipo].nome;
+      im.title = ROBIVECCHI[r.tipo].nome + (r.preso || r.giaTrovato ? ' (trovato)' : ' (da trovare)');
+      if (!(r.preso || r.giaTrovato)) im.className = 'vuoto';
+      elRobi.appendChild(im);
+    }
   }
 
   function aggiornaCeci() {
@@ -369,14 +416,16 @@
 
   // ---------------------------------------------------------------- input
   const tastiera = new Set();
-  const tocchi = { sx: false, dx: false, su: false, giu: false, frusta: false };
-  const comandi = { sx: false, dx: false, su: false, giu: false, frusta: false };
-  const prima = { su: false, giu: false, frusta: false };
-  const appena = { su: false, giu: false, frusta: false };
+  const tocchi = { sx: false, dx: false, su: false, giu: false, salta: false, frusta: false };
+  const comandi = { sx: false, dx: false, su: false, giu: false, salta: false, frusta: false };
+  const prima = { su: false, giu: false, salta: false, frusta: false };
+  const appena = { su: false, giu: false, salta: false, frusta: false };
+  // ↑ salta (e, appesi alla frusta, la accorcia); Spazio salta sempre (e stacca dalla frusta)
   const TASTI = {
     sx: ['ArrowLeft', 'KeyA'],
     dx: ['ArrowRight', 'KeyD'],
-    su: ['ArrowUp', 'KeyW', 'Space'],
+    su: ['ArrowUp', 'KeyW'],
+    salta: ['Space'],
     giu: ['ArrowDown', 'KeyS'],
     frusta: ['KeyX', 'KeyK', 'KeyJ', 'ShiftLeft', 'ShiftRight'],
   };
@@ -405,12 +454,12 @@
     const r = croce.getBoundingClientRect();
     if (y < r.top - 40 || y > r.bottom + 40) return null;
     const terzo = (x - r.left) / r.width;
-    return terzo < 0.36 ? 'sx' : terzo > 0.64 ? 'dx' : 'giu';
+    return terzo < 0.36 ? 'sx' : terzo > 0.64 ? 'dx' : (y < r.top + r.height / 2 ? 'su' : 'giu');
   }
   function aggiornaCroce() {
-    tocchi.sx = tocchi.dx = tocchi.giu = false;
+    tocchi.sx = tocchi.dx = tocchi.giu = tocchi.su = false;
     for (const t of ditiCroce.values()) if (t) tocchi[t] = true;
-    for (const el of croce.children) el.classList.toggle('attivo', tocchi[el.dataset.tasto]);
+    for (const el of croce.querySelectorAll('[data-tasto]')) el.classList.toggle('attivo', tocchi[el.dataset.tasto]);
   }
   croce.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -443,7 +492,7 @@
     for (const k in TASTI) comandi[k] = tocchi[k] || TASTI[k].some((c) => tastiera.has(c));
   }
   function fronti() {
-    for (const k of ['su', 'giu', 'frusta']) {
+    for (const k of ['su', 'giu', 'salta', 'frusta']) {
       appena[k] = comandi[k] && !prima[k];
       prima[k] = comandi[k];
     }
@@ -453,8 +502,11 @@
   function scatola(o) { return { l: o.x - o.w / 2, r: o.x + o.w / 2, t: o.y - o.h, b: o.y }; }
   function sovrappone(a, b) { return a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t; }
 
-  function urtaMuri(o) {
-    const s = scatola(o);
+  // margine: mentre dondola, Tino urta i muri con una sagoma un po' più stretta,
+  // così non si incastra sugli spigoli quando parte da fermo da un bordo
+  function urtaMuri(o, margine = 0) {
+    const s0 = scatola(o);
+    const s = { l: s0.l + margine, r: s0.r - margine, t: s0.t + margine, b: s0.b - margine };
     for (let gy = Math.floor(s.t / T); gy <= Math.floor((s.b - 0.01) / T); gy++) {
       for (let gx = Math.floor(s.l / T); gx <= Math.floor((s.r - 0.01) / T); gx++) {
         if (solido(gx, gy)) return true;
@@ -533,7 +585,8 @@
     if (t.stato === 'ko' || t.stato === 'uscita') return;
 
     const ix = (comandi.dx ? 1 : 0) - (comandi.sx ? 1 : 0);
-    if (appena.su) t.buffer = FISICA.bufferSalto; else t.buffer = Math.max(0, t.buffer - dt);
+    const saltoPremuto = appena.su || appena.salta;
+    if (saltoPremuto) t.buffer = FISICA.bufferSalto; else t.buffer = Math.max(0, t.buffer - dt);
 
     // ---- appeso a un bordo
     if (t.stato === 'appeso') {
@@ -546,7 +599,7 @@
         t.stato = 'libero';
         t.presaPausa = 0.35;
         t.quotaCaduta = t.y;
-      } else if (appena.su || t.buffer > 0 || t.spintaMuro > 0.15) {
+      } else if (saltoPremuto || t.buffer > 0 || t.spintaMuro > 0.15) {
         t.stato = 'sale';
         t.sale = 0;
         t.buffer = 0;
@@ -579,26 +632,38 @@
       let alfa = -g * Math.sin(t.angolo) + ix * FRUSTA.spinta * (Math.cos(t.angolo) > 0 ? 1 : -1);
       t.omega += alfa * dt;
       t.omega -= t.omega * FRUSTA.smorzamento * dt;
+      // ↑ accorcia, ↓ allunga: accorciando si prende velocità (come una vera corda)
+      const verso = (comandi.giu ? 1 : 0) - (comandi.su ? 1 : 0);
+      if (verso) {
+        const L0 = t.corda;
+        const L1 = clamp(L0 + verso * FRUSTA.velCorda * dt, FRUSTA.cordaMin, FRUSTA.cordaMax);
+        if (L1 !== L0) {
+          t.corda = L1;
+          posizionaSuCorda(t);
+          if (urtaMuri(t, 6)) { t.corda = L0; posizionaSuCorda(t); }
+          else t.omega = clamp(t.omega * (L0 / L1) * (L0 / L1), -FRUSTA.omegaMax, FRUSTA.omegaMax);
+        }
+      }
       const vecchio = t.angolo;
       t.angolo += t.omega * dt;
       if (Math.abs(t.angolo) > 1.7) { t.angolo = Math.sign(t.angolo) * 1.7; t.omega = 0; }
       posizionaSuCorda(t);
-      if (urtaMuri(t)) {
+      if (urtaMuri(t, 6)) {
         t.angolo = vecchio;
         t.omega = -t.omega * 0.3;
         posizionaSuCorda(t);
       }
-      if (appena.frusta || appena.su) {
+      if (appena.frusta || appena.salta) {
         const v = t.omega * t.corda;
         t.vx = Math.cos(t.angolo) * v;
         t.vy = -Math.sin(t.angolo) * v;
-        if (appena.su) t.vy -= FRUSTA.staccoSalto;
+        if (appena.salta) t.vy -= FRUSTA.staccoSalto;
         t.vx = clamp(t.vx, -FISICA.vel * 2.2, FISICA.vel * 2.2);
         t.stato = 'libero';
         t.aTerra = false;
         t.piolo = null;
         t.quotaCaduta = t.y;
-        t.ricarica = FRUSTA.ricarica;
+        t.ricarica = FRUSTA.ricaricaStacco;
         t.buffer = 0;
         suoni.salto();
       }
@@ -623,7 +688,7 @@
       suoni.salto();
     }
     // salto più basso se si lascia subito il tasto
-    if (t.vy < -200 && !comandi.su) t.vy += FISICA.gravita * 0.9 * dt;
+    if (t.vy < -200 && !comandi.su && !comandi.salta) t.vy += FISICA.gravita * 0.9 * dt;
 
     t.vy = Math.min(FISICA.cadutaMax, t.vy + FISICA.gravita * dt);
     const eraATerra = t.aTerra;
@@ -640,7 +705,7 @@
     if (t.aTerra && Math.abs(t.vx) > 20) t.passo += dt * Math.abs(t.vx) / 18;
 
     // aggrapparsi ai bordi (automatico, se si va verso il muro o si sta saltando contro)
-    if (!t.aTerra && t.vy > -220 && t.presaPausa <= 0 && !comandi.giu) {
+    if (!t.aTerra && !t.lasca && t.vy > -220 && t.presaPausa <= 0 && !comandi.giu) {
       const a = cercaAppiglio(t);
       if (a && (ix === a.dir || Math.abs(t.vx) > 30 && segno(t.vx) === a.dir || t.vy > -220)) {
         t.stato = 'appeso';
@@ -652,8 +717,33 @@
       }
     }
 
+    // frusta lasca (agganciata stando a terra): si tende appena Tino si stacca da terra
+    if (t.lasca && t.piolo) {
+      const mx = t.x + t.dir * TINO.palmo.x, my = t.y + TINO.palmo.y;
+      const dx = mx - t.piolo.x, dy = my - t.piolo.y;
+      const d = Math.hypot(dx, dy);
+      if (appena.frusta) { sgancia(t); t.ricarica = FRUSTA.ricaricaStacco; return; }
+      if (d > FRUSTA.cordaMax + 10 || dy < -20) { sgancia(t); }
+      else if (t.aTerra) t.corda = clamp(Math.max(t.corda, d), FRUSTA.cordaMin, FRUSTA.cordaMax);
+      else if (d >= t.corda - 1) {
+        t.angolo = Math.atan2(dx, dy);
+        t.corda = clamp(d, FRUSTA.cordaMin, FRUSTA.cordaMax);
+        t.omega = (t.vx * Math.cos(t.angolo) - t.vy * Math.sin(t.angolo)) / t.corda;
+        t.stato = 'dondola';
+        t.lasca = false;
+        posizionaSuCorda(t);
+        if (urtaMuri(t, 6)) { t.x = mx - t.dir * TINO.palmo.x; t.y = my - TINO.palmo.y; t.stato = 'libero'; t.lasca = true; }
+      }
+      return;
+    }
+
     // frusta
     if (appena.frusta && t.ricarica <= 0) usaFrusta(t);
+  }
+
+  function sgancia(t) {
+    t.piolo = null;
+    t.lasca = false;
   }
 
   function posizionaSuCorda(t) {
@@ -670,11 +760,19 @@
     for (const p of G.liv.pioli) {
       const dx = p.x - mano.x, dy = p.y - mano.y;
       const d = Math.hypot(dx, dy);
-      if (d > FRUSTA.portata || dy > -20) continue;
+      if (d > FRUSTA.portata || dy > 0) continue; // il piolo non deve stare sotto la mano
       const pt = d - (segno(dx) === t.dir ? 60 : 0);
       if (pt < punti) { punti = pt; migliore = p; }
     }
     t.ricarica = FRUSTA.ricarica;
+    if (migliore && t.aTerra) {
+      // da terra la frusta resta lasca finché Tino non si stacca dal suolo
+      t.piolo = migliore;
+      t.corda = clamp(Math.hypot(mano.x - migliore.x, mano.y - migliore.y), FRUSTA.cordaMin, FRUSTA.cordaMax);
+      t.lasca = true;
+      suoni.aggancio();
+      return;
+    }
     if (migliore) {
       const dx = mano.x - migliore.x, dy = mano.y - migliore.y;
       t.piolo = migliore;
@@ -686,7 +784,7 @@
       t.aTerra = false;
       t.schiocco = 0;
       posizionaSuCorda(t);
-      if (urtaMuri(t)) { // troppo vicino al muro: niente aggancio
+      if (urtaMuri(t, 6)) { // troppo vicino al muro: niente aggancio
         t.stato = 'libero';
         t.piolo = null;
         t.x = mano.x - t.dir * TINO.palmo.x;
@@ -732,7 +830,8 @@
     aggiornaCeci();
     suoni.colpito();
     scritta(t.x, t.y - t.h - 30, '-1', '#ff8a7a');
-    if (t.stato === 'dondola' || t.stato === 'appeso' || t.stato === 'sale') { t.stato = 'libero'; t.piolo = null; }
+    if (t.stato === 'dondola' || t.stato === 'appeso' || t.stato === 'sale') t.stato = 'libero';
+    sgancia(t);
     if (dir) { t.vx = dir * 280; t.vy = -380; t.aTerra = false; t.quotaCaduta = t.y; }
     if (t.ceci <= 0) koTino();
   }
@@ -743,7 +842,7 @@
     t.x = t.sicuro.x; t.y = t.sicuro.y;
     t.vx = t.vy = 0;
     t.stato = 'libero';
-    t.piolo = null;
+    sgancia(t);
     t.aTerra = true;
     t.quotaCaduta = t.y;
     aggiornaStanza();
@@ -786,6 +885,21 @@
         suoni.cece();
         coriandoli(c.x, c.y, c.oro ? '#ffd23a' : '#f3d79a', 10);
         scritta(c.x, c.y - 20, c.oro ? 'Cece d\'oro!' : '+1', '#ffe680');
+      }
+    }
+    // robivecchi
+    for (const r of G.liv.robivecchi) {
+      if (r.preso) continue;
+      if (r.x > s.l - 16 && r.x < s.r + 16 && r.y > s.t - 16 && r.y < s.b + 16) {
+        r.preso = true;
+        const tr = trovati();
+        tr[r.chiave] = true;
+        scrivi('robivecchi', tr);
+        suoni.robivecchio();
+        coriandoli(r.x, r.y, '#ffd23a', 18);
+        coriandoli(r.x, r.y, '#ffffff', 10);
+        scritta(r.x, r.y - 30, ROBIVECCHI[r.tipo].nome + '!', '#ffe680');
+        aggiornaRobivecchi();
       }
     }
     // punti di partenza
@@ -918,7 +1032,7 @@
       } else if (a.tipo === 'timbro' && a.stato !== 'stordito' && a.stato !== 'festa') {
         a.vx = 0;
         if (vivo && Math.abs(dx) > 4) a.dir = segno(dx);
-        if (vivo && Math.abs(dx) < 8 * T && Math.abs(dy) < 4 * T) {
+        if (vivo && Math.abs(dx) < AGENTI.tiro && Math.abs(dy) < AGENTI.tiroAltezza) {
           a.lancio -= dt;
           if (a.lancio <= 0) {
             a.lancio = AGENTI.lancio;
@@ -1297,6 +1411,24 @@
       }
       ctx.drawImage(figure.cece, c.x - 15 * s, c.y + by - 15 * s, 30 * s, 30 * s);
     }
+    // robivecchi: luccicano; quelli già trovati in una partita precedente sono più trasparenti
+    for (const r of liv.robivecchi) {
+      if (r.preso || !visibile(r.x, r.y)) continue;
+      const by = Math.sin(tm * 2.4 + r.x) * 5;
+      const b = ctx.createRadialGradient(r.x, r.y + by, 3, r.x, r.y + by, 40);
+      b.addColorStop(0, `rgba(255,236,150,${0.5 + Math.sin(tm * 5) * 0.15})`);
+      b.addColorStop(1, 'rgba(255,236,150,0)');
+      ctx.fillStyle = b;
+      ctx.fillRect(r.x - 40, r.y + by - 40, 80, 80);
+      ctx.globalAlpha = r.giaTrovato ? 0.5 : 1;
+      ctx.save();
+      ctx.translate(r.x, r.y + by);
+      ctx.rotate(Math.sin(tm * 1.7 + r.y) * 0.15);
+      ctx.drawImage(figure['robi' + r.tipo], -20, -20, 40, 40);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      if (Math.sin(tm * 3 + r.x) > 0.6) stella(r.x + 16, r.y + by - 16, 5, '#fffbe0');
+    }
     // agenti
     for (const a of liv.agenti) {
       if (!visibile(a.x, a.y)) continue;
@@ -1450,7 +1582,7 @@
   function disegnaTino(tm) {
     const t = G.tino;
     const posa = posaTino();
-    const frustaInUso = t.stato === 'dondola' || t.schiocco > 0;
+    const frustaInUso = t.stato === 'dondola' || t.lasca || t.schiocco > 0;
     const fig = figure[posa + (frustaInUso ? '-senza' : '')];
     if (!fig) return;
     const s = 1 / RISOLUZIONE;
@@ -1458,12 +1590,16 @@
     if (t.invulnerabile > 0 && t.stato !== 'ko' && Math.floor(tm * 14) % 2) ctx.globalAlpha = 0.45;
     if (t.stato === 'uscita') ctx.globalAlpha = clamp(1 - G.tempoMorte / 0.9, 0, 1);
 
-    // la frusta tesa fino al piolo
-    if (t.stato === 'dondola') {
+    // la frusta fino al piolo: tesa mentre dondola, un po' molle quando è lasca
+    if (t.piolo && (t.stato === 'dondola' || t.lasca)) {
       const mx = t.x + t.dir * TINO.palmo.x, my = t.y + TINO.palmo.y;
+      const d = Math.hypot(mx - t.piolo.x, my - t.piolo.y);
+      const molle = t.lasca ? Math.max(0, t.corda - d) * 0.6 + 6 : 0;
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#24150a'; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(t.piolo.x, t.piolo.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx, my);
+      ctx.quadraticCurveTo((mx + t.piolo.x) / 2, (my + t.piolo.y) / 2 + molle, t.piolo.x, t.piolo.y);
+      ctx.stroke();
       ctx.strokeStyle = '#8a5a2b'; ctx.lineWidth = 3;
       ctx.stroke();
     }
@@ -1537,10 +1673,12 @@
     ? `<div class="comandi">
         <p><b>◀ ▶</b> muovi Tino · <b>Salta</b> salta e sale sui bordi · <b>▼</b> scendi da un bordo</p>
         <p><b>Frusta</b>: vicino a un piolo d'oro ti agganci, altrimenti stordisci gli agenti</p>
+        <p>Appeso alla frusta: <b>▲ ▼</b> accorci e allunghi, <b>Salta</b> o <b>Frusta</b> per staccarti</p>
       </div>`
     : `<div class="comandi">
         <p><kbd>←</kbd> <kbd>→</kbd> muovi Tino · <kbd>↑</kbd> o <kbd>Spazio</kbd> salta e sale sui bordi · <kbd>↓</kbd> scendi</p>
         <p><kbd>X</kbd> frusta: vicino a un piolo d'oro ti agganci, altrimenti stordisci gli agenti</p>
+        <p>Appeso alla frusta: <kbd>↑</kbd> <kbd>↓</kbd> accorci e allunghi, <kbd>Spazio</kbd> o <kbd>X</kbd> per staccarti</p>
         <p><kbd>P</kbd> pausa · <kbd>M</kbd> suoni</p>
       </div>`;
 
@@ -1595,7 +1733,19 @@
         <button class="bottone" type="button" data-azione="gioca" data-livello="${continua}">${continua > 0 ? `Continua dal livello ${continua + 1}` : 'Gioca'}</button>
       </div>
       ${livelli}
+      ${collezione()}
       ${COMANDI}`);
+  }
+
+  function collezione() {
+    const tutti = elencoRobivecchi();
+    if (!tutti.length) return '';
+    const tr = trovati();
+    const n = tutti.filter((r) => tr[r.chiave]).length;
+    return `<div class="collezione">
+      <p><b>Robivecchi trovati: ${n} su ${tutti.length}</b></p>
+      <div class="vetrina">${tutti.map((r) => `<img src="${BASE + SORGENTI['robi' + r.tipo]}" alt="${ROBIVECCHI[r.tipo].nome}" title="${ROBIVECCHI[r.tipo].nome} · livello ${r.n + 1}${tr[r.chiave] ? '' : ' (da trovare)'}" class="${tr[r.chiave] ? '' : 'vuoto'}">`).join('')}</div>
+    </div>`;
   }
 
   function mostraKo() {
@@ -1620,6 +1770,7 @@
       ${ritratto('normale')}
       <h2>Livello superato!</h2>
       <p class="statistiche">Ceci raccolti: <b>${G.raccolti}</b> su ${G.liv.ceciTotali} · Tempo: <b>${minuti}:${String(secondi).padStart(2, '0')}</b></p>
+      ${G.liv.robivecchi.length ? `<p class="statistiche">Robivecchi: ${G.liv.robivecchi.map((r) => `<img class="robi-mini ${r.preso || r.giaTrovato ? '' : 'vuoto'}" src="${BASE + SORGENTI['robi' + r.tipo]}" alt="${ROBIVECCHI[r.tipo].nome}" title="${ROBIVECCHI[r.tipo].nome}">`).join(' ')}</p>` : ''}
       ${ultimo ? '<p>Gino è ancora prigioniero più in fondo nel tempio: i prossimi livelli arrivano presto!</p>' : ''}
       <div class="scelte">
         ${ultimo ? '' : '<button class="bottone" type="button" data-azione="prossimo">Livello successivo</button>'}
@@ -1691,6 +1842,6 @@
     avvia,
     passo(dt = PASSO) { aggiorna(dt); },
     premi(nuovi) { for (const k in comandi) comandi[k] = !!nuovi[k]; },
-    cella, solido,
+    cella, solido, ROBIVECCHI,
   };
 })();

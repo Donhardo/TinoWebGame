@@ -118,8 +118,15 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   dall'ultimo punto sicuro). A zero ceci Tino è KO e riparte dal punto di
   partenza (torcia), senza limiti di tentativi. Il cece d'oro alza il massimo.
 - **Frusta**: vicino a un piolo d'oro si aggancia e Tino dondola (← → per lo
-  slancio, X o salto per staccarsi); altrimenti schiocca e stordisce gli agenti
-  e spazza via le bollette.
+  slancio, ↑ ↓ accorciano e allungano la frusta conservando il momento, Spazio o
+  X per staccarsi; sul telefono ▲ ▼ e Salta/Frusta). Agganciata da terra resta
+  lasca finché Tino non si stacca dal suolo. Lontano dai pioli schiocca, stordisce
+  gli agenti e spazza via le bollette. ↑ salta solo fuori dalla frusta; Spazio
+  salta sempre.
+- **Robivecchi**: premi nascosti in punti difficili (cifre 1-5 nella mappa:
+  moneta, bottone, graffetta, fiocco, carta di credito scaduta; disegni in
+  `assets/oggetti/robivecchi/`). Salvati in `localStorage` appena presi; si
+  vedono nella barra (quelli del livello), a fine livello e nel menu (collezione).
 - **Agenti della Tari** (`assets/agenti-tari/`, disegni vettoriali con scritta
   TARI già in tracciati): col retino (ronda e insegue), col timbro (lancia
   bollette), ispettore capo (per la fine dei mondi, non ancora usato).
@@ -127,10 +134,16 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   appoggiano alle foto originali con la tabella `POSE` (posizione e rotazione
   per ogni espressione); anteprima in `bozzetti/avventura.html`.
 - **Tabelle** in cima a `gioco.js`: `FISICA`, `FRUSTA`, `AGENTI`, `VITA`, `PORTA`.
+- **Livelli fatti**: 1 "Le radici della Quercia" (guida, moneta in fondo al
+  baratro), 2 "Il pozzo delle radici" (2 × 2 stanze: agente col timbro,
+  due pioli, corsa alla porta di 5 s; bottone e graffetta), 3 "La galleria dei
+  pioli" (pilastro da superare accorciando la frusta, strada alta con pavimento
+  che crolla o bassa con due agenti, porta di 5 s; fiocco e carta di credito).
 - **Prove automatiche**: `window.ghiandaDOro` (`G.test = true`, `avvia`,
-  `premi`, `passo`) per far giocare un livello a un giocatore simulato.
-  Il livello 1 si completa in ~15 s; lo stacco dal piolo funziona in un'ampia
-  finestra di angoli.
+  `premi`, `passo`) per far giocare un livello a un giocatore simulato con una
+  sequenza di mosse (vai, salta, sali, frusta, dondola regolando la corda).
+  Tutti i livelli si completano con tutti i robivecchi; le porte del 2 e del 3
+  richiedono ~3,5–4 s a un giocatore perfetto (impostate a 5 s).
 - **Da fare**: altri livelli (3 mondi da 4: radici della quercia, tempio
   sepolto, uffici della Tari), ispettore capo, liberazione di Gino.
 

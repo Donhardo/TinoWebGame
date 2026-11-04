@@ -53,6 +53,16 @@ body {
 .ceci img.vuoto { opacity: 0.22; filter: grayscale(1); }
 .ceci img.nuovo { animation: saltello 0.5s ease-out; }
 
+.robivecchi { display: flex; gap: 3px; margin-right: 8px; }
+.robivecchi img { width: 26px; height: 26px; filter: drop-shadow(0 0 4px rgba(255, 220, 120, 0.6)); }
+.robivecchi img.vuoto, .vetrina img.vuoto, .robi-mini.vuoto { filter: grayscale(1) brightness(0.4); opacity: 0.5; }
+
+.collezione { margin-top: 12px; padding: 8px 12px; background: #fff3d6; border-radius: 14px; }
+.collezione p { margin: 0 0 6px; }
+.vetrina { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.vetrina img { width: 40px; height: 40px; }
+.robi-mini { width: 30px; height: 30px; vertical-align: middle; }
+
 .barra-btn {
   width: 38px;
   height: 38px;
@@ -102,7 +112,7 @@ body {
   z-index: 1;
 }
 .croce, .azioni { pointer-events: auto; display: flex; gap: 8px; align-items: flex-end; touch-action: none; }
-.croce span, .azioni button {
+.croce > span[data-tasto], .croce .su-giu span, .azioni button {
   display: grid;
   place-items: center;
   width: 64px;
@@ -116,7 +126,8 @@ body {
   font-size: 1.4rem;
   -webkit-tap-highlight-color: transparent;
 }
-.croce span[data-tasto="giu"] { width: 52px; height: 52px; font-size: 1.1rem; margin-bottom: 0; }
+.croce .su-giu { display: flex; flex-direction: column; gap: 6px; width: auto; height: auto; border: 0; background: none; border-radius: 0; }
+.croce .su-giu span { width: 52px; height: 52px; font-size: 1.05rem; }
 .azioni button { width: 76px; height: 76px; font-size: 1rem; }
 .azioni .t-frusta { background: rgba(122, 74, 34, 0.6); }
 .azioni .t-salta { background: rgba(79, 154, 63, 0.55); margin-bottom: 26px; }
@@ -213,6 +224,7 @@ kbd {
   .barra { grid-template-columns: auto 1fr auto; }
   .barra-home span { display: none; }
   .ceci img { width: 20px; height: 20px; }
+  .robivecchi img { width: 20px; height: 20px; }
 }
 @media (max-height: 480px) {
   .barra { padding-top: 3px; padding-bottom: 3px; }

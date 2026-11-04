@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="m" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#fff2b0"/><stop offset="0.5" stop-color="#f2c14e"/><stop offset="1" stop-color="#b07a12"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="url(#m)" stroke="#6b4a0a" stroke-width="3"/>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#a8740f" stroke-width="2.5" stroke-dasharray="3 3"/>
+  <!-- ghianda in rilievo -->
+  <path d="M22 28 Q32 18 42 28 Z" fill="#a8740f" stroke="#6b4a0a" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M24 28 Q24 44 32 46 Q40 44 40 28 Z" fill="#d9a42e" stroke="#6b4a0a" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M32 20 L33 15" stroke="#6b4a0a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M15 22 Q18 14 26 11" fill="none" stroke="#fffbe0" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+</svg>
