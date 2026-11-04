@@ -1,0 +1,121 @@
+/* Home page */
+body {
+  background:
+    radial-gradient(circle at 15% 0%, #fff3d6 0, transparent 45%),
+    radial-gradient(circle at 90% 10%, #e3f2d5 0, transparent 40%),
+    var(--crema);
+  min-height: 100vh;
+}
+
+.testata {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 28px 16px 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.tino-saluta {
+  width: clamp(90px, 18vw, 150px);
+  height: auto;
+  transform-origin: 50% 100%;
+  animation: saltello 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.18));
+}
+
+.gino-sbircia {
+  width: clamp(60px, 11vw, 100px);
+  height: auto;
+  margin-left: auto;
+  transform-origin: 50% 100%;
+  animation: oscilla 3s ease-in-out infinite;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.18));
+}
+
+.titolo h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  line-height: 1;
+  color: var(--marrone);
+}
+.titolo p { margin: 0.5em 0 0.3em; font-size: clamp(1rem, 2.4vw, 1.2rem); max-width: 34em; }
+
+main { max-width: 980px; margin: 0 auto; padding: 8px 16px 32px; }
+main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
+
+.giochi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.scheda {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-radius: var(--raggio);
+  box-shadow: var(--ombra);
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.scheda:hover, .scheda:focus-visible { transform: translateY(-4px); box-shadow: 0 12px 26px rgba(59, 42, 26, 0.22); }
+.scheda:focus-visible { outline: 3px solid var(--nocciola); outline-offset: 3px; }
+
+.scheda-testo { padding: 14px 18px 18px; display: flex; flex-direction: column; flex: 1; }
+.scheda-testo h3 { margin: 0 0 0.3em; font-size: 1.4rem; color: var(--marrone); }
+.scheda-testo p { margin: 0 0 1em; flex: 1; }
+.scheda-testo .bottone { align-self: flex-start; }
+
+/* Anteprima di Botta e Ghianda: un piccolo campo con i due personaggi */
+.anteprima {
+  position: relative;
+  aspect-ratio: 16 / 8;
+  overflow: hidden;
+}
+.anteprima-botta {
+  /* tovaglia da picnic con la fila di formiche a metà campo */
+  background:
+    radial-gradient(ellipse 3px 4px, #2b1a12 90%, transparent 100%) 50% 0 / 10px 16px repeat-y,
+    linear-gradient(90deg, rgba(214, 52, 52, 0.42) 50%, transparent 50%) 0 0 / 40px 40px,
+    linear-gradient(rgba(214, 52, 52, 0.42) 50%, transparent 50%) 0 0 / 40px 40px,
+    #fff9f0;
+}
+.ap-tino, .ap-gino {
+  position: absolute;
+  bottom: 10%;
+  height: 72%;
+  width: auto;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+}
+.ap-tino { left: 7%; transform: scaleX(-1); animation: ap-tino 1.6s ease-in-out infinite; }
+.ap-gino { right: 7%; height: 62%; animation: ap-gino 1.6s ease-in-out infinite; }
+.ap-ghianda {
+  position: absolute;
+  top: 40%;
+  left: 30%;
+  width: 22px;
+  height: 26px;
+  background: url("../games/botta-e-ghianda/ghianda.svg") center / contain no-repeat;
+  animation: ap-ghianda 1.6s ease-in-out infinite alternate;
+}
+@keyframes ap-tino { 0%, 100% { translate: 0 6%; } 50% { translate: 0 -8%; } }
+@keyframes ap-gino { 0%, 100% { translate: 0 -6%; } 50% { translate: 0 8%; } }
+@keyframes ap-ghianda {
+  0% { left: 28%; top: 30%; rotate: 0deg; }
+  50% { top: 62%; }
+  100% { left: 66%; top: 34%; rotate: 360deg; }
+}
+
+.piede { text-align: center; padding: 16px; font-size: 0.95rem; opacity: 0.75; }
+
+@media (max-width: 520px) {
+  .testata { flex-wrap: wrap; align-items: center; }
+  .titolo { order: 3; width: 100%; }
+}
