@@ -1,6 +1,8 @@
 # TinoWebGame
 Un piccolo sito di minigiochi con Tino come protagonista.
 
+Il sito è pubblicato con GitHub Pages: https://donhardo.github.io/TinoWebGame/
+
 Si apre `index.html` (la home) in un browser: non serve nessuna installazione.
 Per provarlo in locale con un piccolo server:
 
