@@ -66,6 +66,14 @@
     $: { nome: 'Biglietto del tram', file: 'biglietto' },
     '@': { nome: 'Conchiglia', file: 'conchiglia' },
     '%': { nome: 'Mozzicone di matita', file: 'matita' },
+    // mondo 3
+    '!': { nome: 'Gomma da cancellare', file: 'gomma' },
+    '?': { nome: 'Puntina da disegno', file: 'puntina' },
+    '+': { nome: 'Francobollo', file: 'francobollo' },
+    ';': { nome: 'Cappuccio di penna', file: 'cappuccio' },
+    '"': { nome: 'Elastico', file: 'elastico' },
+    '/': { nome: 'Temperamatite', file: 'temperamatite' },
+    ',': { nome: 'Molletta', file: 'molletta' },
   };
   const PORTA = { tempo: 6, apre: 2.5, chiude: 0.9 };
   // Trappole a tempo (secondi)
@@ -81,6 +89,15 @@
   const SABBIA = { affonda: 48, fondo: 50, lento: 0.45, salto: 0.25 };
   // piattaforme mobili: = orizzontali, H verticali; si fermano contro i muri o sui segni ':'
   const PIATTAFORME = { vel: 110, spesso: 16, sosta: 0.5 };
+  // Mondo 3, gli uffici della Tari
+  // nastri trasportatori: { verso sinistra, } verso destra; portano Tino, gli agenti e l'ispettore
+  const NASTRI = { vel: 110 };
+  // cassetti degli archivi: escono, restano aperti, rientrano; quelli più in basso si aprono prima
+  const CASSETTI = { lung: 2, esce: 0.35, aperto: 2.0, rientra: 0.35, chiuso: 1.3, sfasa: 0.6, spesso: 40 };
+  // fotocopiatrici: sparano un foglio verso Tino, a tempo (la luce verde avvisa)
+  const FOTOCOPIE = { ogni: 2.6, vel: 300, avviso: 0.5, sfasa: 0.8, onda: 7, altezza: 36 };
+  // timbri giganti: appesi al soffitto, scendono a tempo fino al pavimento (tremano prima)
+  const TIMBRONI = { su: 1.7, trema: 0.5, scende: 0.13, giu: 0.5, sale: 0.8, sfasa: 0.9, largo: 56, alto: 46 };
   // colori e decorazioni di ogni mondo
   const MONDI = {
     1: {
@@ -93,6 +110,12 @@
       sfondo: '#2e1f0c', mattoneSfondo: [78, 56, 28], muro: '#b88d42', mattone: [204, 160, 84],
       cima: '#f0d58c', erba: null, crepa: ['#c9a25a', '#ecd08a'], sasso: ['#b8955a', '#5a4220', '#7a5a2a'],
       tempio: true,
+    },
+    3: {
+      nome: 'Gli uffici della Tari',
+      sfondo: '#3c4a4a', mattoneSfondo: [70, 86, 84], muro: '#7d8590', mattone: [150, 156, 166],
+      cima: '#6f9a78', erba: null, crepa: ['#9aa1ab', '#c3c9d1'], sasso: ['#a7adb6', '#3e434c', '#6b717b'],
+      ufficio: true,
     },
   };
   // Ispettore capo: non si stordisce, insegue Tino di stanza in stanza e va seminato
@@ -160,6 +183,7 @@
     retino: 'agenti-tari/agente-retino.svg',
     timbro: 'agenti-tari/agente-timbro.svg',
     capo: 'agenti-tari/ispettore-capo.svg',
+    gino: 'gino/gino.png',
     cece: 'oggetti/cece.svg',
     chiave: 'oggetti/chiave.svg',
   };
@@ -242,6 +266,7 @@
     figure.capo = rasterizza(img.capo, 132);
     figure.cece = rasterizza(img.cece, 30);
     figure.chiave = rasterizza(img.chiave, 40);
+    figure.gino = rasterizza(img.gino, 58);
     for (const k of Object.keys(ROBIVECCHI)) figure['robi' + k] = rasterizza(img['robi' + k], 40);
   }
 
@@ -288,6 +313,10 @@
     masso: () => { suono(90, 0.5, 'sawtooth', 0.04, 60); suono(60, 0.6, 'square', 0.03, 40); },
     freccia: () => suono(1400, 0.12, 'triangle', 0.035, 500),
     sabbia: () => suono(200, 0.18, 'triangle', 0.04, 90),
+    timbro: () => { suono(60, 0.3, 'square', 0.07, 30); suono(180, 0.12, 'sawtooth', 0.04, 60); },
+    fotocopia: () => { suono(420, 0.25, 'sawtooth', 0.025, 640); setTimeout(() => suono(900, 0.08, 'triangle', 0.03, 1200), 200); },
+    ghianda: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => suono(f, 0.2, 'triangle', 0.08), i * 110)),
+    gino: () => [784, 1046, 784, 1318].forEach((f, i) => setTimeout(() => suono(f, 0.14, 'triangle', 0.07), i * 140)),
     ko: () => [392, 330, 262, 196].forEach((f, i) => setTimeout(() => suono(f, 0.2, 'sawtooth', 0.045), i * 150)),
   };
 
@@ -314,6 +343,9 @@
     bollette: [],
     onde: [],            // onde del megafono dell'ispettore capo
     frecce: [],          // frecce in volo
+    fogli: [],           // fogli delle fotocopiatrici in volo
+    impronte: [],        // impronte dei timbri giganti sul pavimento
+    finale: null,        // liberazione di Gino (ultimo livello)
     uscite: {},          // da dove Tino è uscito da ogni stanza (l'ispettore lo segue)
     scossa: 0,
     cartello: null,
@@ -346,6 +378,7 @@
       controlli: [], agenti: [], robivecchi: [], uscita: null, partenza: null, ceciTotali: 0,
       cesoie: [], stalattiti: [], chiavi: [], serrature: [], capo: null,
       massi: [], balestre: [], piattaforme: [], mondo: MONDI[def.mondo || 1],
+      cassetti: [], fotocopiatrici: [], timbroni: [], gabbia: null, ghianda: null,
     };
     const segni = new Set(); // ':' dove si fermano le piattaforme
     for (let y = 0; y < lh; y++) griglia.push(new Array(lw).fill('.'));
@@ -360,7 +393,18 @@
             const gx = sx * COL + x, gy = sy * RIG + y;
             const cx = gx * T + T / 2, cy = gy * T + T / 2;
             let cella = '.';
-            if (ch === '#' || ch === '-' || ch === '^' || ch === 'v' || ch === 's') cella = ch;
+            if (ch === '#' || ch === '-' || ch === '^' || ch === 'v' || ch === 's' || ch === '{' || ch === '}') cella = ch;
+            else if (ch === '[' || ch === ']') {
+              cella = '#';
+              liv.cassetti.push({ gx, gy, dir: ch === '[' ? 1 : -1, fase: gy * CASSETTI.sfasa, x: 0, y: gy * T, w: 0, dx: 0, dy: 0, est: 0, cassetto: true });
+            }
+            else if (ch === 'F') {
+              cella = 'F';
+              liv.fotocopiatrici.push({ x: gx, y: gy, fase: -liv.fotocopiatrici.length * FOTOCOPIE.sfasa, ultimo: null });
+            }
+            else if (ch === 'G') liv.timbroni.push({ x: cx, gx, gy, fase: -liv.timbroni.length * TIMBRONI.sfasa, alto: (gy + 1) * T - 4, basso: 0, prima: 'su' });
+            else if (ch === 'g') liv.gabbia = { x: cx, y: (gy + 1) * T, aperta: 0 };
+            else if (ch === 'O') liv.ghianda = { x: cx, y: cy, preso: false };
             else if (ch === '>' || ch === '<') {
               cella = '#';
               liv.balestre.push({ x: gx, y: gy, dir: ch === '>' ? 1 : -1, fase: -liv.balestre.length * FRECCE.sfasa, ultimo: null });
@@ -432,6 +476,18 @@
       }
       p.fase = (p.inizio - p.min) / PIATTAFORME.vel;
     }
+    // cassetti: escono al massimo di CASSETTI.lung quadretti, fino al primo muro
+    for (const c of liv.cassetti) {
+      let n = 0;
+      while (n < CASSETTI.lung && !'#{}F'.includes(griglia[c.gy][c.gx + c.dir * (n + 1)] ?? '#')) n++;
+      c.lung = n * T;
+    }
+    // timbri giganti: scendono fino al primo pavimento
+    for (const k of liv.timbroni) {
+      let y = k.gy + 1;
+      while (y < lh && !'#{}F~-'.includes(griglia[y][k.gx])) y++;
+      k.basso = y * T;
+    }
     liv.ceciTotali = liv.ceci.length;
     if (!liv.partenza) liv.partenza = { x: T * 2, y: T * 8 };
     return liv;
@@ -494,10 +550,61 @@
     return tt > FRECCE.ogni - FRECCE.avviso;
   }
 
+  // cassetti: 0 = chiuso, 1 = tutto fuori
+  function estensione(c, tm) {
+    const C = CASSETTI;
+    const periodo = C.esce + C.aperto + C.rientra + C.chiuso;
+    let tt = (((tm + c.fase) % periodo) + periodo) % periodo;
+    if (tt < C.esce) return tt / C.esce;
+    tt -= C.esce;
+    if (tt < C.aperto) return 1;
+    tt -= C.aperto;
+    if (tt < C.rientra) return 1 - tt / C.rientra;
+    return 0;
+  }
+  // timbri giganti: fase del ciclo e quanto sono scesi (0 = in alto, 1 = sul pavimento)
+  function statoTimbro(k, tm) {
+    const C = TIMBRONI;
+    const periodo = C.su + C.trema + C.scende + C.giu + C.sale;
+    let tt = (((tm + k.fase) % periodo) + periodo) % periodo;
+    if (tt < C.su) return { fase: 'su', q: 0 };
+    tt -= C.su;
+    if (tt < C.trema) return { fase: 'trema', q: 0 };
+    tt -= C.trema;
+    if (tt < C.scende) return { fase: 'scende', q: (tt / C.scende) ** 2 };
+    tt -= C.scende;
+    if (tt < C.giu) return { fase: 'giu', q: 1 };
+    tt -= C.giu;
+    return { fase: 'sale', q: 1 - tt / C.sale };
+  }
+  // dove arriva in basso la testa del timbro
+  function fondoTimbro(k, q) { return k.alto + (k.basso - k.alto) * q; }
+  // fotocopiatrice che sta per sparare (luce verde)
+  function caricaFotocopia(f) {
+    const tt = (((G.tempo + f.fase) % FOTOCOPIE.ogni) + FOTOCOPIE.ogni) % FOTOCOPIE.ogni;
+    return tt > FOTOCOPIE.ogni - FOTOCOPIE.avviso;
+  }
+  // nastro trasportatore sotto i piedi: -1, 1 o 0
+  function nastro(o) {
+    const c = cella(Math.floor(o.x / T), Math.floor((o.y + 1) / T));
+    return c === '{' ? -1 : c === '}' ? 1 : 0;
+  }
+
+  // sopra un nastro trasportatore, anche saltando (il primo pavimento sotto i piedi)
+  function sopraNastro(o) {
+    const gx = Math.floor(o.x / T);
+    for (let gy = Math.floor((o.y + 1) / T); gy < Math.floor((o.y + 1) / T) + 3; gy++) {
+      const c = cella(gx, gy);
+      if (c === '{' || c === '}') return true;
+      if (solido(gx, gy)) return false;
+    }
+    return false;
+  }
+
   // solido per Tino (e per gli agenti)
   function solido(gx, gy) {
     const c = cella(gx, gy);
-    if (c === '#') return true;
+    if (c === '#' || c === '{' || c === '}' || c === 'F') return true;
     if (c === '|') { const p = porta(gx, gy); return !p || p.apertura < 0.9; }
     if (c === 'L') { const p = serratura(gx, gy); return !p || p.aperta < 0.9; }
     if (c === '~') { const k = crepa(gx, gy); return !k || k.stato !== 'caduta'; }
@@ -536,6 +643,9 @@
     G.bollette.length = 0;
     G.onde.length = 0;
     G.frecce.length = 0;
+    G.fogli.length = 0;
+    G.impronte.length = 0;
+    G.finale = null;
     G.uscite = {};
     G.scossa = 0;
     G.cartello = null;
@@ -743,8 +853,8 @@
     if (tino) {
       o.piattaforma = null;
       if (vy >= 0 && !scendi) {
-        for (const p of G.liv.piattaforme) {
-          if (s.r - 6 <= p.x || s.l + 6 >= p.x + p.w) continue;
+        for (const p of G.liv.piattaforme.concat(G.liv.cassetti)) {
+          if (p.w < 24 || s.r - 6 <= p.x || s.l + 6 >= p.x + p.w) continue;
           // (anche se tocca già terra a metà: così la lastra se lo porta dietro)
           if (piediPrima <= Math.max(p.y, p.y - p.dy) + 0.5 && o.y >= p.y - 0.5) {
             const y0 = o.y;
@@ -1041,6 +1151,12 @@
         coriandoli(b.x, b.y, '#ffffff', 6);
       }
     }
+    for (const f of G.fogli) {
+      if (f.x > colpo.l - 20 && f.x < colpo.r + 20 && f.y > colpo.t - 10 && f.y < colpo.b + 10) {
+        f.via = true;
+        coriandoli(f.x, f.y, '#ffffff', 8);
+      }
+    }
     for (const f of G.frecce) {
       if (f.x > colpo.l - 20 && f.x < colpo.r + 20 && f.y > colpo.t - 10 && f.y < colpo.b + 10) {
         f.via = true;
@@ -1193,6 +1309,32 @@
         scritta(k.x, k.y - 110, 'Punto di partenza!', '#ffe680');
       }
     }
+    // la Ghianda d'Oro
+    const gh = G.liv.ghianda;
+    if (gh && !gh.preso && gh.x > s.l - 24 && gh.x < s.r + 24 && gh.y > s.t - 24 && gh.y < s.b + 24) {
+      gh.preso = true;
+      suoni.ghianda();
+      coriandoli(gh.x, gh.y, '#ffd23a', 30);
+      coriandoli(gh.x, gh.y, '#ffffff', 14);
+      scritta(gh.x, gh.y - 40, 'La Ghianda d\'Oro!', '#ffe680');
+    }
+    // la gabbia di Gino: si apre con la Ghianda d'Oro (fine del gioco)
+    const gb = G.liv.gabbia;
+    if (gb && t.aTerra && Math.abs(gb.x - t.x) < 100 && Math.abs(gb.y - t.y) < 20) {
+      if (!gh || gh.preso) {
+        t.stato = 'uscita';
+        t.vx = 0;
+        t.dir = segno(gb.x - t.x) || 1;
+        G.tempoMorte = 0;
+        G.finale = { t: 0 };
+        suoni.gino();
+        scritta(gb.x, gb.y - 140, 'Gino è libero!', '#ffe680');
+        return;
+      } else if (G.tempo > (G.avvisoChiave || 0)) {
+        G.avvisoChiave = G.tempo + 2;
+        scritta(gb.x, gb.y - 140, 'La gabbia si apre con la Ghianda d\'Oro!', '#ff8a7a');
+      }
+    }
     // uscita
     const u = G.liv.uscita;
     if (u && t.aTerra && Math.abs(u.x - t.x) < 26 && Math.abs(u.y - t.y) < 10) {
@@ -1218,6 +1360,8 @@
       if (G.liv.cesoie.some((c) => Math.abs(c.x - gx) <= 1 && Math.abs(c.y - gy) <= 1)) trappoleVicine = true;
       if (G.liv.stalattiti.some((k) => Math.abs(k.x - t.x) < STALATTITI.vista + 20 && k.y0 < t.y)) trappoleVicine = true;
       if (G.frecce.some((f) => Math.abs(f.y - (t.y - t.h / 2)) < T)) trappoleVicine = true;
+      if (G.fogli.some((f) => Math.abs(f.y - (t.y - t.h / 2)) < T)) trappoleVicine = true;
+      if (G.liv.timbroni.some((k) => Math.abs(k.x - t.x) < 80 && k.alto < t.y && k.basso >= t.y - 1)) trappoleVicine = true;
       if (G.liv.massi.some((m) => m.stato === 'rotola' && Math.abs(m.x - t.x) < 5 * T && Math.abs(m.y - t.y) < 2 * T)) trappoleVicine = true;
       const c = G.liv.capo;
       const agentiVicini = G.liv.agenti.some((a) => a.stato !== 'stordito' && Math.abs(a.x - t.x) < 3 * T && Math.abs(a.y - t.y) < T)
@@ -1349,7 +1493,7 @@
         const gx = Math.floor(davanti / T), gy = Math.floor((a.y - 1) / T);
         const muro = solido(gx, gy) || solido(gx, gy - 1);
         const piano = cella(gx, gy + 1);
-        const buco = !(piano === '#' || piano === '-' || piano === '|');
+        const buco = !'#-|{}F'.includes(piano);
         const bordo = davanti < a.stanzaX * L + 4 || davanti > (a.stanzaX + 1) * L - 4;
         if (muro || buco || bordo) {
           if (a.stato === 'insegue') a.vx = 0;
@@ -1522,7 +1666,8 @@
     // megafono: se Tino scappa sullo stesso piano, gli spara contro un'onda da saltare
     c.megafono -= dt;
     const M = CAPO.megafono;
-    if (vedeTino && c.megafono <= 0 && Math.abs(t.y - c.y) < 25 && Math.abs(dx) > M.min && Math.abs(dx) < M.max) {
+    // (sui nastri trasportatori il rumore copre il megafono: niente onde)
+    if (vedeTino && c.megafono <= 0 && !sopraNastro(t) && !sopraNastro(c) && Math.abs(t.y - c.y) < 25 && Math.abs(dx) > M.min && Math.abs(dx) < M.max) {
       c.stato = 'urla';
       c.t = M.carica;
       c.dir = segno(dx);
@@ -1746,6 +1891,107 @@
     G.frecce = G.frecce.filter((f) => !f.via);
   }
 
+  // ---------------------------------------------------------------- uffici della Tari
+  // cassetti degli archivi: escono e rientrano; Tino ci sta sopra e se lo portano dietro
+  function aggiornaCassetti() {
+    const t = G.tino;
+    for (const c of G.liv.cassetti) {
+      const e = estensione(c, G.tempo) * c.lung;
+      c.dx = (e - c.est) * c.dir;
+      c.est = e;
+      c.w = e;
+      c.x = c.dir > 0 ? (c.gx + 1) * T : c.gx * T - e;
+      if (t.piattaforma !== c || t.stato !== 'libero' || !t.aTerra) continue;
+      const x0 = t.x;
+      t.x += c.dx;
+      if (urtaMuri(t)) t.x = x0; // il cassetto rientra e Tino resta contro l'archivio: cade giù
+    }
+  }
+
+  // nastri trasportatori: spostano chi ci sta sopra
+  function aggiornaNastri(dt) {
+    const sposta = (o) => {
+      const d = nastro(o);
+      if (!d) return;
+      const x0 = o.x;
+      o.x += d * NASTRI.vel * dt;
+      if (urtaMuri(o)) o.x = x0;
+    };
+    const t = G.tino;
+    if (t.stato === 'libero' && t.aTerra && !t.piattaforma) sposta(t);
+    for (const a of G.liv.agenti) if (a.stanzaX === G.stanza.x && a.stanzaY === G.stanza.y && a.vy === 0) sposta(a);
+    const c = G.liv.capo;
+    if (c && attivo(c) && c.aTerra) sposta(c);
+  }
+
+  // fotocopiatrici: sparano un foglio verso Tino; il foglio vola ondeggiando
+  function aggiornaFotocopie(dt) {
+    const t = G.tino;
+    for (const f of G.liv.fotocopiatrici) {
+      const n = Math.floor((G.tempo + f.fase) / FOTOCOPIE.ogni);
+      if (f.ultimo === null) f.ultimo = n;
+      if (n === f.ultimo) continue;
+      f.ultimo = n;
+      if (Math.floor(f.x / COL) !== G.stanza.x || Math.floor(f.y / RIG) !== G.stanza.y) continue;
+      if (t.stato === 'ko' || t.stato === 'uscita') continue;
+      const dir = segno(t.x - (f.x * T + T / 2)) || 1;
+      f.dir = dir;
+      const y0 = f.y * T + FOTOCOPIE.altezza;
+      G.fogli.push({ x: f.x * T + T / 2 + dir * (T / 2 + 8), y0, y: y0, vx: dir * FOTOCOPIE.vel, t: 0 });
+      suoni.fotocopia();
+    }
+    const s = scatola(t);
+    const piccola = { l: s.l + 4, r: s.r - 4, t: s.t + 8, b: s.b - 2 };
+    for (const f of G.fogli) {
+      f.t += dt;
+      f.x += f.vx * dt;
+      f.y = f.y0 + Math.sin(f.t * 9) * FOTOCOPIE.onda;
+      const punta = f.x + segno(f.vx) * 14;
+      if (solido(Math.floor(punta / T), Math.floor(f.y / T)) || Math.floor(f.x / L) !== G.stanza.x) {
+        f.via = true;
+        coriandoli(punta, f.y, '#ffffff', 4);
+        continue;
+      }
+      if (t.stato !== 'ko' && t.stato !== 'uscita' && sovrappone({ l: f.x - 14, r: f.x + 14, t: f.y - 5, b: f.y + 5 }, piccola)) {
+        f.via = true;
+        coriandoli(f.x, f.y, '#ffffff', 6);
+        colpito(segno(f.vx));
+      }
+    }
+    G.fogli = G.fogli.filter((f) => !f.via);
+  }
+
+  // timbri giganti: quando arrivano giù fanno tremare tutto e lasciano l'impronta
+  function aggiornaTimbroni(dt) {
+    const t = G.tino;
+    const liv = G.liv;
+    for (const k of liv.timbroni) {
+      const st = statoTimbro(k, G.tempo);
+      const qui = Math.floor(k.x / L) === G.stanza.x && Math.floor(k.alto / A) === G.stanza.y;
+      if (st.fase === 'giu' && k.prima !== 'giu' && qui) {
+        G.scossa = Math.max(G.scossa, 0.15);
+        suoni.timbro();
+        polvere(k.x, k.basso, 10);
+        G.impronte.push({ x: k.x, y: k.basso, vita: 2.5 });
+      }
+      k.prima = st.fase;
+      if (st.q < 0.05) continue;
+      const yb = fondoTimbro(k, st.q);
+      const testa = { l: k.x - TIMBRONI.largo / 2, r: k.x + TIMBRONI.largo / 2, t: yb - TIMBRONI.alto, b: yb };
+      if (t.stato !== 'ko' && t.stato !== 'uscita') {
+        const s = scatola(t);
+        if (sovrappone(testa, { l: s.l + 5, r: s.r - 5, t: s.t + 8, b: s.b })) colpito(segno(t.x - k.x) || -t.dir || 1);
+      }
+      for (const a of liv.agenti) {
+        if (a.stato !== 'stordito' && sovrappone(testa, scatola(a))) { a.stato = 'stordito'; a.t = AGENTI.stordito; a.vx = 0; if (qui) suoni.stordito(); }
+      }
+      const c = liv.capo;
+      if (c && attivo(c) && sovrappone(testa, scatola(c))) fermaCapo(c, segno(c.x - k.x) || 1, 'trappola');
+    }
+    for (const i of G.impronte) i.vita -= dt;
+    G.impronte = G.impronte.filter((i) => i.vita > 0);
+  }
+
   function schizziSabbia(x, y, n) {
     for (let i = 0; i < n; i++) {
       G.particelle.push({ x: x + (Math.random() - 0.5) * 30, y, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 160, vita: 0.6, colore: Math.random() < 0.5 ? '#e8c77a' : '#c99a4a', r: 2 + Math.random() * 3, peso: 0.8 });
@@ -1792,6 +2038,7 @@
       G.bollette.length = 0;
       G.onde.length = 0;
       G.frecce.length = 0;
+      G.fogli.length = 0;
       chiaveStanza = '';
     }
   }
@@ -1801,6 +2048,8 @@
     G.tempo += dt;
     fronti();
     aggiornaPiattaforme(dt);
+    aggiornaCassetti();
+    aggiornaNastri(dt);
     aggiornaTino(dt);
     aggiornaOggetti(dt);
     aggiornaAgenti(dt);
@@ -1808,6 +2057,8 @@
     aggiornaOnde(dt);
     aggiornaMassi(dt);
     aggiornaFrecce(dt);
+    aggiornaFotocopie(dt);
+    aggiornaTimbroni(dt);
     controllaTino(dt);
     G.scossa = Math.max(0, G.scossa - dt);
     aggiornaStanza();
@@ -1818,7 +2069,11 @@
       if (G.tempoMorte > 1.6 && G.fase === 'gioco') mostraKo();
     } else if (t.stato === 'uscita') {
       G.tempoMorte += dt;
-      if (G.tempoMorte > 1.2 && G.fase === 'gioco') mostraFineLivello();
+      if (G.finale) {
+        G.finale.t += dt;
+        G.liv.gabbia.aperta = Math.min(1, G.liv.gabbia.aperta + dt / 0.6);
+      }
+      if (G.tempoMorte > (G.finale ? 3.4 : 1.2) && G.fase === 'gioco') mostraFineLivello();
     }
   }
 
@@ -1864,7 +2119,8 @@
     // sfondo: mattoni scuri
     g.fillStyle = M.sfondo;
     g.fillRect(0, 0, L, A);
-    for (let y = 0; y < A; y += 30) {
+    if (M.ufficio) sfondoUfficio(g, ox, oy);
+    else for (let y = 0; y < A; y += 30) {
       const sfas = (y / 30) % 2 ? 30 : 0;
       for (let x = -60 + sfas; x < L; x += 60) {
         const v = caso(x + ox * 7, y + oy * 5);
@@ -1908,7 +2164,7 @@
         g.fillStyle = gr;
         g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 50, 0); g.lineTo(x + 230, A); g.lineTo(x + 120, A); g.closePath(); g.fill();
       }
-    } else {
+    } else if (!M.ufficio) {
       // radici che pendono dall'alto
       g.strokeStyle = 'rgba(40,26,14,0.7)';
       g.lineCap = 'round';
@@ -1950,6 +2206,11 @@
             if (M.erba) {
               g.fillStyle = M.erba;
               for (let i = 0; i < 4; i++) if (caso(X, Y, i) > 0.55) g.fillRect(x + i * 15 + 2, y - 3, 9, 5);
+            } else if (M.ufficio) {
+              // linoleum a quadretti
+              g.fillStyle = '#5a8466';
+              for (let i = 0; i < 4; i++) if ((X * 4 + i) % 2) g.fillRect(x + i * 15, y, 15, 9);
+              g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x, y + 9, T, 2);
             } else {
               // mucchietti di sabbia
               g.fillStyle = '#e8c77a';
@@ -1978,6 +2239,24 @@
             g.fillStyle = '#5a3418';
             g.fillRect(x + 8, y + 12, 6, 14);
             g.fillRect(x + T - 14, y + 12, 6, 14);
+          }
+        } else if (c === '{' || c === '}') {
+          // nastro trasportatore: telaio (i rulli e il nastro si muovono, li disegna disegna())
+          g.fillStyle = '#4a4f59';
+          g.fillRect(x, y, T, T);
+          g.fillStyle = '#353942';
+          g.fillRect(x, y + 34, T, T - 34);
+          g.fillStyle = '#c9a227';
+          for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(x + i * 20, y + T); g.lineTo(x + i * 20 + 10, y + 40); g.lineTo(x + i * 20 + 18, y + 40); g.lineTo(x + i * 20 + 8, y + T); g.fill(); }
+        } else if (c === '^' && M.ufficio) {
+          // puntine da disegno rovesciate
+          for (let i = 0; i < 3; i++) {
+            const sx = x + 11 + i * 19, col = ['#e74c3c', '#3d7fd1', '#f2c14e'][(X + i) % 3];
+            g.strokeStyle = '#d7dbe2'; g.lineWidth = 3;
+            g.beginPath(); g.moveTo(sx, y + T - 14); g.lineTo(sx, y + 28); g.stroke();
+            g.strokeStyle = '#4a4f59'; g.lineWidth = 1; g.stroke();
+            g.fillStyle = col; g.strokeStyle = '#2a1e14'; g.lineWidth = 2;
+            g.beginPath(); g.ellipse(sx, y + T - 8, 9, 6, 0, 0, Math.PI * 2); g.fill(); g.stroke();
           }
         } else if (c === '^') {
           for (let i = 0; i < 3; i++) {
@@ -2010,12 +2289,79 @@
       g.fillStyle = '#1a0f05';
       g.beginPath(); g.ellipse(bx, y + 30, 6, 5, 0, 0, Math.PI * 2); g.fill();
     }
+    // archivi: il mobile di metallo con i cassetti
+    for (const c of G.liv.cassetti) {
+      if (Math.floor(c.gx / COL) !== G.stanza.x || Math.floor(c.gy / RIG) !== G.stanza.y) continue;
+      const x = (c.gx - ox) * T, y = (c.gy - oy) * T;
+      g.fillStyle = '#8fa196';
+      g.fillRect(x, y, T, T);
+      g.strokeStyle = '#3e4a44'; g.lineWidth = 2;
+      g.strokeRect(x + 1, y + 1, T - 2, T - 2);
+      g.fillStyle = '#26302b';
+      g.fillRect(c.dir > 0 ? x + T - 6 : x, y + 2, 6, CASSETTI.spesso);
+      g.fillStyle = '#b8c7bd';
+      g.fillRect(x + 4, y + CASSETTI.spesso + 6, T - 8, 3);
+      // etichetta
+      g.fillStyle = '#f4efe2'; g.fillRect(x + 20, y + 12, 20, 10);
+      g.strokeStyle = '#3e4a44'; g.lineWidth = 1; g.strokeRect(x + 20, y + 12, 20, 10);
+    }
     // vignettatura
     const v = g.createRadialGradient(L / 2, A / 2, A * 0.35, L / 2, A / 2, L * 0.65);
     v.addColorStop(0, 'rgba(0,0,0,0)');
     v.addColorStop(1, 'rgba(0,0,0,0.45)');
     g.fillStyle = v;
     g.fillRect(0, 0, L, A);
+  }
+
+  // uffici della Tari: carta da parati, archivi, finestre con le veneziane, orologio e manifesti
+  function sfondoUfficio(g, ox, oy) {
+    for (let x = 0; x < L; x += 40) {
+      g.fillStyle = 'rgba(255,255,255,0.05)';
+      g.fillRect(x, 0, 18, A);
+      g.fillStyle = 'rgba(0,0,0,0.06)';
+      g.fillRect(x + 18, 0, 2, A);
+    }
+    // luce dei neon dall'alto
+    const neon = g.createLinearGradient(0, 0, 0, A * 0.6);
+    neon.addColorStop(0, 'rgba(220,255,240,0.13)'); neon.addColorStop(1, 'rgba(220,255,240,0)');
+    g.fillStyle = neon; g.fillRect(0, 0, L, A * 0.6);
+    // archivi sullo sfondo
+    for (let i = 0; i < 4; i++) {
+      const w = 64 + caso(i, ox, 1) * 30, h = 150 + caso(i, oy + ox, 2) * 170;
+      const x = 40 + i * 240 + caso(i, ox + oy, 3) * 110, y = A - h;
+      g.fillStyle = 'rgba(28,38,36,0.55)';
+      g.fillRect(x, y, w, h);
+      g.strokeStyle = 'rgba(120,140,130,0.35)'; g.lineWidth = 2;
+      for (let yy = y + 8; yy < A - 30; yy += 44) {
+        g.strokeRect(x + 6, yy, w - 12, 36);
+        g.fillStyle = 'rgba(150,170,160,0.4)'; g.fillRect(x + w / 2 - 8, yy + 14, 16, 5);
+      }
+    }
+    // finestra con le veneziane
+    const fx = 120 + caso(ox, oy, 4) * 600, fy = 70;
+    g.fillStyle = 'rgba(150,200,230,0.35)'; g.fillRect(fx, fy, 150, 110);
+    g.fillStyle = 'rgba(230,236,240,0.4)';
+    for (let yy = fy + 4; yy < fy + 110; yy += 11) g.fillRect(fx, yy, 150, 6);
+    g.strokeStyle = 'rgba(30,40,40,0.7)'; g.lineWidth = 6; g.strokeRect(fx, fy, 150, 110);
+    // orologio
+    const ox2 = (fx + 420) % (L - 80) + 40, oy2 = 90;
+    g.fillStyle = 'rgba(240,236,226,0.75)'; g.beginPath(); g.arc(ox2, oy2, 26, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(30,30,30,0.8)'; g.lineWidth = 4; g.stroke();
+    g.lineWidth = 3; g.beginPath(); g.moveTo(ox2, oy2); g.lineTo(ox2, oy2 - 17); g.moveTo(ox2, oy2); g.lineTo(ox2 + 12, oy2 + 4); g.stroke();
+    // manifesto
+    if (caso(ox, oy, 6) > 0.35) {
+      const mx = (fx + 230) % (L - 120) + 20, my = 200;
+      g.save();
+      g.translate(mx + 45, my + 55); g.rotate((caso(ox, oy, 7) - 0.5) * 0.12);
+      g.fillStyle = 'rgba(244,239,226,0.8)'; g.fillRect(-45, -55, 90, 110);
+      g.fillStyle = 'rgba(192,57,43,0.85)'; g.fillRect(-45, -55, 90, 26);
+      g.fillStyle = 'rgba(255,255,255,0.95)'; g.font = '700 16px "Alfa Slab One", sans-serif'; g.textAlign = 'center';
+      g.fillText('TARI', 0, -36);
+      g.fillStyle = 'rgba(40,40,40,0.85)'; g.font = '700 13px Fredoka, sans-serif';
+      g.fillText('PAGA', 0, -6); g.fillText('SUBITO!', 0, 12);
+      g.fillStyle = 'rgba(60,60,60,0.5)'; g.fillRect(-30, 24, 60, 3); g.fillRect(-30, 32, 44, 3);
+      g.restore();
+    }
   }
 
   // piccoli geroglifici del tempio: ghianda, occhio, onde, foglia
@@ -2077,7 +2423,8 @@
     // torce
     for (const f of liv.torce) {
       if (!visibile(f.x, f.y)) continue;
-      disegnaTorcia(f.x, f.y + 10, true, tm);
+      if (liv.mondo.ufficio) disegnaLampada(f.x, f.y, tm);
+      else disegnaTorcia(f.x, f.y + 10, true, tm);
     }
     // punti di partenza
     for (const c of liv.controlli) {
@@ -2218,6 +2565,50 @@
       ctx.strokeStyle = '#4a3010'; ctx.lineWidth = 2; ctx.stroke();
       for (let i = 0; i < p.n; i++) geroglifico(ctx, p.x + T / 2 + i * T, p.y + 9, (p.gx + i) % 4, 'rgba(90,50,10,0.8)', 0.6);
     }
+    // nastri trasportatori: il nastro scorre e i rulli girano
+    for (let gy = G.stanza.y * RIG; gy < (G.stanza.y + 1) * RIG; gy++) {
+      for (let gx = G.stanza.x * COL; gx < (G.stanza.x + 1) * COL; gx++) {
+        const c = cella(gx, gy);
+        if (c === '{' || c === '}') disegnaNastro(gx, gy, c === '}' ? 1 : -1, tm);
+      }
+    }
+    // impronte dei timbri giganti
+    for (const i of G.impronte) {
+      ctx.save();
+      ctx.globalAlpha = clamp(i.vita / 1.2, 0, 0.8);
+      ctx.translate(i.x, i.y - 2);
+      ctx.scale(1, 0.3);
+      ctx.fillStyle = '#c0392b';
+      tondo(-30, -14, 60, 28, 6); ctx.fill();
+      ctx.fillStyle = '#fff3e8';
+      ctx.font = '700 20px "Alfa Slab One", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('TARI', 0, 8);
+      ctx.restore();
+    }
+    // cassetti degli archivi
+    for (const c of liv.cassetti) {
+      if (c.w < 2 || !visibile(c.x, c.y)) continue;
+      disegnaCassetto(c);
+    }
+    // fotocopiatrici
+    for (const f of liv.fotocopiatrici) {
+      if (!visibile(f.x * T, f.y * T)) continue;
+      disegnaFotocopiatrice(f, tm);
+    }
+    // fogli in volo
+    for (const f of G.fogli) {
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(Math.cos(f.t * 9) * 0.35 + segno(f.vx) * 0.2);
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#4a4f59'; ctx.lineWidth = 1.5;
+      ctx.fillRect(-13, -9, 26, 18); ctx.strokeRect(-13, -9, 26, 18);
+      ctx.fillStyle = '#8c94a6';
+      for (let i = 0; i < 3; i++) ctx.fillRect(-9, -5 + i * 4, i === 2 ? 11 : 18, 1.6);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 2, 6, 5);
+      ctx.restore();
+    }
+    // la Ghianda d'Oro
+    if (liv.ghianda && !liv.ghianda.preso && visibile(liv.ghianda.x, liv.ghianda.y)) disegnaGhiandaOro(liv.ghianda.x, liv.ghianda.y + Math.sin(tm * 2.2) * 5, tm);
     // balestre che stanno per tirare
     for (const b of liv.balestre) {
       const x = b.x * T + T / 2 + b.dir * 20, y = b.y * T + T / 2;
@@ -2392,6 +2783,13 @@
       if (visibile(c.x, c.y, 200)) disegnaCapo(c, tm);
       if (c.stato === 'dorme' && visibile(sc.x, sc.y)) disegnaScrivania(sc.x, sc.y);
     }
+    // timbri giganti
+    for (const k of liv.timbroni) {
+      if (!visibile(k.x, k.alto)) continue;
+      disegnaTimbrone(k, tm);
+    }
+    // la gabbia di Gino
+    if (liv.gabbia && visibile(liv.gabbia.x, liv.gabbia.y)) disegnaGabbia(liv.gabbia, tm);
     // onde del megafono
     for (const o of G.onde) disegnaOnda(o, tm);
     // bollette
@@ -2413,6 +2811,7 @@
       ctx.restore();
     }
     disegnaTino(tm);
+    if (liv.gabbia && G.finale) disegnaGinoLibero(liv.gabbia);
     // sabbie mobili: davanti a Tino, così si vede che affonda
     for (let gy = G.stanza.y * RIG; gy < (G.stanza.y + 1) * RIG; gy++) {
       for (let gx = G.stanza.x * COL; gx < (G.stanza.x + 1) * COL; gx++) {
@@ -2527,6 +2926,214 @@
       ctx.fillStyle = 'rgba(255,240,200,0.5)';
       for (let i = 0; i < 3; i++) ctx.fillRect(x + 8 + i * 18 + Math.sin(tm + i + gx) * 3, y + 10 + i * 4, 6, 2);
     }
+  }
+
+  function disegnaNastro(gx, gy, dir, tm) {
+    const x = gx * T, y = gy * T;
+    // nastro di gomma con le frecce che scorrono
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, y, T, 16); ctx.clip();
+    ctx.fillStyle = '#2a2d33';
+    ctx.fillRect(x, y, T, 16);
+    const sp = ((tm * NASTRI.vel * dir) % 30 + 30) % 30;
+    ctx.fillStyle = '#7d8590';
+    for (let i = -1; i < 3; i++) {
+      const sx = x + i * 30 + sp;
+      ctx.beginPath();
+      ctx.moveTo(sx + (dir > 0 ? 0 : 14), y + 3); ctx.lineTo(sx + (dir > 0 ? 14 : 0), y + 8); ctx.lineTo(sx + (dir > 0 ? 0 : 14), y + 13);
+      ctx.lineTo(sx + (dir > 0 ? 5 : 9), y + 8); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    // rulli
+    for (let i = 0; i < 2; i++) {
+      const rx = x + 15 + i * 30, ry = y + 25;
+      ctx.fillStyle = '#9aa1ab'; ctx.strokeStyle = '#2a2d33'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(rx, ry, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      const a = tm * NASTRI.vel / 8 * dir;
+      ctx.beginPath(); ctx.moveTo(rx + Math.cos(a) * 7, ry + Math.sin(a) * 7); ctx.lineTo(rx - Math.cos(a) * 7, ry - Math.sin(a) * 7); ctx.stroke();
+    }
+  }
+
+  function disegnaCassetto(c) {
+    const S = CASSETTI.spesso;
+    const x0 = c.x, x1 = c.x + c.w, y = c.y;
+    // pratiche che spuntano dal cassetto
+    ctx.fillStyle = '#f4efe2'; ctx.strokeStyle = '#8c94a6'; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const px = c.dir > 0 ? x0 + 8 + i * 24 : x1 - 26 - i * 24;
+      if (px < x0 + 2 || px + 18 > x1 - 8) continue;
+      ctx.fillRect(px, y - 7 + (i % 2) * 3, 18, 10); ctx.strokeRect(px, y - 7 + (i % 2) * 3, 18, 10);
+    }
+    ctx.fillStyle = '#9fb0a4';
+    ctx.fillRect(x0, y, c.w, S);
+    ctx.fillStyle = '#c3d1c7';
+    ctx.fillRect(x0, y, c.w, 5);
+    ctx.strokeStyle = '#3e4a44'; ctx.lineWidth = 2;
+    ctx.strokeRect(x0, y, c.w, S);
+    // frontale con la maniglia
+    const fx = c.dir > 0 ? x1 - 10 : x0;
+    ctx.fillStyle = '#7f9186';
+    ctx.fillRect(fx, y - 2, 10, S + 4);
+    ctx.strokeRect(fx, y - 2, 10, S + 4);
+    ctx.fillStyle = '#e6e9ee';
+    ctx.fillRect(c.dir > 0 ? x1 : x0 - 5, y + S / 2 - 7, 5, 14);
+  }
+
+  function disegnaFotocopiatrice(f, tm) {
+    const x = f.x * T, y = f.y * T;
+    const carica = caricaFotocopia(f);
+    // corpo
+    ctx.fillStyle = '#d9dde3';
+    tondo(x + 3, y + 10, T - 6, T - 10, 5); ctx.fill();
+    ctx.strokeStyle = '#4a4f59'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#b9c0cc';
+    ctx.fillRect(x + 3, y + T - 14, T - 6, 14);
+    // coperchio e vetro
+    ctx.fillStyle = '#8c94a6';
+    ctx.fillRect(x + 1, y + 4, T - 2, 8);
+    ctx.strokeRect(x + 1, y + 4, T - 2, 8);
+    // fessure da cui escono i fogli (ai due lati)
+    ctx.fillStyle = '#2a2d33';
+    ctx.fillRect(x + 1, y + FOTOCOPIE.altezza - 3, 6, 6);
+    ctx.fillRect(x + T - 7, y + FOTOCOPIE.altezza - 3, 6, 6);
+    // pannello con i tasti
+    ctx.fillStyle = '#4a4f59'; ctx.fillRect(x + 14, y + 16, 32, 10);
+    ctx.fillStyle = carica ? '#5cff8a' : '#2e7d4f';
+    ctx.fillRect(x + 17, y + 18, 6, 6);
+    ctx.fillStyle = '#e74c3c'; ctx.fillRect(x + 37, y + 18, 6, 6);
+    // la luce verde dello scanner che passa sotto il coperchio
+    if (carica) {
+      const tt = (((G.tempo + f.fase) % FOTOCOPIE.ogni) + FOTOCOPIE.ogni) % FOTOCOPIE.ogni;
+      const k = 1 - (FOTOCOPIE.ogni - tt) / FOTOCOPIE.avviso;
+      const lx = x + 4 + k * (T - 8);
+      const bag = ctx.createRadialGradient(lx, y + 8, 1, lx, y + 8, 26);
+      bag.addColorStop(0, 'rgba(120,255,150,0.9)'); bag.addColorStop(1, 'rgba(120,255,150,0)');
+      ctx.fillStyle = bag; ctx.fillRect(lx - 26, y - 18, 52, 52);
+    }
+  }
+
+  function disegnaTimbrone(k, tm) {
+    const st = statoTimbro(k, tm);
+    const yb = fondoTimbro(k, st.q);
+    const tr = st.fase === 'trema' ? (Math.random() - 0.5) * 4 : 0;
+    const x = k.x + tr;
+    const top = k.gy * T;
+    const W = TIMBRONI.largo, H = TIMBRONI.alto;
+    // attacco al soffitto e pistone
+    ctx.fillStyle = '#4a4f59';
+    ctx.fillRect(x - 20, top, 40, 10);
+    ctx.fillStyle = '#9aa1ab';
+    ctx.fillRect(x - 6, top + 8, 12, Math.max(0, yb - H - top - 4));
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 2;
+    ctx.strokeRect(x - 6, top + 8, 12, Math.max(0, yb - H - top - 4));
+    // manico di legno
+    ctx.fillStyle = '#8a5a2b';
+    tondo(x - 16, yb - H - 2, 32, 16, 6); ctx.fill();
+    ctx.strokeStyle = '#3a2414'; ctx.stroke();
+    // blocco del timbro
+    ctx.fillStyle = '#6e4626';
+    ctx.fillRect(x - W / 2, yb - H + 12, W, 20);
+    ctx.strokeRect(x - W / 2, yb - H + 12, W, 20);
+    ctx.fillStyle = '#ffe7a8';
+    ctx.font = '700 12px "Alfa Slab One", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('TARI', x, yb - H + 27);
+    // gomma rossa
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(x - W / 2 + 3, yb - 14, W - 6, 14);
+    ctx.strokeStyle = '#5a1a12'; ctx.strokeRect(x - W / 2 + 3, yb - 14, W - 6, 14);
+  }
+
+  function disegnaGhiandaOro(x, y, tm) {
+    const bag = ctx.createRadialGradient(x, y, 4, x, y, 70);
+    bag.addColorStop(0, `rgba(255,226,110,${0.6 + Math.sin(tm * 4) * 0.15})`);
+    bag.addColorStop(1, 'rgba(255,226,110,0)');
+    ctx.fillStyle = bag;
+    ctx.fillRect(x - 70, y - 70, 140, 140);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.sin(tm * 1.5) * 0.12);
+    const corpo = ctx.createLinearGradient(-18, 0, 18, 0);
+    corpo.addColorStop(0, '#b8860b'); corpo.addColorStop(0.4, '#ffe680'); corpo.addColorStop(1, '#a8740a');
+    ctx.fillStyle = corpo; ctx.strokeStyle = '#5a3c08'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-18, -4); ctx.quadraticCurveTo(-20, 22, 0, 30); ctx.quadraticCurveTo(20, 22, 18, -4); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c99a2e';
+    ctx.beginPath(); ctx.ellipse(0, -6, 23, 12, 0, Math.PI, 0); ctx.lineTo(23, -2); ctx.lineTo(-23, -2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(90,60,8,0.6)'; ctx.lineWidth = 1.5;
+    for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 8 - 3, -14); ctx.lineTo(i * 8 + 3, -3); ctx.stroke(); }
+    ctx.strokeStyle = '#5a3c08'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(3, -25); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath(); ctx.ellipse(-8, 6, 3, 8, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    if (Math.sin(tm * 3) > 0.5) stella(x + 22, y - 22, 6, '#fffbe0');
+    if (Math.sin(tm * 3 + 2) > 0.5) stella(x - 24, y + 10, 5, '#fffbe0');
+  }
+
+  // la gabbia della Tari con Gino dentro: trema finché è chiusa, saltella quando è libero
+  function disegnaGabbia(gb, tm) {
+    const x = gb.x, y = gb.y, w = 92, h = 104;
+    const f = G.finale;
+    // Gino, chiuso dentro, trema
+    if (!f) disegnaGino(x + Math.sin(tm * 40) * 1.5, y - 4, Math.sin(tm * 25) * 0.05, 1, 1);
+    // sbarre (la porta davanti sale quando si apre)
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.fillStyle = '#7d8590';
+    ctx.fillRect(x - w / 2 - 4, y - 8, w + 8, 8);
+    ctx.beginPath(); ctx.ellipse(x, y - h, w / 2 + 4, 18, 0, Math.PI, 0); ctx.fill(); ctx.stroke();
+    const su = gb.aperta * (h - 14);
+    for (let i = 0; i <= 6; i++) {
+      const bx = x - w / 2 + (i * w) / 6;
+      const porta = i >= 2 && i <= 4;
+      ctx.strokeStyle = '#2a2d33'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(bx, y - h); ctx.lineTo(bx, y - 8 - (porta ? su : 0)); ctx.stroke();
+      ctx.strokeStyle = '#b9c0cc'; ctx.lineWidth = 3; ctx.stroke();
+    }
+    ctx.strokeStyle = '#2a2d33'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(x - w / 2, y - h / 2 - su * 0.5); ctx.lineTo(x + w / 2, y - h / 2 - su * 0.5); ctx.stroke();
+    // cartello TARI e lucchetto
+    ctx.fillStyle = '#c0392b'; ctx.strokeStyle = '#2a1004'; ctx.lineWidth = 2;
+    tondo(x - 28, y - h - 34, 56, 20, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff3e8'; ctx.font = '700 13px "Alfa Slab One", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('TARI', x, y - h - 19);
+    if (!f) {
+      ctx.fillStyle = '#e8b33a'; ctx.strokeStyle = '#6b5014';
+      tondo(x - 10, y - h / 2 - 4, 20, 18, 4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#3a2414'; ctx.fillRect(x - 1.5, y - h / 2 + 2, 3, 7);
+    }
+  }
+
+  function disegnaGino(x, y, rot, sx, sy) {
+    const fig = figure.gino;
+    if (!fig) return;
+    const gh = 58, gw = gh * fig.width / fig.height;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.scale(sx, sy);
+    ctx.drawImage(fig, -gw / 2, -gh, gw, gh);
+    ctx.restore();
+  }
+  // Gino libero: esce dalla gabbia verso Tino e saltella di gioia
+  function disegnaGinoLibero(gb) {
+    const f = G.finale;
+    const k = clamp((f.t - 0.4) / 0.6, 0, 1);
+    const x = gb.x - G.tino.dir * k * 50;
+    const salto = Math.abs(Math.sin(f.t * 6));
+    const schiaccia = salto < 0.25 && f.t > 0.4;
+    disegnaGino(x, gb.y - 4 - salto * (f.t > 0.4 ? 28 : 6), Math.sin(f.t * 6) * 0.08, schiaccia ? 1.1 : 1, schiaccia ? 0.9 : 1);
+  }
+
+  function disegnaLampada(x, y, tm) {
+    const b = ctx.createRadialGradient(x, y + 10, 2, x, y + 10, 80);
+    b.addColorStop(0, 'rgba(255,240,190,0.3)'); b.addColorStop(1, 'rgba(255,240,190,0)');
+    ctx.fillStyle = b; ctx.fillRect(x - 80, y - 70, 160, 160);
+    ctx.strokeStyle = '#2a2d33'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x, y - 30); ctx.lineTo(x, y - 8); ctx.stroke();
+    ctx.fillStyle = '#3d7a5a'; ctx.strokeStyle = '#1f3d2d'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - 22, y + 8); ctx.lineTo(x - 9, y - 10); ctx.lineTo(x + 9, y - 10); ctx.lineTo(x + 22, y + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff2c0';
+    ctx.beginPath(); ctx.ellipse(x, y + 9, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
   }
 
   function disegnaFiamma(x, y, s, tm) {
@@ -2698,7 +3305,10 @@
     const capoVicino = c && attivo(c) && Math.abs(c.x - t.x) < 6 * T && Math.abs(c.y - t.y) < 3 * T;
     const massoVicino = G.liv.massi.some((m) => m.stato !== 'fermo' && m.stato !== 'rotto' && Math.abs(m.x - t.x) < 4 * T && Math.abs(m.y - t.y) < 2 * T);
     const frecciaVicina = G.frecce.some((f) => (t.x - f.x) * f.vx > 0 && Math.abs(f.x - t.x) < 3 * T && Math.abs(f.y - (t.y - t.h / 2)) < T);
-    if (t.ceci === 1 || agentiVicini || capoVicino || massoVicino || frecciaVicina) return 'arrabbiato';
+    const foglioVicino = G.fogli.some((f) => (t.x - f.x) * f.vx > 0 && Math.abs(f.x - t.x) < 3 * T && Math.abs(f.y - (t.y - t.h / 2)) < T);
+    const timbroVicino = G.liv.timbroni.some((k) => Math.abs(k.x - t.x) < 1.5 * T && k.alto < t.y && statoTimbro(k, G.tempo).fase === 'trema');
+    if (G.finale) return 'normale';
+    if (t.ceci === 1 || agentiVicini || capoVicino || massoVicino || frecciaVicina || foglioVicino || timbroVicino) return 'arrabbiato';
     return 'normale';
   }
 
@@ -2711,7 +3321,7 @@
     const s = 1 / RISOLUZIONE;
     ctx.save();
     if (t.invulnerabile > 0 && t.stato !== 'ko' && Math.floor(tm * 14) % 2) ctx.globalAlpha = 0.45;
-    if (t.stato === 'uscita') ctx.globalAlpha = clamp(1 - G.tempoMorte / 0.9, 0, 1);
+    if (t.stato === 'uscita' && !G.finale) ctx.globalAlpha = clamp(1 - G.tempoMorte / 0.9, 0, 1);
 
     // la frusta fino al piolo: tesa mentre dondola, un po' molle quando è lasca
     if (t.piolo && (t.stato === 'dondola' || t.lasca)) {
@@ -2744,6 +3354,9 @@
     } else if (!t.aTerra) {
       if (t.vy < 0) { sx = 0.93; sy = 1.07; } else { sx = 1.03; sy = 0.98; }
       rot = t.dir * clamp(t.vx / 2500, -0.1, 0.1);
+    } else if (G.finale && G.finale.t > 0.8) {
+      // festa con Gino
+      dy = -Math.abs(Math.sin(G.finale.t * 6 + 1)) * 18;
     } else if (Math.abs(t.vx) > 20) {
       rot = Math.sin(t.passo) * 0.08;
       dy = -Math.abs(Math.cos(t.passo)) * 4;
@@ -2858,8 +3471,9 @@
     const continua = Math.min(s, n) - 1;
     apriPannello(`
       ${LOGO}
-      <p class="storia">Gli agenti della Tari hanno rapito Gino e lo tengono nel tempio della Ghianda d'Oro.
-        Tino prende cappello e frusta e parte all'avventura!</p>
+      <p class="storia">${leggi('finito', false)
+        ? 'Tino ha liberato Gino e ha trovato la Ghianda d\'Oro! Ora puoi rigiocare i livelli e cercare tutti i robivecchi.'
+        : 'Gli agenti della Tari hanno rapito Gino e lo tengono nel tempio della Ghianda d\'Oro. Tino prende cappello e frusta e parte all\'avventura!'}</p>
       <div class="scelte">
         <button class="bottone" type="button" data-azione="gioca" data-livello="${continua}">${continua > 0 ? `Continua dal livello ${continua + 1}` : 'Gioca'}</button>
       </div>
@@ -2897,17 +3511,35 @@
     const ultimo = n + 1 >= window.LIVELLI.length;
     scrivi('sbloccati', Math.max(sbloccati(), Math.min(window.LIVELLI.length, n + 2)));
     const minuti = Math.floor(G.tempo / 60), secondi = Math.floor(G.tempo % 60);
+    if (G.finale) { mostraFineGioco(minuti, secondi); return; }
     apriPannello(`
       ${ritratto('normale')}
       <h2>Livello superato!</h2>
       <p class="statistiche">Ceci raccolti: <b>${G.raccolti}</b> su ${G.liv.ceciTotali} · Tempo: <b>${minuti}:${String(secondi).padStart(2, '0')}</b></p>
       ${G.liv.robivecchi.length ? `<p class="statistiche">Robivecchi: ${G.liv.robivecchi.map((r) => `<img class="robi-mini ${r.preso || r.giaTrovato ? '' : 'vuoto'}" src="${BASE + SORGENTI['robi' + r.tipo]}" alt="${ROBIVECCHI[r.tipo].nome}" title="${ROBIVECCHI[r.tipo].nome}">`).join(' ')}</p>` : ''}
       ${G.liv.def.fine ? `<p>${G.liv.def.fine}</p>` : ''}
-      ${ultimo ? '<p>Gino è ancora prigioniero più in fondo nel tempio: i prossimi livelli arrivano presto!</p>' : ''}
       <div class="scelte">
         ${ultimo ? '' : '<button class="bottone" type="button" data-azione="prossimo">Livello successivo</button>'}
         <button class="bottone ${ultimo ? '' : 'secondario'}" type="button" data-azione="ricomincia">Rigioca</button>
         <button class="bottone secondario" type="button" data-azione="menu">Menu</button>
+      </div>`);
+  }
+
+  // fine del gioco: Gino è libero e Tino ha la Ghianda d'Oro
+  function mostraFineGioco(minuti, secondi) {
+    scrivi('finito', true);
+    const tutti = elencoRobivecchi();
+    const tr = trovati();
+    const n = tutti.filter((r) => tr[r.chiave]).length;
+    apriPannello(`
+      <div class="ritratti-finale">${ritratto('normale')}<div class="ritratto"><img class="gino-libero" src="${BASE + SORGENTI.gino}" alt="Gino"></div></div>
+      <h2>Gino è libero!</h2>
+      <p>${G.liv.def.fine || ''}</p>
+      <p class="statistiche">Ultimo livello: ceci <b>${G.raccolti}</b> su ${G.liv.ceciTotali} · Tempo: <b>${minuti}:${String(secondi).padStart(2, '0')}</b></p>
+      <p class="statistiche">Robivecchi trovati in tutto il gioco: <b>${n}</b> su ${tutti.length}${n < tutti.length ? ' (gli altri ti aspettano nei livelli!)' : ': collezione completa!'}</p>
+      <div class="scelte">
+        <button class="bottone" type="button" data-azione="menu">Menu</button>
+        <button class="bottone secondario" type="button" data-azione="ricomincia">Rigioca il livello</button>
       </div>`);
   }
 
@@ -2976,5 +3608,6 @@
     premi(nuovi) { for (const k in comandi) comandi[k] = !!nuovi[k]; },
     cella, solido, ROBIVECCHI, chiusura, spuntoniFuori,
     MASSI, FRECCE, SABBIA, PIATTAFORME, posPiattaforma, sabbia, caricaBalestra,
+    NASTRI, CASSETTI, FOTOCOPIE, TIMBRONI, estensione, statoTimbro, fondoTimbro, caricaFotocopia,
   };
 })();
