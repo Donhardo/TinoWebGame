@@ -1,0 +1,66 @@
+/* Stili comuni a tutto il sito */
+:root {
+  --verde: #4f9a3f;
+  --verde-scuro: #2f6b26;
+  --verde-chiaro: #e7f4dc;
+  --marrone: #7a4a22;
+  --nocciola: #c98a3c;
+  --crema: #fff8ec;
+  --testo: #3b2a1a;
+  --ombra: 0 6px 18px rgba(59, 42, 26, 0.18);
+  --raggio: 18px;
+  --font: "Fredoka", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font-family: var(--font);
+  color: var(--testo);
+  background: var(--crema);
+  -webkit-tap-highlight-color: transparent;
+}
+
+a { color: var(--verde-scuro); }
+
+.bottone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  font: inherit;
+  font-weight: 600;
+  font-size: 1.05rem;
+  padding: 0.65em 1.3em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--verde);
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--verde-scuro);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+}
+.bottone:hover { background: #5aab48; }
+.bottone:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--verde-scuro); }
+.bottone:focus-visible { outline: 3px solid var(--nocciola); outline-offset: 3px; }
+.bottone.secondario { background: #fff; color: var(--verde-scuro); box-shadow: 0 4px 0 #cbbfa9; }
+.bottone.secondario:hover { background: var(--verde-chiaro); }
+
+@keyframes saltello {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  10% { transform: translateY(0) scale(1.06, 0.92); }
+  40% { transform: translateY(-14%) scale(0.97, 1.04); }
+  70% { transform: translateY(0) scale(1.04, 0.96); }
+}
+
+@keyframes oscilla {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
