@@ -128,8 +128,9 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
 - **Robivecchi**: premi nascosti in punti difficili (cifre 1-7 nella mappa:
   moneta, bottone, graffetta, fiocco, carta di credito scaduta, tappo a corona,
   biglia; nel mondo 2 `8 9 0 & $ @ %`: dado, ditale, linguetta di lattina,
-  rocchetto di filo, biglietto del tram, conchiglia, mozzicone di matita; disegni in
-  `assets/oggetti/robivecchi/`). Salvati in `localStorage` appena presi; si
+  rocchetto di filo, biglietto del tram, conchiglia, mozzicone di matita; nel mondo 3
+  `! ? + ; " / ,`: gomma, puntina, francobollo, cappuccio di penna, elastico,
+  temperamatite, molletta; disegni in `assets/oggetti/robivecchi/`). Salvati in `localStorage` appena presi; si
   vedono nella barra (quelli del livello), a fine livello e nel menu (collezione).
 - **Chiavi e lucchetti**: `k` chiave (si accumulano, si vedono nella barra),
   `L` porta col lucchetto (si apre toccandola con una chiave, che si consuma;
@@ -152,16 +153,19 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   lancia onde "MULTA!" da saltare, se Tino è sullo stesso piano. Quando
   atterra fa tremare lo schermo e cadere le stalattiti vicine. Pesa: il
   pavimento crepato sotto di lui crolla prima, e se cade nel baratro
-  ricompare dall'ultimo punto in cui toccava terra. Se Tino riparte da un
+  ricompare dall'ultimo punto in cui toccava terra. Se Tino o il capo sono sopra un
+  nastro trasportatore il megafono tace (le onde da dietro, con il nastro che frena
+  Tino, erano impossibili da saltare). Se Tino riparte da un
   punto di partenza più avanti della scrivania, il capo arriva dal bordo
   sinistro della stanza dopo 4 s.
 - **Tino vestito**: cappello e frusta sono in `assets/tino/accessori/` e si
   appoggiano alle foto originali con la tabella `POSE` (posizione e rotazione
   per ogni espressione); anteprima in `bozzetti/avventura.html`.
 - **Tabelle** in cima a `gioco.js`: `FISICA`, `FRUSTA`, `AGENTI`, `VITA`, `PORTA`;
-  per il mondo 2 `MASSI`, `FRECCE`, `SABBIA`, `PIATTAFORME`; `MONDI` (nome, colori e
+  per il mondo 2 `MASSI`, `FRECCE`, `SABBIA`, `PIATTAFORME`; per il mondo 3 `NASTRI`,
+  `CASSETTI`, `FOTOCOPIE`, `TIMBRONI`; `MONDI` (nome, colori e
   decorazioni di ogni mondo: il livello sceglie il suo con `mondo: N` in `livelli.js`,
-  e `preparaStanza` disegna radici o tempio di conseguenza; nel menu i livelli sono
+  e `preparaStanza` disegna radici, tempio o uffici di conseguenza; nel menu i livelli sono
   divisi per mondo).
 - **Trappole del tempio** (mondo 2):
   - `M` masso: quando Tino è nella stanza, a meno di 8 quadretti e non più in alto,
@@ -186,6 +190,26 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
     (altrimenti Tino viene lasciato e la lastra gli passa attraverso).
   - L'ispettore capo non usa le lastre; quando segue Tino in un'altra stanza scende
     anche dai gradini (prima scendeva solo se Tino era più in basso).
+- **Trappole degli uffici** (mondo 3):
+  - `{` `}` nastri trasportatori verso sinistra / destra: sono pavimento e portano
+    con sé Tino, agenti e ispettore (110 px/s: contro si corre a 140, a favore a 360).
+    In aria il nastro non spinge. Non sono punto sicuro.
+  - `[` `]` archivi: la casella è il mobile (muro), il cassetto esce di due quadretti a
+    destra / a sinistra (fino al primo muro) all'altezza della cima della casella; ci
+    si sale sopra (da sotto si passa). Ciclo: esce 0,35 s, aperto 2 s, rientra 0,35 s,
+    chiuso 1,3 s; ogni riga è sfasata di 0,6 s e quelle più in basso si aprono prima,
+    così si sale da un cassetto all'altro. Se rientra con Tino sopra, lo porta contro il
+    mobile e lo lascia cadere. Agenti e ispettore non li usano.
+  - `F` fotocopiatrice: blocco alto un quadretto (ci si sale) che ogni 2,6 s spara un
+    foglio verso Tino (la luce verde avvisa), all'altezza del corpo, ondeggiando; si
+    salta o si spazza con la frusta; contro i muri si ferma.
+  - `G` timbro gigante appeso al soffitto: su 1,7 s, trema 0,5 s, scende fino al primo
+    pavimento, resta giù 0,5 s, risale; lascia l'impronta TARI. Colpisce Tino, stordisce
+    gli agenti, ferma l'ispettore. Va messo almeno due quadretti sopra la testa di Tino.
+  - `O` la Ghianda d'Oro e `g` la gabbia di Gino (ultimo livello, al posto di `U`):
+    la gabbia si apre solo con la Ghianda; Gino esce e saltella, poi il pannello finale
+    "Gino è libero!" (con il testo `fine`), e il menu ricorda che il gioco è finito
+    (`localStorage` `finito`).
 - **Livelli fatti** (mondo 1, le radici della quercia):
   1 "Le radici della Quercia" (4 stanze, guida; moneta in fondo al baratro);
   2 "Il pozzo delle radici" (3 × 2 stanze: agente col timbro, due pioli,
@@ -221,6 +245,24 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   scende da una sporgenza, salta in testa a Tino e poi colpisce l'ispettore,
   matita su una sporgenza, blocco alto due quadretti dove il capo resta a terra
   mentre Tino aspetta la lastra; ~33 s, con il capo a ~150 px sul blocco).
+- **Livelli fatti** (mondo 3, gli uffici della Tari):
+  9 "L'archivio" (5 stanze: nastro a favore, puntine con nastro contro e la puntina da
+  prendere saltando sul nastro, archivio da scalare di cassetto in cassetto con la
+  gomma su un cassetto in alto a destra, fotocopiatrice e agente col retino, agente col
+  timbro su un blocco alto due; ~30 s); 10 "La sala dei timbri" (5 stanze: primo timbro,
+  nastro veloce sotto due timbri con il francobollo da prendere saltando sotto il
+  secondo, archivio e mensola col cappuccio, fotocopiatrice contro il mobile, ufficio
+  con tre agenti, nastro contro sotto un timbro con la fotocopiatrice davanti; ~26 s);
+  11 "Lo sportello chiuso" (5 stanze: pulsante e corsa allo sportello di 5,5 s aiutata
+  dal nastro, con l'elastico da prendere al volo (~4,3 s senza, ~4,7 s con), pozzo
+  dell'archivio con cassetti alternati a destra e sinistra e la chiave in cima,
+  corridoio alto con due timbri e un pozzetto col temperamatite, sportello col
+  lucchetto; ~28 s); 12 "L'ufficio del capo" (6 stanze: nastro e timbro, due cassetti
+  sopra le puntine attorno a un pilastro, ufficio dell'ispettore, inseguimento su un
+  nastro contro sotto due timbri (che lo fermano) con la molletta da prendere saltando,
+  mobile alto due dove il capo resta bloccato e due cassetti sopra le puntine, Ghianda
+  d'Oro su una mensola e gabbia di Gino; ~41 s, con il capo a ~110 px nel punto più
+  stretto e a ~220 px quando Tino sale sul mobile).
 - **Prove automatiche**: `window.ghiandaDOro` (`G.test = true`, `avvia`,
   `premi`, `passo`) per far giocare un livello a un giocatore simulato con una
   sequenza di mosse (vai, salta, sali, frusta, dondola regolando la corda).
@@ -230,21 +272,22 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   sono stati completati senza perdere ceci; per i copioni del tempio servono anche
   "attraversa la sabbia saltando" e le attese su massi, frecce
   (`caricaBalestra`, `G.frecce`) e lastre (`G.liv.piattaforme`, `posPiattaforma`).
+  Per gli uffici: `estensione(cassetto, G.tempo)` (aspettare che un cassetto si apra
+  da capo, non solo che sia aperto), `statoTimbro`, `caricaFotocopia`, `G.fogli`,
+  `G.onde`. I livelli 9-12 sono stati completati senza perdere ceci e con tutti i
+  robivecchi.
 - **Piano dei mondi** (approvato): 3 mondi da 4 livelli, ognuno con colori,
   sfondi e una trappola propria; l'ultimo livello di ogni mondo ha l'ispettore
   capo, che non si stordisce e va seminato.
   1. *Le radici della Quercia* (gallerie di terra e pietra): completo, livelli 1-4.
   2. *Il tempio sepolto* (sabbia, pietre dorate, colonne, geroglifici di
      ghiande): completo, livelli 5-8 (massi, frecce, sabbie mobili, piattaforme mobili).
-  3. *Gli uffici della Tari* (scrivanie, archivi, timbri giganti): nastri
-     trasportatori di pratiche, cassetti-piattaforma, fotocopiatrici che
-     sparano fogli, più agenti; alla fine liberazione di Gino e Ghianda d'Oro.
-- **Prossimo passo (deciso)**: nella prossima sessione si fa il mondo 3,
-  *Gli uffici della Tari*, per intero (livelli 9-12, in una volta): una voce
-  nuova in `MONDI` con colori e decorazioni (scrivanie, archivi, timbri), le
-  trappole nuove, nuovi robivecchi, l'ultimo inseguimento dell'ispettore e la
-  liberazione di Gino (finale del gioco, con il testo di fine nel menu).
-  Ogni livello va verificato col giocatore simulato (tutti i robivecchi).
+  3. *Gli uffici della Tari* (scrivanie, archivi, timbri giganti): completo, livelli
+     9-12 (nastri trasportatori, cassetti, fotocopiatrici, timbri giganti, più agenti);
+     alla fine liberazione di Gino e Ghianda d'Oro.
+- **Stato**: il gioco è completo (3 mondi, 12 livelli, 21 robivecchi, finale con Gino).
+  Possibili seguiti, non ancora decisi: un mondo bonus, la classifica dei tempi per
+  livello, una schermata con tutti i robivecchi e i livelli in cui stanno.
 - **Provarlo su Claude**: per far provare un ramo non ancora unito si pubblica
   il gioco come artifact. In una cartella di appoggio vanno `index.html` (senza
   doctype, html, head e body, con i percorsi `../../` tolti), `css/sito.css`,
