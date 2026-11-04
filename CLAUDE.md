@@ -157,8 +157,21 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   sequenza di mosse (vai, salta, sali, frusta, dondola regolando la corda).
   Tutti i livelli si completano con tutti i robivecchi; le porte del 2 e del 3
   richiedono ~3,5–4 s a un giocatore perfetto (impostate a 5 s).
-- **Da fare**: altri livelli (3 mondi da 4: radici della quercia, tempio
-  sepolto, uffici della Tari), ispettore capo, liberazione di Gino.
+- **Piano dei mondi** (approvato): 3 mondi da 4 livelli, ognuno con colori,
+  sfondi e una trappola propria; l'ultimo livello di ogni mondo ha l'ispettore
+  capo, che non si stordisce e va seminato.
+  1. *Le radici della Quercia* (gallerie di terra e pietra): livelli 1-3 fatti.
+  2. *Il tempio sepolto* (sabbia, pietre dorate, colonne, geroglifici di
+     ghiande): massi che rotolano, frecce dai muri, sabbie mobili, piattaforme
+     mobili.
+  3. *Gli uffici della Tari* (scrivanie, archivi, timbri giganti): nastri
+     trasportatori di pratiche, cassetti-piattaforma, fotocopiatrici che
+     sparano fogli, più agenti; alla fine liberazione di Gino e Ghianda d'Oro.
+- **Prossimo passo**: livello 4 delle radici con il primo inseguimento
+  dell'ispettore capo (`assets/agenti-tari/ispettore-capo.svg` è già pronto).
+- **Copioni del giocatore simulato**: i copioni usati per verificare i
+  livelli non sono nel repository; per un livello nuovo vanno riscritti
+  (passi vai, salta, sali, frusta, dondola) e fatti girare con Playwright.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
