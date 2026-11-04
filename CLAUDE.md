@@ -239,10 +239,12 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   3. *Gli uffici della Tari* (scrivanie, archivi, timbri giganti): nastri
      trasportatori di pratiche, cassetti-piattaforma, fotocopiatrici che
      sparano fogli, più agenti; alla fine liberazione di Gino e Ghianda d'Oro.
-- **Prossimo passo**: il mondo 3, *Gli uffici della Tari* (livelli 9-12): una voce
+- **Prossimo passo (deciso)**: nella prossima sessione si fa il mondo 3,
+  *Gli uffici della Tari*, per intero (livelli 9-12, in una volta): una voce
   nuova in `MONDI` con colori e decorazioni (scrivanie, archivi, timbri), le
   trappole nuove, nuovi robivecchi, l'ultimo inseguimento dell'ispettore e la
   liberazione di Gino (finale del gioco, con il testo di fine nel menu).
+  Ogni livello va verificato col giocatore simulato (tutti i robivecchi).
 - **Provarlo su Claude**: per far provare un ramo non ancora unito si pubblica
   il gioco come artifact. In una cartella di appoggio vanno `index.html` (senza
   doctype, html, head e body, con i percorsi `../../` tolti), `css/sito.css`,
