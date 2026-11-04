@@ -58,12 +58,43 @@
     5: { nome: 'Carta di credito scaduta', file: 'carta-scaduta' },
     6: { nome: 'Tappo a corona', file: 'tappo' },
     7: { nome: 'Biglia', file: 'biglia' },
+    // mondo 2
+    8: { nome: 'Dado', file: 'dado' },
+    9: { nome: 'Ditale', file: 'ditale' },
+    0: { nome: 'Linguetta di lattina', file: 'linguetta' },
+    '&': { nome: 'Rocchetto di filo', file: 'rocchetto' },
+    $: { nome: 'Biglietto del tram', file: 'biglietto' },
+    '@': { nome: 'Conchiglia', file: 'conchiglia' },
+    '%': { nome: 'Mozzicone di matita', file: 'matita' },
   };
   const PORTA = { tempo: 6, apre: 2.5, chiude: 0.9 };
   // Trappole a tempo (secondi)
   const CESOIE = { aperte: 1.4, chiude: 0.12, chiuse: 0.48, apre: 0.2, sfasa: 0.7 };
   const SPUNTONI = { periodo: 2.4, su: 1.1, avviso: 0.35 };
   const STALATTITI = { vista: 110, trema: 0.35, gravita: 2000, ritorno: 5 };
+  // Mondo 2, il tempio sepolto
+  // massi: partono quando Tino si avvicina (rotolano verso di lui), si rompono contro i muri e ricompaiono
+  const MASSI = { vel: 220, raggio: 26, vista: 8 * T, trema: 0.6, ritorno: 2.5, gravita: 2000 };
+  // frecce dai muri: ogni balestra tira a tempo, sfasata rispetto alla precedente
+  const FRECCE = { ogni: 2.2, vel: 430, avviso: 0.45, sfasa: 0.55 };
+  // sabbie mobili: si affonda piano (px/s), a "fondo" px si perde un cece; si corre e si salta meno
+  const SABBIA = { affonda: 48, fondo: 50, lento: 0.45, salto: 0.25 };
+  // piattaforme mobili: = orizzontali, H verticali; si fermano contro i muri o sui segni ':'
+  const PIATTAFORME = { vel: 110, spesso: 16, sosta: 0.5 };
+  // colori e decorazioni di ogni mondo
+  const MONDI = {
+    1: {
+      nome: 'Le radici della Quercia',
+      sfondo: '#3a2b1e', mattoneSfondo: [68, 52, 38], muro: '#8f7656', mattone: [140, 114, 82],
+      cima: '#b89d78', erba: '#5f8a3a', crepa: ['#a58a66', '#b89d78'], sasso: ['#8a7357', '#3e3226', '#5f4b37'],
+    },
+    2: {
+      nome: 'Il tempio sepolto',
+      sfondo: '#2e1f0c', mattoneSfondo: [78, 56, 28], muro: '#b88d42', mattone: [204, 160, 84],
+      cima: '#f0d58c', erba: null, crepa: ['#c9a25a', '#ecd08a'], sasso: ['#b8955a', '#5a4220', '#7a5a2a'],
+      tempio: true,
+    },
+  };
   // Ispettore capo: non si stordisce, insegue Tino di stanza in stanza e va seminato
   const CAPO = {
     vel: 220,          // più lento di Tino (250), ma non si ferma davanti alle trappole
@@ -78,6 +109,7 @@
     caduta: 2.5,       // se cade in un baratro ricompare dopo un po'
     arriva: 4,         // ripartendo da un punto di partenza, arriva dopo tanto così
     pesante: 0.3,      // il pavimento crepato sotto di lui crolla prima
+    sabbia: 0.45,      // nelle sabbie mobili non affonda (pesa troppo...) ma si impantana
     megafono: { ogni: 3.6, carica: 0.5, vel: 380, min: 3 * T, max: 9 * T },
   };
 
@@ -253,6 +285,9 @@
     capo: () => { suono(220, 0.12, 'sawtooth', 0.05, 330); setTimeout(() => suono(330, 0.18, 'sawtooth', 0.05, 200), 120); },
     megafono: () => { suono(260, 0.3, 'sawtooth', 0.05, 520); suono(130, 0.3, 'square', 0.03, 260); },
     tonfo: () => suono(70, 0.25, 'square', 0.06, 35),
+    masso: () => { suono(90, 0.5, 'sawtooth', 0.04, 60); suono(60, 0.6, 'square', 0.03, 40); },
+    freccia: () => suono(1400, 0.12, 'triangle', 0.035, 500),
+    sabbia: () => suono(200, 0.18, 'triangle', 0.04, 90),
     ko: () => [392, 330, 262, 196].forEach((f, i) => setTimeout(() => suono(f, 0.2, 'sawtooth', 0.045), i * 150)),
   };
 
@@ -278,6 +313,7 @@
     scritte: [],
     bollette: [],
     onde: [],            // onde del megafono dell'ispettore capo
+    frecce: [],          // frecce in volo
     uscite: {},          // da dove Tino è uscito da ogni stanza (l'ispettore lo segue)
     scossa: 0,
     cartello: null,
@@ -309,7 +345,9 @@
       porte: [], pulsanti: [], crepe: [], ceci: [], pioli: [], torce: [], cartelli: [],
       controlli: [], agenti: [], robivecchi: [], uscita: null, partenza: null, ceciTotali: 0,
       cesoie: [], stalattiti: [], chiavi: [], serrature: [], capo: null,
+      massi: [], balestre: [], piattaforme: [], mondo: MONDI[def.mondo || 1],
     };
+    const segni = new Set(); // ':' dove si fermano le piattaforme
     for (let y = 0; y < lh; y++) griglia.push(new Array(lw).fill('.'));
     let nCartello = 0;
     for (let sy = 0; sy < righeStanze; sy++) {
@@ -322,7 +360,20 @@
             const gx = sx * COL + x, gy = sy * RIG + y;
             const cx = gx * T + T / 2, cy = gy * T + T / 2;
             let cella = '.';
-            if (ch === '#' || ch === '-' || ch === '^' || ch === 'v') cella = ch;
+            if (ch === '#' || ch === '-' || ch === '^' || ch === 'v' || ch === 's') cella = ch;
+            else if (ch === '>' || ch === '<') {
+              cella = '#';
+              liv.balestre.push({ x: gx, y: gy, dir: ch === '>' ? 1 : -1, fase: -liv.balestre.length * FRECCE.sfasa, ultimo: null });
+            }
+            else if (ch === 'M' || ch === '(' || ch === ')') {
+              liv.massi.push({ verso: ch === '(' ? -1 : ch === ')' ? 1 : 0, x0: cx, y0: (gy + 1) * T - MASSI.raggio, x: cx, y: (gy + 1) * T - MASSI.raggio, vx: 0, vy: 0, dir: -1, rot: 0, stato: 'fermo', t: 0, appare: 0, stanzaX: sx, stanzaY: sy });
+            }
+            else if (ch === ':') segni.add(gx + ',' + gy);
+            else if ((ch === '=' || ch === 'H') && riga[x - 1] !== ch) {
+              let n = 1;
+              while (riga[x + n] === ch) n++;
+              liv.piattaforme.push({ asse: ch === '=' ? 'x' : 'y', gx, gy, n, x: gx * T, y: gy * T, w: n * T, dx: 0, dy: 0, sx, sy });
+            }
             else if (ch === 'x') liv.cesoie.push({ x: gx, y: gy, fase: liv.cesoie.length * CESOIE.sfasa });
             else if (ch === 'Y') liv.stalattiti.push({ x: cx, y0: gy * T, y: gy * T, vy: 0, stato: 'appesa', t: 0 });
             else if (ch === 'k') liv.chiavi.push({ x: cx, y: cy, preso: false });
@@ -363,6 +414,24 @@
         }
       }
     }
+    // percorso delle piattaforme mobili: fino al primo muro (o segno ':'), senza uscire dalla stanza
+    const libero = (gx, gy) => griglia[gy] && griglia[gy][gx] !== undefined && !'#~|L'.includes(griglia[gy][gx]) && !segni.has(gx + ',' + gy);
+    for (const p of liv.piattaforme) {
+      const x0 = p.sx * COL, x1 = x0 + COL - 1, y0 = p.sy * RIG, y1 = y0 + RIG - 1;
+      if (p.asse === 'x') {
+        let a = p.gx, b = p.gx + p.n - 1;
+        while (a - 1 >= x0 && libero(a - 1, p.gy)) a--;
+        while (b + 1 <= x1 && libero(b + 1, p.gy)) b++;
+        p.min = a * T; p.max = (b - p.n + 1) * T; p.inizio = p.x;
+      } else {
+        const tutte = (gy) => { for (let i = 0; i < p.n; i++) if (!libero(p.gx + i, gy)) return false; return true; };
+        let a = p.gy, b = p.gy;
+        while (a - 1 >= y0 && tutte(a - 1)) a--;
+        while (b + 1 <= y1 && tutte(b + 1)) b++;
+        p.min = a * T; p.max = b * T; p.inizio = p.y;
+      }
+      p.fase = (p.inizio - p.min) / PIATTAFORME.vel;
+    }
     liv.ceciTotali = liv.ceci.length;
     if (!liv.partenza) liv.partenza = { x: T * 2, y: T * 8 };
     return liv;
@@ -398,6 +467,32 @@
     return 0;
   }
   function crepa(gx, gy) { return G.liv.crepe.find((c) => c.x === gx && c.y === gy); }
+
+  // posizione di una piattaforma mobile al tempo tm: va e viene, con una sosta agli estremi
+  function posPiattaforma(p, tm) {
+    const corsa = (p.max - p.min) / PIATTAFORME.vel;
+    if (corsa <= 0) return p.min;
+    const periodo = 2 * (corsa + PIATTAFORME.sosta);
+    const s = (((tm + p.fase) % periodo) + periodo) % periodo;
+    if (s < corsa) return p.min + s * PIATTAFORME.vel;
+    if (s < corsa + PIATTAFORME.sosta) return p.max;
+    if (s < 2 * corsa + PIATTAFORME.sosta) return p.max - (s - corsa - PIATTAFORME.sosta) * PIATTAFORME.vel;
+    return p.min;
+  }
+
+  // quanto è affondato un corpo nelle sabbie mobili (-1 se non ci è dentro)
+  function sabbia(o) {
+    const gx = Math.floor(o.x / T), gy = Math.floor((o.y - 0.5) / T);
+    if (cella(gx, gy) !== 's') return -1;
+    let y = gy;
+    while (cella(gx, y - 1) === 's') y--;
+    return o.y - y * T;
+  }
+  // balestra pronta a tirare (per il bagliore di avviso)
+  function caricaBalestra(b) {
+    const tt = (((G.tempo + b.fase) % FRECCE.ogni) + FRECCE.ogni) % FRECCE.ogni;
+    return tt > FRECCE.ogni - FRECCE.avviso;
+  }
 
   // solido per Tino (e per gli agenti)
   function solido(gx, gy) {
@@ -440,6 +535,7 @@
     G.scritte.length = 0;
     G.bollette.length = 0;
     G.onde.length = 0;
+    G.frecce.length = 0;
     G.uscite = {};
     G.scossa = 0;
     G.cartello = null;
@@ -608,12 +704,15 @@
 
   // muove un corpo (Tino o agente) con le collisioni; restituisce se tocca terra
   function muovi(o, dt, scendi = false) {
+    // le sabbie mobili inghiottono solo Tino: per gli altri sono pavimento
+    const tino = o === G.tino;
+    const duro = tino ? solido : (gx, gy) => solido(gx, gy) || cella(gx, gy) === 's';
     // orizzontale
     o.x += o.vx * dt;
     let s = scatola(o);
     for (let gy = Math.floor(s.t / T); gy <= Math.floor((s.b - 0.01) / T); gy++) {
       for (let gx = Math.floor(s.l / T); gx <= Math.floor((s.r - 0.01) / T); gx++) {
-        if (!solido(gx, gy)) continue;
+        if (!duro(gx, gy)) continue;
         if (o.vx > 0) o.x = gx * T - o.w / 2 - 0.01;
         else if (o.vx < 0) o.x = (gx + 1) * T + o.w / 2 + 0.01;
         else o.x += (o.x < gx * T + T / 2) ? -1 : 1; // spinto fuori (es. porta che si chiude)
@@ -623,17 +722,38 @@
     }
     // verticale
     const piediPrima = o.y;
+    const vy = o.vy;
     o.y += o.vy * dt;
     s = scatola(o);
     let terra = false;
     for (let gy = Math.floor(s.t / T); gy <= Math.floor((s.b - 0.01) / T); gy++) {
       for (let gx = Math.floor(s.l / T); gx <= Math.floor((s.r - 0.01) / T); gx++) {
         const sottile = cella(gx, gy) === '-' && o.vy > 0 && piediPrima <= gy * T + 0.5 && !scendi;
-        if (!solido(gx, gy) && !sottile) continue;
+        if (!duro(gx, gy) && !sottile) continue;
+        // celle in cui era già dentro prima di muoversi (es. schiacciato da una lastra): non lo spostano
+        if (o.vy > 0 && gy * T < piediPrima - 1) continue;
+        if (o.vy < 0 && (gy + 1) * T > piediPrima - o.h + 1) continue;
         if (o.vy > 0) { o.y = gy * T; terra = true; }
         else if (o.vy < 0) o.y = (gy + 1) * T + o.h + 0.01;
         o.vy = 0;
         s = scatola(o);
+      }
+    }
+    // piattaforme mobili: Tino ci atterra sopra (da sotto si passa, con ↓ si scende)
+    if (tino) {
+      o.piattaforma = null;
+      if (vy >= 0 && !scendi) {
+        for (const p of G.liv.piattaforme) {
+          if (s.r - 6 <= p.x || s.l + 6 >= p.x + p.w) continue;
+          // (anche se tocca già terra a metà: così la lastra se lo porta dietro)
+          if (piediPrima <= Math.max(p.y, p.y - p.dy) + 0.5 && o.y >= p.y - 0.5) {
+            const y0 = o.y;
+            o.y = p.y;
+            if (urtaMuri(o)) { o.y = y0; continue; } // schiacciato contro il soffitto: la lastra passa
+            o.vy = 0; terra = true; o.piattaforma = p;
+            break;
+          }
+        }
       }
     }
     return terra;
@@ -763,15 +883,20 @@
 
     // ---- libero: corre, salta, cade
     if (ix) t.dir = ix;
+    // nelle sabbie mobili si affonda piano, si corre a fatica e si salta un po' meno
+    const prof = sabbia(t);
+    const inSabbia = prof >= 0;
+    if (inSabbia) t.aTerra = true;
     const acc = t.aTerra ? FISICA.accTerra : FISICA.accAria;
-    const meta = ix * FISICA.vel;
+    const meta = ix * FISICA.vel * (inSabbia ? SABBIA.lento : 1);
     if (ix) t.vx += clamp(meta - t.vx, -acc * dt, acc * dt);
     else if (t.aTerra) t.vx += clamp(-t.vx, -FISICA.attrito * dt, FISICA.attrito * dt);
     else t.vx += clamp(-t.vx, -FISICA.accAria * 0.5 * dt, FISICA.accAria * 0.5 * dt);
 
     if (t.aTerra) t.coyote = FISICA.coyote; else t.coyote = Math.max(0, t.coyote - dt);
+    if (inSabbia) t.vx = clamp(t.vx, -FISICA.vel * SABBIA.lento, FISICA.vel * SABBIA.lento);
     if (t.buffer > 0 && t.coyote > 0) {
-      t.vy = -FISICA.salto;
+      t.vy = -FISICA.salto * (inSabbia ? 1 - SABBIA.salto * clamp(prof / SABBIA.fondo, 0, 1) : 1);
       t.aTerra = false;
       t.coyote = 0;
       t.buffer = 0;
@@ -782,9 +907,16 @@
     if (t.vy < -200 && !comandi.su && !comandi.salta) t.vy += FISICA.gravita * 0.9 * dt;
 
     t.vy = Math.min(FISICA.cadutaMax, t.vy + FISICA.gravita * dt);
+    if (inSabbia && t.vy > 0) t.vy = SABBIA.affonda;
     const eraATerra = t.aTerra;
     const vyPrima = t.vy;
     t.aTerra = muovi(t, dt, comandi.giu);
+    if (sabbia(t) >= 0) {
+      t.aTerra = true;
+      t.quotaCaduta = t.y;
+      if (!inSabbia) { schizziSabbia(t.x, Math.floor(t.y / T) * T, vyPrima > 300 ? 12 : 5); suoni.sabbia(); }
+      else if (Math.abs(t.vx) > 20 && Math.random() < dt * 8) schizziSabbia(t.x, t.y - prof, 1);
+    }
     if (!t.aTerra) t.quotaCaduta = Math.min(t.quotaCaduta, t.y);
     if (t.aTerra && !eraATerra) {
       if (vyPrima > 300) { t.schiaccia = 0.14; polvere(t.x, t.y, 6); suoni.atterra(); }
@@ -909,6 +1041,12 @@
         coriandoli(b.x, b.y, '#ffffff', 6);
       }
     }
+    for (const f of G.frecce) {
+      if (f.x > colpo.l - 20 && f.x < colpo.r + 20 && f.y > colpo.t - 10 && f.y < colpo.b + 10) {
+        f.via = true;
+        coriandoli(f.x, f.y, '#c9a25a', 6);
+      }
+    }
     const c = G.liv.capo;
     if (c && sovrappone(colpo, scatola(c))) {
       if (c.stato === 'dorme') svegliaCapo(c);
@@ -976,6 +1114,8 @@
     }
     // baratro
     if (t.y - t.h > G.liv.lh * T + 40) { trappola(); return; }
+    // sabbie mobili: affondato troppo
+    if (sabbia(t) > SABBIA.fondo) { scritta(t.x, t.y - 90, 'Glu glu!', '#ffe680'); trappola(); return; }
 
     // cesoie: colpiscono se sono quasi chiuse
     for (const c of G.liv.cesoie) {
@@ -1073,10 +1213,12 @@
       const gx = Math.floor(t.x / T), gy = Math.floor((t.y - 1) / T);
       let trappoleVicine = false;
       for (let x = gx - 1; x <= gx + 1; x++) {
-        if (cella(x, gy) === '^' || cella(x, gy) === 'v' || cella(x, gy + 1) === '.') trappoleVicine = true;
+        if (cella(x, gy) === '^' || cella(x, gy) === 'v' || cella(x, gy + 1) === '.' || cella(x, gy + 1) === 's') trappoleVicine = true;
       }
       if (G.liv.cesoie.some((c) => Math.abs(c.x - gx) <= 1 && Math.abs(c.y - gy) <= 1)) trappoleVicine = true;
       if (G.liv.stalattiti.some((k) => Math.abs(k.x - t.x) < STALATTITI.vista + 20 && k.y0 < t.y)) trappoleVicine = true;
+      if (G.frecce.some((f) => Math.abs(f.y - (t.y - t.h / 2)) < T)) trappoleVicine = true;
+      if (G.liv.massi.some((m) => m.stato === 'rotola' && Math.abs(m.x - t.x) < 5 * T && Math.abs(m.y - t.y) < 2 * T)) trappoleVicine = true;
       const c = G.liv.capo;
       const agentiVicini = G.liv.agenti.some((a) => a.stato !== 'stordito' && Math.abs(a.x - t.x) < 3 * T && Math.abs(a.y - t.y) < T)
         || (c && attivo(c) && Math.abs(c.x - t.x) < 4 * T && Math.abs(c.y - t.y) < 2 * T);
@@ -1393,7 +1535,7 @@
     c.dir = segno(dx);
     const fy = Math.floor((c.y - 1) / T);
     const gx = Math.floor((c.x + c.dir * (c.w / 2 + 6)) / T);
-    const appoggio = (x, y) => solido(x, y) || cella(x, y) === '-';
+    const appoggio = (x, y) => solido(x, y) || cella(x, y) === '-' || cella(x, y) === 's';
     let azione = 'cammina';
     if (solido(gx, fy)) {
       // gradino alto un quadretto, con spazio sopra: lo salta
@@ -1403,7 +1545,8 @@
       for (let k = 1; k <= 3; k++) if (appoggio(gx + c.dir * k, fy + 1)) { largo = k; break; }
       let fondo = false;
       for (let y = fy + 2; y < fy + 6; y++) if (appoggio(gx, y)) { fondo = true; break; }
-      if (fondo && ty > c.y + T / 2) azione = 'cammina';           // scende
+      // scende se Tino è più in basso, o se sta seguendo l'uscita di Tino verso un'altra stanza
+      if (fondo && (ty > c.y + T / 2 || !vedeTino)) azione = 'cammina';
       else if (largo && largo <= 2 && !solido(gx + c.dir * largo, fy)) azione = 'salta';
       else azione = 'fermo';                                         // burrone troppo largo
     }
@@ -1422,7 +1565,7 @@
       c.vx = c.dir * CAPO.velSalto;
       c.aTerra = false;
       c.saltando = true;
-    } else c.vx = c.dir * CAPO.vel;
+    } else c.vx = c.dir * CAPO.vel * (sottoPiedi(c).some(([x, y]) => cella(x, y) === 's') ? CAPO.sabbia : 1);
   }
 
   // l'ispettore pesa: quando atterra trema tutto e le stalattiti vicine cadono
@@ -1473,6 +1616,142 @@
     suoni.bolletta();
   }
 
+  // ---------------------------------------------------------------- tempio sepolto
+  // piattaforme mobili: si spostano prima di Tino e se lo portano dietro
+  function aggiornaPiattaforme() {
+    const t = G.tino;
+    for (const p of G.liv.piattaforme) {
+      const v = posPiattaforma(p, G.tempo);
+      const x = p.asse === 'x' ? v : p.x, y = p.asse === 'y' ? v : p.y;
+      p.dx = x - p.x; p.dy = y - p.y;
+      p.x = x; p.y = y;
+      if (t.piattaforma !== p || t.stato !== 'libero' || !t.aTerra) continue;
+      const x0 = t.x, y0 = t.y;
+      t.x += p.dx;
+      if (urtaMuri(t)) t.x = x0;
+      t.y += p.dy;
+      if (urtaMuri(t)) { t.y = y0; t.piattaforma = null; }
+    }
+  }
+
+  function rompiMasso(m, polverone = true) {
+    m.stato = 'rotto';
+    m.t = MASSI.ritorno;
+    m.vx = m.vy = 0;
+    if (!polverone) return;
+    if (stanzaDi(m.x, m.y).x === G.stanza.x && stanzaDi(m.x, m.y).y === G.stanza.y) suoni.crollo();
+    const col = G.liv.mondo.sasso;
+    for (let i = 0; i < 12; i++) {
+      G.particelle.push({ x: m.x + (Math.random() - 0.5) * 40, y: m.y + (Math.random() - 0.5) * 40, vx: (Math.random() - 0.5) * 300, vy: -Math.random() * 300, vita: 0.8, colore: i % 2 ? col[0] : col[2], r: 4 + Math.random() * 6, peso: 1 });
+    }
+  }
+
+  function aggiornaMassi(dt) {
+    const t = G.tino;
+    const vivo = t.stato !== 'ko' && t.stato !== 'uscita';
+    const R = MASSI.raggio;
+    for (const m of G.liv.massi) {
+      m.appare = Math.max(0, m.appare - dt);
+      if (m.stato === 'fermo') {
+        // parte quando Tino è nella stanza, abbastanza vicino e non più in alto del masso
+        const stessa = m.stanzaX === G.stanza.x && m.stanzaY === G.stanza.y;
+        const dx = t.x - m.x0;
+        if (stessa && vivo && Math.abs(dx) < MASSI.vista && t.y > m.y0 && (!m.verso || segno(dx) === m.verso && Math.abs(dx) > T)) {
+          m.stato = 'trema';
+          m.t = MASSI.trema;
+          m.dir = segno(t.x - m.x0) || -1;
+        }
+      } else if (m.stato === 'trema') {
+        m.t -= dt;
+        if (m.t <= 0) { m.stato = 'rotola'; m.vx = m.dir * MASSI.vel; suoni.masso(); }
+      } else if (m.stato === 'rotola') {
+        // avanti: contro un muro si rompe
+        m.x += m.vx * dt;
+        const fx = Math.floor((m.x + m.dir * R) / T);
+        let muro = false;
+        for (let gy = Math.floor((m.y - R + 6) / T); gy <= Math.floor((m.y + R - 6) / T); gy++) if (solido(fx, gy)) muro = true;
+        if (muro) { m.x -= m.vx * dt; rompiMasso(m); continue; }
+        // giù: cade dai bordi e continua a rotolare
+        const prima = m.y + R;
+        m.vy = Math.min(FISICA.cadutaMax, m.vy + MASSI.gravita * dt);
+        m.y += m.vy * dt;
+        const gy = Math.floor((m.y + R) / T);
+        for (let gx = Math.floor((m.x - R + 8) / T); gx <= Math.floor((m.x + R - 8) / T); gx++) {
+          const c = cella(gx, gy);
+          if (solido(gx, gy) || ((c === '-' || c === 's') && prima <= gy * T + 1)) {
+            if (m.vy > 500) { polvere(m.x, gy * T, 8); if (stanzaDi(m.x, m.y).x === G.stanza.x) G.scossa = Math.max(G.scossa, 0.12); }
+            m.y = gy * T - R; m.vy = 0;
+            break;
+          }
+        }
+        m.rot += (m.vx * dt) / R;
+        if (m.vy === 0 && Math.random() < dt * 10) polvere(m.x - m.dir * R * 0.6, m.y + R, 1);
+        // nelle sabbie mobili sprofonda
+        if (m.vy === 0 && cella(Math.floor(m.x / T), Math.floor((m.y + R + 1) / T)) === 's') {
+          schizziSabbia(m.x, m.y + R, 10);
+          rompiMasso(m, false);
+          continue;
+        }
+        if (m.y - R > G.liv.lh * T + 40) { rompiMasso(m, false); continue; }
+        // colpi
+        const disco = { l: m.x - R + 6, r: m.x + R - 6, t: m.y - R + 6, b: m.y + R };
+        if (vivo && sovrappone(disco, scatola(t))) colpito(m.dir);
+        for (const a of G.liv.agenti) {
+          if (a.stato !== 'stordito' && sovrappone(disco, scatola(a))) { a.stato = 'stordito'; a.t = AGENTI.stordito; a.vx = 0; suoni.stordito(); }
+        }
+        const c = G.liv.capo;
+        if (c && attivo(c) && sovrappone(disco, scatola(c))) { fermaCapo(c, m.dir, 'trappola'); rompiMasso(m); }
+      } else if (m.stato === 'rotto') {
+        m.t -= dt;
+        if (m.t <= 0) { m.stato = 'fermo'; m.x = m.x0; m.y = m.y0; m.rot = 0; m.appare = 0.4; }
+      }
+    }
+  }
+
+  function aggiornaFrecce(dt) {
+    const t = G.tino;
+    for (const b of G.liv.balestre) {
+      const n = Math.floor((G.tempo + b.fase) / FRECCE.ogni);
+      if (b.ultimo === null) b.ultimo = n;
+      if (n === b.ultimo) continue;
+      b.ultimo = n;
+      // tira solo se Tino è nella stanza
+      if (Math.floor(b.x / COL) !== G.stanza.x || Math.floor(b.y / RIG) !== G.stanza.y) continue;
+      if (t.stato === 'ko' || t.stato === 'uscita') continue;
+      G.frecce.push({ x: b.x * T + T / 2 + b.dir * (T / 2 + 6), y: b.y * T + T / 2, vx: b.dir * FRECCE.vel });
+      suoni.freccia();
+    }
+    const s = scatola(t);
+    const piccola = { l: s.l + 4, r: s.r - 4, t: s.t + 8, b: s.b - 2 };
+    for (const f of G.frecce) {
+      f.x += f.vx * dt;
+      const punta = f.x + segno(f.vx) * 22;
+      if (solido(Math.floor(punta / T), Math.floor(f.y / T)) || Math.floor(f.x / L) !== G.stanza.x) {
+        f.via = true;
+        coriandoli(punta, f.y, '#c9a25a', 4);
+        continue;
+      }
+      const asta = { l: f.x - 22, r: f.x + 22, t: f.y - 4, b: f.y + 4 };
+      if (t.stato !== 'ko' && t.stato !== 'uscita' && sovrappone(asta, piccola)) {
+        f.via = true;
+        colpito(segno(f.vx));
+        continue;
+      }
+      for (const a of G.liv.agenti) {
+        if (a.stato !== 'stordito' && sovrappone(asta, scatola(a))) { a.stato = 'stordito'; a.t = AGENTI.stordito; a.vx = 0; f.via = true; suoni.stordito(); }
+      }
+      const c = G.liv.capo;
+      if (c && attivo(c) && sovrappone(asta, scatola(c))) { fermaCapo(c, segno(f.vx), 'trappola'); f.via = true; }
+    }
+    G.frecce = G.frecce.filter((f) => !f.via);
+  }
+
+  function schizziSabbia(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      G.particelle.push({ x: x + (Math.random() - 0.5) * 30, y, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 160, vita: 0.6, colore: Math.random() < 0.5 ? '#e8c77a' : '#c99a4a', r: 2 + Math.random() * 3, peso: 0.8 });
+    }
+  }
+
   // ---------------------------------------------------------------- effetti
   function polvere(x, y, n) {
     for (let i = 0; i < n; i++) {
@@ -1512,6 +1791,7 @@
       G.stanza = s;
       G.bollette.length = 0;
       G.onde.length = 0;
+      G.frecce.length = 0;
       chiaveStanza = '';
     }
   }
@@ -1520,11 +1800,14 @@
   function aggiorna(dt) {
     G.tempo += dt;
     fronti();
+    aggiornaPiattaforme(dt);
     aggiornaTino(dt);
     aggiornaOggetti(dt);
     aggiornaAgenti(dt);
     aggiornaCapo(dt);
     aggiornaOnde(dt);
+    aggiornaMassi(dt);
+    aggiornaFrecce(dt);
     controllaTino(dt);
     G.scossa = Math.max(0, G.scossa - dt);
     aggiornaStanza();
@@ -1576,28 +1859,68 @@
     g.setTransform(k, 0, 0, k, 0, 0);
     const ox = G.stanza.x * COL, oy = G.stanza.y * RIG;
 
+    const M = G.liv.mondo;
+    const rgb = (c, v, k) => `rgb(${c[0] + v * k[0]},${c[1] + v * k[1]},${c[2] + v * k[2]})`;
     // sfondo: mattoni scuri
-    g.fillStyle = '#3a2b1e';
+    g.fillStyle = M.sfondo;
     g.fillRect(0, 0, L, A);
     for (let y = 0; y < A; y += 30) {
       const sfas = (y / 30) % 2 ? 30 : 0;
       for (let x = -60 + sfas; x < L; x += 60) {
         const v = caso(x + ox * 7, y + oy * 5);
-        g.fillStyle = `rgb(${68 + v * 18},${52 + v * 14},${38 + v * 10})`;
+        g.fillStyle = rgb(M.mattoneSfondo, v, [18, 14, 10]);
         g.fillRect(x + 2, y + 2, 56, 26);
       }
     }
-    // radici che pendono dall'alto
-    g.strokeStyle = 'rgba(40,26,14,0.7)';
-    g.lineCap = 'round';
-    for (let i = 0; i < 7; i++) {
-      const x = caso(i, ox + oy, 3) * L;
-      const lung = 60 + caso(i, ox, 9) * 140;
-      g.lineWidth = 3 + caso(i, oy, 4) * 4;
-      g.beginPath();
-      g.moveTo(x, 0);
-      g.bezierCurveTo(x + 20, lung * 0.4, x - 20, lung * 0.7, x + 6, lung);
-      g.stroke();
+    if (M.tempio) {
+      // geroglifici di ghiande incisi nei mattoni dello sfondo
+      for (let y = 0; y < A; y += 30) {
+        const sfas = (y / 30) % 2 ? 30 : 0;
+        for (let x = -60 + sfas; x < L; x += 60) {
+          const v = caso(x * 3 + ox, y * 7 + oy, 5);
+          if (v < 0.87) continue;
+          geroglifico(g, x + 30, y + 15, Math.floor(v * 100) % 4, 'rgba(30,18,6,0.6)', 0.8);
+        }
+      }
+      // colonne sullo sfondo
+      for (let i = 0; i < 3; i++) {
+        const x = 150 + i * 330 + (caso(i, ox + oy, 2) - 0.5) * 80;
+        const larga = 54;
+        const gr = g.createLinearGradient(x - larga / 2, 0, x + larga / 2, 0);
+        gr.addColorStop(0, 'rgba(52,36,14,0.95)'); gr.addColorStop(0.35, 'rgba(116,86,44,0.95)'); gr.addColorStop(1, 'rgba(44,30,12,0.95)');
+        g.fillStyle = gr;
+        g.fillRect(x - larga / 2, 0, larga, A);
+        g.strokeStyle = 'rgba(40,26,10,0.45)';
+        g.lineWidth = 2;
+        for (let k = 1; k < 4; k++) { g.beginPath(); g.moveTo(x - larga / 2 + k * larga / 4, 0); g.lineTo(x - larga / 2 + k * larga / 4, A); g.stroke(); }
+        g.fillStyle = 'rgba(96,70,34,0.95)';
+        for (let yy = 40 + caso(i, ox, 7) * 60; yy < A; yy += 180) {
+          g.fillRect(x - larga / 2 - 8, yy, larga + 16, 14);
+          g.fillStyle = 'rgba(60,42,18,0.9)'; g.fillRect(x - larga / 2 - 8, yy + 14, larga + 16, 4);
+          g.fillStyle = 'rgba(96,70,34,0.95)';
+        }
+      }
+      // raggi di luce dall'alto
+      for (let i = 0; i < 2; i++) {
+        const x = caso(i, ox * 3 + oy, 11) * L;
+        const gr = g.createLinearGradient(x, 0, x + 120, A);
+        gr.addColorStop(0, 'rgba(255,226,150,0.16)'); gr.addColorStop(1, 'rgba(255,226,150,0)');
+        g.fillStyle = gr;
+        g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 50, 0); g.lineTo(x + 230, A); g.lineTo(x + 120, A); g.closePath(); g.fill();
+      }
+    } else {
+      // radici che pendono dall'alto
+      g.strokeStyle = 'rgba(40,26,14,0.7)';
+      g.lineCap = 'round';
+      for (let i = 0; i < 7; i++) {
+        const x = caso(i, ox + oy, 3) * L;
+        const lung = 60 + caso(i, ox, 9) * 140;
+        g.lineWidth = 3 + caso(i, oy, 4) * 4;
+        g.beginPath();
+        g.moveTo(x, 0);
+        g.bezierCurveTo(x + 20, lung * 0.4, x - 20, lung * 0.7, x + 6, lung);
+        g.stroke();
+      }
     }
 
     // muri e pavimenti
@@ -1607,7 +1930,7 @@
         const c = cella(X, Y);
         const x = gx * T, y = gy * T;
         if (c === '#') {
-          g.fillStyle = '#8f7656';
+          g.fillStyle = M.muro;
           g.fillRect(x, y, T, T);
           // mattoni grandi
           for (let r = 0; r < 2; r++) {
@@ -1615,28 +1938,47 @@
             for (let m = -1; m < 2; m++) {
               const mx = x + sf + m * 60;
               const v = caso(X * 2 + m, Y * 2 + r);
-              g.fillStyle = `rgb(${140 + v * 26},${114 + v * 22},${82 + v * 16})`;
+              g.fillStyle = rgb(M.mattone, v, [26, 22, 16]);
               const l = Math.max(x + 1.5, mx + 1.5), rr = Math.min(x + T - 1.5, mx + 58.5);
               if (rr > l) g.fillRect(l, y + r * 30 + 1.5, rr - l, 27);
             }
           }
+          if (M.tempio && caso(X, Y, 8) > 0.82 && cella(X, Y - 1) === '#') geroglifico(g, x + 30, y + 30, Math.floor(caso(X, Y, 9) * 4), 'rgba(90,60,20,0.7)', 1.3);
           if (cella(X, Y - 1) !== '#') {
-            g.fillStyle = '#b89d78';
+            g.fillStyle = M.cima;
             g.fillRect(x, y, T, 9);
-            g.fillStyle = '#5f8a3a';
-            for (let i = 0; i < 4; i++) if (caso(X, Y, i) > 0.55) g.fillRect(x + i * 15 + 2, y - 3, 9, 5);
+            if (M.erba) {
+              g.fillStyle = M.erba;
+              for (let i = 0; i < 4; i++) if (caso(X, Y, i) > 0.55) g.fillRect(x + i * 15 + 2, y - 3, 9, 5);
+            } else {
+              // mucchietti di sabbia
+              g.fillStyle = '#e8c77a';
+              for (let i = 0; i < 3; i++) if (caso(X, Y, i + 4) > 0.6) { g.beginPath(); g.ellipse(x + 10 + i * 20, y + 1, 10, 4, 0, Math.PI, 0); g.fill(); }
+            }
           }
           if (cella(X, Y + 1) !== '#') { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x, y + T - 6, T, 6); }
           if (cella(X - 1, Y) !== '#' && X > 0) { g.fillStyle = 'rgba(255,240,210,0.18)'; g.fillRect(x, y, 4, T); }
           if (cella(X + 1, Y) !== '#' && X < G.liv.lw - 1) { g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(x + T - 5, y, 5, T); }
         } else if (c === '-') {
-          g.fillStyle = '#7a4a22';
-          g.fillRect(x, y, T, 12);
-          g.fillStyle = '#a06a35';
-          g.fillRect(x, y, T, 4);
-          g.fillStyle = '#5a3418';
-          g.fillRect(x + 8, y + 12, 6, 14);
-          g.fillRect(x + T - 14, y + 12, 6, 14);
+          if (M.tempio) {
+            // lastra di pietra con le mensole
+            g.fillStyle = '#c9a25a';
+            g.fillRect(x, y, T, 12);
+            g.fillStyle = '#f0d58c';
+            g.fillRect(x, y, T, 4);
+            g.fillStyle = '#7a5a2a';
+            g.fillRect(x, y + 12, T, 3);
+            g.beginPath(); g.moveTo(x + 6, y + 15); g.lineTo(x + 20, y + 15); g.lineTo(x + 8, y + 28); g.closePath(); g.fill();
+            g.beginPath(); g.moveTo(x + T - 6, y + 15); g.lineTo(x + T - 20, y + 15); g.lineTo(x + T - 8, y + 28); g.closePath(); g.fill();
+          } else {
+            g.fillStyle = '#7a4a22';
+            g.fillRect(x, y, T, 12);
+            g.fillStyle = '#a06a35';
+            g.fillRect(x, y, T, 4);
+            g.fillStyle = '#5a3418';
+            g.fillRect(x + 8, y + 12, 6, 14);
+            g.fillRect(x + T - 14, y + 12, 6, 14);
+          }
         } else if (c === '^') {
           for (let i = 0; i < 3; i++) {
             const sx = x + 4 + i * 18;
@@ -1650,12 +1992,66 @@
         }
       }
     }
+    // balestre: una faccia di pietra con la bocca da cui escono le frecce
+    for (const b of G.liv.balestre) {
+      if (Math.floor(b.x / COL) !== G.stanza.x || Math.floor(b.y / RIG) !== G.stanza.y) continue;
+      const x = (b.x - ox) * T, y = (b.y - oy) * T;
+      g.fillStyle = '#8a6430';
+      tondoSu(g, x + 6, y + 6, T - 12, T - 12, 10); g.fill();
+      g.strokeStyle = '#4a3010'; g.lineWidth = 3; g.stroke();
+      // ghianda stilizzata
+      g.fillStyle = '#5a3c14';
+      g.beginPath(); g.ellipse(x + 30, y + 22, 13, 6, 0, Math.PI, 0); g.fill();
+      g.fillRect(x + 28, y + 11, 4, 6);
+      g.strokeStyle = '#5a3c14'; g.lineWidth = 2.5;
+      g.beginPath(); g.ellipse(x + 30, y + 30, 9, 10, 0, 0, Math.PI); g.stroke();
+      // bocca sul lato da cui tira
+      const bx = b.dir > 0 ? x + T - 10 : x + 10;
+      g.fillStyle = '#1a0f05';
+      g.beginPath(); g.ellipse(bx, y + 30, 6, 5, 0, 0, Math.PI * 2); g.fill();
+    }
     // vignettatura
     const v = g.createRadialGradient(L / 2, A / 2, A * 0.35, L / 2, A / 2, L * 0.65);
     v.addColorStop(0, 'rgba(0,0,0,0)');
     v.addColorStop(1, 'rgba(0,0,0,0.45)');
     g.fillStyle = v;
     g.fillRect(0, 0, L, A);
+  }
+
+  // piccoli geroglifici del tempio: ghianda, occhio, onde, foglia
+  function geroglifico(g, x, y, tipo, colore, k) {
+    g.save();
+    g.translate(x, y);
+    g.scale(k, k);
+    g.strokeStyle = colore;
+    g.fillStyle = colore;
+    g.lineWidth = 2;
+    g.lineCap = 'round';
+    g.beginPath();
+    if (tipo === 0) {
+      // ghianda: cappello e corpo
+      g.ellipse(0, -3, 8, 4, 0, Math.PI, 0); g.fill();
+      g.beginPath(); g.moveTo(0, -7); g.lineTo(0, -10); g.stroke();
+      g.beginPath(); g.ellipse(0, 1, 6, 7, 0, 0, Math.PI); g.stroke();
+    } else if (tipo === 1) {
+      g.ellipse(0, 0, 9, 5, 0, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc(0, 0, 2.5, 0, Math.PI * 2); g.fill();
+    } else if (tipo === 2) {
+      g.moveTo(-9, -3); g.lineTo(-4, 3); g.lineTo(0, -3); g.lineTo(4, 3); g.lineTo(9, -3); g.stroke();
+    } else {
+      g.moveTo(0, 8); g.quadraticCurveTo(-9, 0, 0, -8); g.quadraticCurveTo(9, 0, 0, 8); g.stroke();
+      g.beginPath(); g.moveTo(0, 8); g.lineTo(0, -5); g.stroke();
+    }
+    g.restore();
+  }
+  function tondoSu(g, x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
   }
 
   function disegna() {
@@ -1801,6 +2197,56 @@
         }
       }
     }
+    // piattaforme mobili: lastre dorate (quelle verticali con la guida)
+    for (const p of liv.piattaforme) {
+      if (!visibile(p.x, p.y, 200)) continue;
+      if (p.asse === 'y') {
+        ctx.strokeStyle = 'rgba(40,26,10,0.5)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([8, 8]);
+        for (const xx of [p.x + 10, p.x + p.w - 10]) { ctx.beginPath(); ctx.moveTo(xx, p.min); ctx.lineTo(xx, p.max + PIATTAFORME.spesso); ctx.stroke(); }
+        ctx.setLineDash([]);
+      } else {
+        ctx.fillStyle = 'rgba(40,26,10,0.35)';
+        ctx.fillRect(p.min + 8, p.y + PIATTAFORME.spesso / 2 - 2, p.max - p.min + p.w - 16, 4);
+      }
+      const gr = ctx.createLinearGradient(0, p.y, 0, p.y + PIATTAFORME.spesso);
+      gr.addColorStop(0, '#ffe7a0'); gr.addColorStop(0.4, '#e0a93e'); gr.addColorStop(1, '#8a5a18');
+      ctx.fillStyle = gr;
+      tondo(p.x + 1, p.y, p.w - 2, PIATTAFORME.spesso, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#4a3010'; ctx.lineWidth = 2; ctx.stroke();
+      for (let i = 0; i < p.n; i++) geroglifico(ctx, p.x + T / 2 + i * T, p.y + 9, (p.gx + i) % 4, 'rgba(90,50,10,0.8)', 0.6);
+    }
+    // balestre che stanno per tirare
+    for (const b of liv.balestre) {
+      const x = b.x * T + T / 2 + b.dir * 20, y = b.y * T + T / 2;
+      if (!visibile(x, y) || !caricaBalestra(b)) continue;
+      const bag = ctx.createRadialGradient(x, y, 1, x, y, 22);
+      bag.addColorStop(0, 'rgba(255,120,60,0.85)'); bag.addColorStop(1, 'rgba(255,120,60,0)');
+      ctx.fillStyle = bag;
+      ctx.fillRect(x - 22, y - 22, 44, 44);
+    }
+    // frecce
+    for (const f of G.frecce) {
+      const d = segno(f.vx);
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.scale(d, 1);
+      ctx.strokeStyle = '#5a3c14'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(14, 0); ctx.stroke();
+      ctx.fillStyle = '#d9dde3'; ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(12, -6); ctx.lineTo(12, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#c0392b';
+      ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-28, -6); ctx.lineTo(-14, -1); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-28, 6); ctx.lineTo(-14, 1); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    // massi
+    for (const m of liv.massi) {
+      if (m.stato === 'rotto' || !visibile(m.x, m.y)) continue;
+      disegnaMasso(m, tm);
+    }
     // cesoie: due lame che si chiudono a tempo
     for (const c of liv.cesoie) {
       const x = c.x * T + T / 2, alto = (c.y - 1) * T, basso = (c.y + 1) * T;
@@ -1831,12 +2277,13 @@
     // stalattiti
     for (const k of liv.stalattiti) {
       if (!visibile(k.x, k.y0)) continue;
-      ctx.fillStyle = '#5f4b37';
+      const sasso = liv.mondo.sasso;
+      ctx.fillStyle = sasso[2];
       ctx.beginPath(); ctx.ellipse(k.x, k.y0 + 2, 18, 7, 0, 0, Math.PI * 2); ctx.fill();
       if (k.stato === 'rotta') continue;
       const tr = k.stato === 'trema' ? (Math.random() - 0.5) * 5 : 0;
-      ctx.fillStyle = '#8a7357';
-      ctx.strokeStyle = '#3e3226';
+      ctx.fillStyle = sasso[0];
+      ctx.strokeStyle = sasso[1];
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(k.x - 15 + tr, k.y);
@@ -1891,9 +2338,9 @@
       const x = c.x * T, y = c.y * T;
       if (!visibile(x, y)) continue;
       const tr = c.stato === 'trema' ? (Math.random() - 0.5) * 4 : 0;
-      ctx.fillStyle = '#a58a66';
+      ctx.fillStyle = liv.mondo.crepa[0];
       ctx.fillRect(x + tr, y, T, 22);
-      ctx.fillStyle = '#b89d78';
+      ctx.fillStyle = liv.mondo.crepa[1];
       ctx.fillRect(x + tr, y, T, 7);
       ctx.strokeStyle = '#3e3226';
       ctx.lineWidth = 2;
@@ -1966,6 +2413,12 @@
       ctx.restore();
     }
     disegnaTino(tm);
+    // sabbie mobili: davanti a Tino, così si vede che affonda
+    for (let gy = G.stanza.y * RIG; gy < (G.stanza.y + 1) * RIG; gy++) {
+      for (let gx = G.stanza.x * COL; gx < (G.stanza.x + 1) * COL; gx++) {
+        if (cella(gx, gy) === 's') disegnaSabbia(gx, gy, tm);
+      }
+    }
     // particelle
     for (const p of G.particelle) {
       ctx.globalAlpha = clamp(p.vita * 2, 0, 1);
@@ -2027,6 +2480,53 @@
     ctx.fillStyle = '#3b2a1a';
     ctx.textAlign = 'center';
     righe.forEach((r, i) => ctx.fillText(r, L / 2, y0 + 32 + i * 27));
+  }
+
+  function disegnaMasso(m, tm) {
+    const R = MASSI.raggio;
+    const tr = m.stato === 'trema' ? (Math.random() - 0.5) * 4 : 0;
+    ctx.save();
+    if (m.appare > 0) ctx.globalAlpha = 1 - m.appare / 0.4;
+    ctx.translate(m.x + tr, m.y);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(0, R - 2, R * 0.9, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(m.rot);
+    const gr = ctx.createRadialGradient(-8, -10, 4, 0, 0, R);
+    gr.addColorStop(0, '#e6dfd0'); gr.addColorStop(0.6, '#9e9483'); gr.addColorStop(1, '#4f483c');
+    ctx.fillStyle = gr;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#2e2a22'; ctx.lineWidth = 3; ctx.stroke();
+    // crepe e una ghianda incisa (girano col masso)
+    ctx.strokeStyle = 'rgba(40,36,28,0.7)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-R + 4, 4); ctx.lineTo(-10, 8); ctx.lineTo(-6, 18); ctx.moveTo(12, -R + 6); ctx.lineTo(8, -10); ctx.stroke();
+    geroglifico(ctx, 4, 0, 0, 'rgba(40,36,28,0.85)', 1.1);
+    ctx.restore();
+  }
+
+  function disegnaSabbia(gx, gy, tm) {
+    const x = gx * T, y = gy * T;
+    const cima = cella(gx, gy - 1) !== 's';
+    ctx.fillStyle = '#c99a4a';
+    ctx.fillRect(x, y + (cima ? 6 : 0), T, T - (cima ? 6 : 0));
+    // vortici che girano piano
+    ctx.strokeStyle = 'rgba(120,80,30,0.45)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 2; i++) {
+      const cx = x + 18 + i * 26, cy = y + 30 + (i ? 8 : -2);
+      const a = tm * (i ? 1.6 : -1.3) + gx;
+      ctx.beginPath(); ctx.arc(cx, cy, 9, a, a + 4); ctx.stroke();
+    }
+    if (cima) {
+      ctx.fillStyle = '#e8c77a';
+      ctx.beginPath();
+      ctx.moveTo(x, y + T * 0.4);
+      for (let i = 0; i <= 6; i++) ctx.lineTo(x + i * 10, y + 6 + Math.sin(tm * 2.5 + (gx * 6 + i) * 0.9) * 2.5);
+      ctx.lineTo(x + T, y + T * 0.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,240,200,0.5)';
+      for (let i = 0; i < 3; i++) ctx.fillRect(x + 8 + i * 18 + Math.sin(tm + i + gx) * 3, y + 10 + i * 4, 6, 2);
+    }
   }
 
   function disegnaFiamma(x, y, s, tm) {
@@ -2196,7 +2696,9 @@
     const agentiVicini = G.liv.agenti.some((a) => a.stato !== 'stordito' && a.stanzaX === G.stanza.x && a.stanzaY === G.stanza.y && Math.abs(a.x - t.x) < 4 * T && Math.abs(a.y - t.y) < 2 * T);
     const c = G.liv.capo;
     const capoVicino = c && attivo(c) && Math.abs(c.x - t.x) < 6 * T && Math.abs(c.y - t.y) < 3 * T;
-    if (t.ceci === 1 || agentiVicini || capoVicino) return 'arrabbiato';
+    const massoVicino = G.liv.massi.some((m) => m.stato !== 'fermo' && m.stato !== 'rotto' && Math.abs(m.x - t.x) < 4 * T && Math.abs(m.y - t.y) < 2 * T);
+    const frecciaVicina = G.frecce.some((f) => (t.x - f.x) * f.vx > 0 && Math.abs(f.x - t.x) < 3 * T && Math.abs(f.y - (t.y - t.h / 2)) < T);
+    if (t.ceci === 1 || agentiVicini || capoVicino || massoVicino || frecciaVicina) return 'arrabbiato';
     return 'normale';
   }
 
@@ -2342,8 +2844,16 @@
     const n = window.LIVELLI.length;
     let livelli = '';
     if (n > 1) {
-      livelli = '<div class="livelli">' + window.LIVELLI.map((l, i) =>
-        `<button class="bottone secondario" type="button" data-azione="gioca" data-livello="${i}" ${i < s ? '' : 'disabled'} title="${l.nome}">${i + 1}</button>`).join('') + '</div>';
+      // i livelli divisi per mondo
+      const mondi = [];
+      window.LIVELLI.forEach((l, i) => {
+        const m = l.mondo || 1;
+        if (!mondi.length || mondi[mondi.length - 1].m !== m) mondi.push({ m, livelli: [] });
+        mondi[mondi.length - 1].livelli.push(
+          `<button class="bottone secondario" type="button" data-azione="gioca" data-livello="${i}" ${i < s ? '' : 'disabled'} title="${l.nome}">${i + 1}</button>`);
+      });
+      livelli = '<div class="livelli">' + mondi.map((g) =>
+        `<div class="mondo"><span>${(MONDI[g.m] || {}).nome || ''}</span>${g.livelli.join('')}</div>`).join('') + '</div>';
     }
     const continua = Math.min(s, n) - 1;
     apriPannello(`
@@ -2465,5 +2975,6 @@
     passo(dt = PASSO) { aggiorna(dt); },
     premi(nuovi) { for (const k in comandi) comandi[k] = !!nuovi[k]; },
     cella, solido, ROBIVECCHI, chiusura, spuntoniFuori,
+    MASSI, FRECCE, SABBIA, PIATTAFORME, posPiattaforma, sabbia, caricaBalestra,
   };
 })();

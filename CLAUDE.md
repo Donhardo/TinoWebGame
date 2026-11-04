@@ -111,7 +111,9 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   gli agenti si stordiscono e si evitano, non si eliminano; sul telefono si gioca
   solo in orizzontale (in verticale compare l'invito a girarlo).
 - **Livelli**: in `livelli.js`, griglie di stanze da 16 × 9 quadretti (60 px,
-  schermo logico 960 × 540), scritte a caratteri; la legenda è in cima al file.
+  schermo logico 960 × 540), scritte a caratteri; la legenda è in cima al file
+  (anche quella dei caratteri del tempio). Tino è alto poco più di un quadretto:
+  sopra il suo pavimento servono due quadretti liberi.
   Testi dei cartelli in due versioni (`pc` e `touch`).
 - **Ceci = energia**: si parte con 3, si perde un cece se colpiti, presi da un
   agente, sugli spuntoni, cadendo in un baratro o da troppo in alto (si riparte
@@ -125,7 +127,8 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   salta sempre.
 - **Robivecchi**: premi nascosti in punti difficili (cifre 1-7 nella mappa:
   moneta, bottone, graffetta, fiocco, carta di credito scaduta, tappo a corona,
-  biglia; disegni in
+  biglia; nel mondo 2 `8 9 0 & $ @ %`: dado, ditale, linguetta di lattina,
+  rocchetto di filo, biglietto del tram, conchiglia, mozzicone di matita; disegni in
   `assets/oggetti/robivecchi/`). Salvati in `localStorage` appena presi; si
   vedono nella barra (quelli del livello), a fine livello e nel menu (collezione).
 - **Chiavi e lucchetti**: `k` chiave (si accumulano, si vedono nella barra),
@@ -155,7 +158,34 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
 - **Tino vestito**: cappello e frusta sono in `assets/tino/accessori/` e si
   appoggiano alle foto originali con la tabella `POSE` (posizione e rotazione
   per ogni espressione); anteprima in `bozzetti/avventura.html`.
-- **Tabelle** in cima a `gioco.js`: `FISICA`, `FRUSTA`, `AGENTI`, `VITA`, `PORTA`.
+- **Tabelle** in cima a `gioco.js`: `FISICA`, `FRUSTA`, `AGENTI`, `VITA`, `PORTA`;
+  per il mondo 2 `MASSI`, `FRECCE`, `SABBIA`, `PIATTAFORME`; `MONDI` (nome, colori e
+  decorazioni di ogni mondo: il livello sceglie il suo con `mondo: N` in `livelli.js`,
+  e `preparaStanza` disegna radici o tempio di conseguenza; nel menu i livelli sono
+  divisi per mondo).
+- **Trappole del tempio** (mondo 2):
+  - `M` masso: quando Tino è nella stanza, a meno di 8 quadretti e non più in alto,
+    trema e rotola verso di lui (220, più lento di Tino); cade dai bordi, si rompe
+    contro i muri, affonda nella sabbia e ricompare dopo 2,5 s. `(` e `)` rotolano
+    solo a sinistra / a destra, quando Tino li ha superati da quella parte (per gli
+    inseguimenti). Si salta; stordisce gli agenti e ferma l'ispettore.
+  - `>` `<` balestra: un muro con la faccia di pietra che tira frecce a tempo (ogni
+    2,2 s, ogni balestra sfasata di 0,55 s rispetto alla precedente) solo se Tino è
+    nella stanza; la bocca si illumina prima del tiro. Frecce all'altezza del corpo
+    vanno saltate, quelle un quadretto più in alto passano sopra la testa (ma
+    colpiscono chi salta). La frusta le spazza via; fermano anche l'ispettore.
+  - `s` sabbie mobili: solo Tino ci affonda (48 px/s, a 50 px perde un cece e
+    riparte dal punto sicuro); dentro corre al 45% e salta un po' meno, quindi si
+    attraversano saltando di continuo. Per agenti e ispettore sono pavimento (il
+    capo ci cammina al 45%). Vanno messe al livello del pavimento.
+  - `=` `H` piattaforme mobili (lastre d'oro, `==` larga due quadretti), orizzontali
+    e verticali: vanno e vengono fino al primo muro o al segno invisibile `:`, con
+    una sosta agli estremi; si sale da sotto, con ↓ si scende, portano Tino con sé.
+    Partono andando verso destra / verso il basso dalla posizione della mappa.
+    Sopra una lastra verticale servono due quadretti liberi fino al soffitto
+    (altrimenti Tino viene lasciato e la lastra gli passa attraverso).
+  - L'ispettore capo non usa le lastre; quando segue Tino in un'altra stanza scende
+    anche dai gradini (prima scendeva solo se Tino era più in basso).
 - **Livelli fatti** (mondo 1, le radici della quercia):
   1 "Le radici della Quercia" (4 stanze, guida; moneta in fondo al baratro);
   2 "Il pozzo delle radici" (3 × 2 stanze: agente col timbro, due pioli,
@@ -172,29 +202,48 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   gradini (deviazione per la biglia), fino al burrone da passare col piolo,
   dove il capo resta bloccato; ~29 s al giocatore perfetto, con il capo a
   150-250 px nei punti critici; testo di fine mondo nel campo `fine`).
+- **Livelli fatti** (mondo 2, il tempio sepolto):
+  5 "L'ingresso del tempio" (5 stanze: frecce basse da saltare e balestra su cui
+  arrampicarsi, primo masso da saltare, piolo sugli spuntoni col dado da prendere
+  allungando la frusta, masso che insegue fino a un buco da saltare, frecce alte e
+  basse con il ditale su una sporgenza; ~26 s al giocatore perfetto);
+  6 "Le sabbie mobili" (5 stanze: sabbia da attraversare saltando, piolo sopra la
+  sabbia con la linguetta su una sporgenza alta, chiave su una colonna da prendere
+  saltando fuori dalla sabbia, agente col retino e lucchetto, pavimento crepato
+  sopra la sabbia con agente col timbro e piolo verso il rocchetto, masso che
+  affonda nella sabbia; ~25 s);
+  7 "Il salone delle colonne" (5 stanze: lastra orizzontale sulla sabbia, lastra
+  verticale con le frecce da spazzare con la frusta e il biglietto in alto a
+  sinistra, lastre sopra gli spuntoni con la conchiglia, due lastre verticali con
+  la chiave in cima e frecce, lastra sugli spuntoni e lucchetto; ~50 s);
+  8 "Il ritorno dell'ispettore" (6 stanze: sabbia, masso da saltare, ufficio
+  dell'ispettore, poi inseguimento tra sabbia e frecce (che lo fermano), masso che
+  scende da una sporgenza, salta in testa a Tino e poi colpisce l'ispettore,
+  matita su una sporgenza, blocco alto due quadretti dove il capo resta a terra
+  mentre Tino aspetta la lastra; ~33 s, con il capo a ~150 px sul blocco).
 - **Prove automatiche**: `window.ghiandaDOro` (`G.test = true`, `avvia`,
   `premi`, `passo`) per far giocare un livello a un giocatore simulato con una
   sequenza di mosse (vai, salta, sali, frusta, dondola regolando la corda).
   Tutti i livelli si completano con tutti i robivecchi (il copione del 4 salta
   da solo le onde del megafono); le porte del 2 e del 3
-  richiedono ~3,5–4 s a un giocatore perfetto (impostate a 5 s).
+  richiedono ~3,5–4 s a un giocatore perfetto (impostate a 5 s). I livelli 5-8
+  sono stati completati senza perdere ceci; per i copioni del tempio servono anche
+  "attraversa la sabbia saltando" e le attese su massi, frecce
+  (`caricaBalestra`, `G.frecce`) e lastre (`G.liv.piattaforme`, `posPiattaforma`).
 - **Piano dei mondi** (approvato): 3 mondi da 4 livelli, ognuno con colori,
   sfondi e una trappola propria; l'ultimo livello di ogni mondo ha l'ispettore
   capo, che non si stordisce e va seminato.
   1. *Le radici della Quercia* (gallerie di terra e pietra): completo, livelli 1-4.
   2. *Il tempio sepolto* (sabbia, pietre dorate, colonne, geroglifici di
-     ghiande): massi che rotolano, frecce dai muri, sabbie mobili, piattaforme
-     mobili.
+     ghiande): completo, livelli 5-8 (massi, frecce, sabbie mobili, piattaforme mobili).
   3. *Gli uffici della Tari* (scrivanie, archivi, timbri giganti): nastri
      trasportatori di pratiche, cassetti-piattaforma, fotocopiatrici che
      sparano fogli, più agenti; alla fine liberazione di Gino e Ghianda d'Oro.
-- **Prossimo passo (deciso)**: nella prossima sessione si fa il mondo 2,
-  *Il tempio sepolto*, per intero: tutti e 4 i livelli (5-8) in una volta.
-  Servono colori e sfondo propri del mondo (sabbia, pietre dorate, colonne,
-  geroglifici di ghiande; oggi `preparaStanza` disegna solo le radici, quindi
-  va scelto lo stile in base al mondo del livello), le trappole nuove (massi
-  che rotolano, frecce dai muri, sabbie mobili, piattaforme mobili), nuovi
-  robivecchi e, nel livello 8, un nuovo inseguimento dell'ispettore capo.
+- **Prossimo passo (deciso)**: nella prossima sessione si fa il mondo 3,
+  *Gli uffici della Tari*, per intero (livelli 9-12, in una volta): una voce
+  nuova in `MONDI` con colori e decorazioni (scrivanie, archivi, timbri), le
+  trappole nuove, nuovi robivecchi, l'ultimo inseguimento dell'ispettore e la
+  liberazione di Gino (finale del gioco, con il testo di fine nel menu).
   Ogni livello va verificato col giocatore simulato (tutti i robivecchi).
 - **Provarlo su Claude**: per far provare un ramo non ancora unito si pubblica
   il gioco come artifact. In una cartella di appoggio vanno `index.html` (senza

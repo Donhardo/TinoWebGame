@@ -24,5 +24,6 @@ e poi si visita http://localhost:8000.
   Contro il computer (livelli sempre più difficili) o in due sulla stessa tastiera.
 - **Tino e la Ghianda d'Oro** (`games/ghianda-d-oro/`): avventura nel tempio con
   cappello e frusta, tra trappole, porte e agenti della Tari, per salvare Gino.
-  Primo mondo completo (4 livelli, l'ultimo con l'inseguimento dell'ispettore capo).
+  Due mondi completi, le radici della Quercia e il tempio sepolto (8 livelli; l'ultimo
+  di ogni mondo con l'inseguimento dell'ispettore capo).
   I livelli si modificano in `games/ghianda-d-oro/livelli.js`.
