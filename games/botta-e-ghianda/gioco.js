@@ -823,66 +823,123 @@
     disegnaMessaggio();
   }
 
-  // Il campo è una tovaglia da picnic a quadretti, con briciole, una macchia
-  // di marmellata e una fila di formiche al posto della linea di metà campo.
-  const QUADRETTO = 60;
-  const BRICIOLE = (() => {
-    // posizioni fisse ma sparse (generatore pseudo-casuale con seme)
-    let seme = 7;
-    const rnd = () => { seme = (seme * 16807) % 2147483647; return seme / 2147483647; };
-    return Array.from({ length: 26 }, () => ({
-      u: 150 + rnd() * (L - 300), v: 30 + rnd() * (S - 60), r: 1.6 + rnd() * 2.6, a: rnd() * Math.PI,
-    })).filter((c) => Math.abs(c.u - L / 2) > 30);
-  })();
-  const MARMELLATE = [
-    { u: 300, v: 395, r: 34, forma: 1 },
-    { u: 668, v: 140, r: 18, forma: 2 },
-  ];
+  // Il campo è un prato con qualche fiorellino; al posto della linea di metà
+  // campo c'è una fila di formiche. Il prato si disegna una volta sola su una
+  // tela a parte e poi si copia a ogni fotogramma.
+  let prato = null;
+  let pratoScala = 0;
+
+  function casualeConSeme(seme) {
+    return () => { seme = (seme * 16807) % 2147483647; return seme / 2147483647; };
+  }
+
+  function preparaPrato(k) {
+    const c = document.createElement('canvas');
+    c.width = Math.round(L * k);
+    c.height = Math.round(S * k);
+    const g = c.getContext('2d');
+    g.scale(k, k);
+    const rnd = casualeConSeme(11);
+
+    // fondo
+    const fondo = g.createLinearGradient(0, 0, L, S);
+    fondo.addColorStop(0, '#7cc45c');
+    fondo.addColorStop(1, '#64b04a');
+    g.fillStyle = fondo;
+    g.fillRect(0, 0, L, S);
+
+    // chiazze più chiare e più scure, per non sembrare un campo da gioco
+    for (let i = 0; i < 70; i++) {
+      const x = rnd() * L, y = rnd() * S, r = 30 + rnd() * 90;
+      const chiara = rnd() < 0.5;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, chiara ? 'rgba(200, 235, 120, 0.16)' : 'rgba(40, 100, 30, 0.14)');
+      gr.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      g.fillStyle = gr;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+
+    // fili d'erba
+    g.lineCap = 'round';
+    const verdi = ['rgba(52, 120, 40, 0.45)', 'rgba(70, 145, 50, 0.5)', 'rgba(150, 205, 95, 0.45)', 'rgba(40, 95, 30, 0.35)'];
+    for (let i = 0; i < 2600; i++) {
+      const x = rnd() * L, y = rnd() * S;
+      const a = rnd() * Math.PI * 2;
+      const l = 4 + rnd() * 7;
+      g.strokeStyle = verdi[i % verdi.length];
+      g.lineWidth = 1 + rnd() * 1.2;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + Math.cos(a + 0.5) * l * 0.6, y + Math.sin(a + 0.5) * l * 0.6, x + Math.cos(a) * l, y + Math.sin(a) * l);
+      g.stroke();
+    }
+
+    // fiorellini, lontani dalla fila di formiche
+    const tipi = ['margherita', 'margherita', 'giallo', 'rosa', 'trifoglio'];
+    let messi = 0;
+    for (let tentativi = 0; messi < 30 && tentativi < 400; tentativi++) {
+      const x = 30 + rnd() * (L - 60), y = 25 + rnd() * (S - 50);
+      const tipo = tipi[Math.floor(rnd() * tipi.length)];
+      const ruota = rnd() * Math.PI;
+      const dim = 0.8 + rnd() * 0.5;
+      if (Math.abs(x - L / 2) < 45) continue;
+      disegnaFiore(g, x, y, tipo, ruota, dim);
+      messi++;
+    }
+
+    // ombreggiatura ai bordi
+    const vign = g.createRadialGradient(L / 2, S / 2, S * 0.45, L / 2, S / 2, L * 0.62);
+    vign.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vign.addColorStop(1, 'rgba(20, 60, 15, 0.28)');
+    g.fillStyle = vign;
+    g.fillRect(0, 0, L, S);
+    return c;
+  }
+
+  function disegnaFiore(g, x, y, tipo, ruota, dim) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(ruota);
+    g.scale(dim, dim);
+    g.shadowColor = 'rgba(20, 60, 15, 0.35)';
+    g.shadowBlur = 3;
+    g.shadowOffsetY = 1.5;
+    if (tipo === 'trifoglio') {
+      g.fillStyle = '#4f9e3a';
+      for (let i = 0; i < 3; i++) {
+        const a = i * (Math.PI * 2 / 3);
+        g.beginPath();
+        g.arc(Math.cos(a) * 4, Math.sin(a) * 4, 4.2, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.restore();
+      return;
+    }
+    const petali = tipo === 'margherita' ? 8 : 5;
+    const colore = tipo === 'margherita' ? '#ffffff' : tipo === 'giallo' ? '#ffd83a' : '#f59ac0';
+    const lungo = tipo === 'margherita' ? 6.5 : 4.5;
+    g.fillStyle = colore;
+    for (let i = 0; i < petali; i++) {
+      const a = i * (Math.PI * 2 / petali);
+      g.beginPath();
+      g.ellipse(Math.cos(a) * lungo * 0.6, Math.sin(a) * lungo * 0.6, lungo * 0.62, lungo * 0.3, a, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.shadowColor = 'transparent';
+    g.fillStyle = tipo === 'margherita' ? '#f5c518' : tipo === 'giallo' ? '#e89a10' : '#fff1a8';
+    g.beginPath();
+    g.arc(0, 0, tipo === 'margherita' ? 2.8 : 2, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  }
 
   function disegnaCampo() {
-    // tovaglia
-    ctx.fillStyle = '#fff9f0';
-    ctx.fillRect(0, 0, L, S);
-    ctx.fillStyle = 'rgba(214, 52, 52, 0.42)';
-    for (let u = 0; u < L; u += QUADRETTO) ctx.fillRect(u, 0, QUADRETTO / 2, S);
-    for (let v = 0; v < S; v += QUADRETTO) ctx.fillRect(0, v, L, QUADRETTO / 2);
-
-    // orlo cucito
-    ctx.strokeStyle = 'rgba(150, 28, 28, 0.55)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([9, 7]);
-    ctx.strokeRect(10, 10, L - 20, S - 20);
-    ctx.setLineDash([]);
-
-    // marmellata di albicocca
-    for (const m of MARMELLATE) {
-      ctx.save();
-      ctx.translate(m.u, m.v);
-      ctx.beginPath();
-      for (let i = 0; i <= 24; i++) {
-        const a = (i / 24) * Math.PI * 2;
-        const r = m.r * (1 + 0.18 * Math.sin(a * 3 + m.forma) + 0.1 * Math.sin(a * 5 + m.forma * 2));
-        if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-        else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-      }
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(240, 150, 30, 0.7)';
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.beginPath();
-      ctx.ellipse(-m.r * 0.3, -m.r * 0.3, m.r * 0.22, m.r * 0.12, -0.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+    const k = Math.min(2, Math.max(1, scala * Math.min(window.devicePixelRatio || 1, 2)));
+    if (!prato || Math.abs(k - pratoScala) > 0.25) {
+      prato = preparaPrato(k);
+      pratoScala = k;
     }
-
-    // briciole
-    ctx.fillStyle = '#c9934a';
-    for (const c of BRICIOLE) {
-      ctx.beginPath();
-      ctx.ellipse(c.u, c.v, c.r, c.r * 0.7, c.a, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
+    ctx.drawImage(prato, 0, 0, L, S);
     disegnaFormiche();
   }
 
@@ -1073,7 +1130,7 @@
     const n = stato.scia.length;
     for (let i = 0; i < n; i++) {
       const s = stato.scia[i];
-      ctx.fillStyle = `rgba(150, 95, 40, ${0.04 + 0.18 * (i / n)})`;
+      ctx.fillStyle = `rgba(255, 244, 214, ${0.05 + 0.25 * (i / n)})`;
       ctx.beginPath();
       ctx.arc(s.x, s.y, R * (0.4 + 0.5 * (i / n)), 0, Math.PI * 2);
       ctx.fill();
@@ -1136,7 +1193,7 @@
         ctx.arc(q.x, q.y, q.r * (0.4 + 0.6 * k), 0, Math.PI * 2);
         ctx.fill();
       } else if (q.tipo === 'fumo') {
-        ctx.fillStyle = 'rgba(150, 150, 150, 0.55)';
+        ctx.fillStyle = 'rgba(235, 235, 235, 0.7)';
         ctx.beginPath();
         ctx.arc(q.x, q.y, q.r * (1.6 - 0.6 * k), 0, Math.PI * 2);
         ctx.fill();
@@ -1175,7 +1232,7 @@
       const [x, y] = pos[lato];
       const piena = g.carica >= 1;
       ctx.save();
-      ctx.fillStyle = 'rgba(90, 45, 20, 0.4)';
+      ctx.fillStyle = 'rgba(25, 60, 20, 0.45)';
       arrotondato(x - 3, y - 3, W + 6, H + 6, (H + 6) / 2);
       ctx.fill();
       if (g.carica > 0) {
@@ -1282,7 +1339,7 @@
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
     ctx.lineWidth = 10;
-    ctx.strokeStyle = 'rgba(122, 40, 20, 0.85)';
+    ctx.strokeStyle = 'rgba(40, 85, 30, 0.85)';
     ctx.strokeText(m.testo, 0, 0);
     ctx.fillStyle = '#fff8ec';
     ctx.fillText(m.testo, 0, 0);
