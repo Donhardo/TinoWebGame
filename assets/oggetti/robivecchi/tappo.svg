@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="t" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#ffd7a0"/><stop offset="0.5" stop-color="#e2762a"/><stop offset="1" stop-color="#8e3a0e"/>
+    </radialGradient>
+  </defs>
+  <!-- tappo a corona: bordo seghettato -->
+  <path d="M32 4 L37 9 L44 6 L46 13 L53 14 L52 21 L58 25 L54 31 L58 38 L52 41 L53 49 L46 49 L44 57 L37 54 L32 60 L27 54 L20 57 L18 49 L11 49 L12 41 L6 38 L10 31 L6 25 L12 21 L11 14 L18 13 L20 6 L27 9 Z" fill="url(#t)" stroke="#5c240a" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="17" fill="#f4e6c8" stroke="#8e3a0e" stroke-width="2.5"/>
+  <!-- stella al centro -->
+  <path d="M32 21 L35 29 L43 29 L37 34 L39 42 L32 37 L25 42 L27 34 L21 29 L29 29 Z" fill="#c0392b" stroke="#6e1a12" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M15 20 Q19 12 27 10" fill="none" stroke="#fff4dc" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+</svg>
