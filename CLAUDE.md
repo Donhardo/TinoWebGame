@@ -123,8 +123,9 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   lasca finché Tino non si stacca dal suolo. Lontano dai pioli schiocca, stordisce
   gli agenti e spazza via le bollette. ↑ salta solo fuori dalla frusta; Spazio
   salta sempre.
-- **Robivecchi**: premi nascosti in punti difficili (cifre 1-5 nella mappa:
-  moneta, bottone, graffetta, fiocco, carta di credito scaduta; disegni in
+- **Robivecchi**: premi nascosti in punti difficili (cifre 1-7 nella mappa:
+  moneta, bottone, graffetta, fiocco, carta di credito scaduta, tappo a corona,
+  biglia; disegni in
   `assets/oggetti/robivecchi/`). Salvati in `localStorage` appena presi; si
   vedono nella barra (quelli del livello), a fine livello e nel menu (collezione).
 - **Chiavi e lucchetti**: `k` chiave (si accumulano, si vedono nella barra),
@@ -137,7 +138,20 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   baratri. Il fumetto dei cartelli va in basso se Tino è nella metà alta.
 - **Agenti della Tari** (`assets/agenti-tari/`, disegni vettoriali con scritta
   TARI già in tracciati): col retino (ronda e insegue), col timbro (lancia
-  bollette), ispettore capo (per la fine dei mondi, non ancora usato).
+  bollette), ispettore capo (fine dei mondi).
+- **Ispettore capo** (`I` nella mappa, tabella `CAPO`, un solo capo per livello):
+  dorme alla scrivania e si sveglia quando Tino lo supera. Insegue Tino anche
+  da una stanza all'altra: va dove Tino è uscito (`G.uscite`). È più lento di
+  Tino (220 contro 250) ma ignora gli spuntoni. Salta gradini di un quadretto
+  e buchi di al massimo due; davanti a muri più alti o burroni più larghi si
+  ferma e minaccia. La frusta e le trappole (cesoie, stalattiti) lo fermano
+  solo per 0,6 s, poi è immune per un po'; non si stordisce. Col megafono
+  lancia onde "MULTA!" da saltare, se Tino è sullo stesso piano. Quando
+  atterra fa tremare lo schermo e cadere le stalattiti vicine. Pesa: il
+  pavimento crepato sotto di lui crolla prima, e se cade nel baratro
+  ricompare dall'ultimo punto in cui toccava terra. Se Tino riparte da un
+  punto di partenza più avanti della scrivania, il capo arriva dal bordo
+  sinistro della stanza dopo 4 s.
 - **Tino vestito**: cappello e frusta sono in `assets/tino/accessori/` e si
   appoggiano alle foto originali con la tabella `POSE` (posizione e rotazione
   per ogni espressione); anteprima in `bozzetti/avventura.html`.
@@ -151,24 +165,43 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   accorciando la frusta, strada alta o bassa con due agenti, porta di 5 s,
   corridoio di tre cesoie e spuntoni a scomparsa, chiave su una sporgenza sotto
   una stalattite, porta col lucchetto, frusta dal pavimento che crolla;
-  fiocco e carta di credito; ~43 s).
+  fiocco e carta di credito; ~43 s); 4 "L'ispettore capo" (6 stanze in fila:
+  piolo sopra gli spuntoni con il tappo da prendere accorciando la frusta,
+  agente col retino, ufficio con l'ispettore che dorme, poi inseguimento tra
+  gradino, spuntoni a scomparsa, cesoie, pavimento crepato e una scala di tre
+  gradini (deviazione per la biglia), fino al burrone da passare col piolo,
+  dove il capo resta bloccato; ~29 s al giocatore perfetto, con il capo a
+  150-250 px nei punti critici; testo di fine mondo nel campo `fine`).
 - **Prove automatiche**: `window.ghiandaDOro` (`G.test = true`, `avvia`,
   `premi`, `passo`) per far giocare un livello a un giocatore simulato con una
   sequenza di mosse (vai, salta, sali, frusta, dondola regolando la corda).
-  Tutti i livelli si completano con tutti i robivecchi; le porte del 2 e del 3
+  Tutti i livelli si completano con tutti i robivecchi (il copione del 4 salta
+  da solo le onde del megafono); le porte del 2 e del 3
   richiedono ~3,5–4 s a un giocatore perfetto (impostate a 5 s).
 - **Piano dei mondi** (approvato): 3 mondi da 4 livelli, ognuno con colori,
   sfondi e una trappola propria; l'ultimo livello di ogni mondo ha l'ispettore
   capo, che non si stordisce e va seminato.
-  1. *Le radici della Quercia* (gallerie di terra e pietra): livelli 1-3 fatti.
+  1. *Le radici della Quercia* (gallerie di terra e pietra): completo, livelli 1-4.
   2. *Il tempio sepolto* (sabbia, pietre dorate, colonne, geroglifici di
      ghiande): massi che rotolano, frecce dai muri, sabbie mobili, piattaforme
      mobili.
   3. *Gli uffici della Tari* (scrivanie, archivi, timbri giganti): nastri
      trasportatori di pratiche, cassetti-piattaforma, fotocopiatrici che
      sparano fogli, più agenti; alla fine liberazione di Gino e Ghianda d'Oro.
-- **Prossimo passo**: livello 4 delle radici con il primo inseguimento
-  dell'ispettore capo (`assets/agenti-tari/ispettore-capo.svg` è già pronto).
+- **Prossimo passo (deciso)**: nella prossima sessione si fa il mondo 2,
+  *Il tempio sepolto*, per intero: tutti e 4 i livelli (5-8) in una volta.
+  Servono colori e sfondo propri del mondo (sabbia, pietre dorate, colonne,
+  geroglifici di ghiande; oggi `preparaStanza` disegna solo le radici, quindi
+  va scelto lo stile in base al mondo del livello), le trappole nuove (massi
+  che rotolano, frecce dai muri, sabbie mobili, piattaforme mobili), nuovi
+  robivecchi e, nel livello 8, un nuovo inseguimento dell'ispettore capo.
+  Ogni livello va verificato col giocatore simulato (tutti i robivecchi).
+- **Provarlo su Claude**: per far provare un ramo non ancora unito si pubblica
+  il gioco come artifact. In una cartella di appoggio vanno `index.html` (senza
+  doctype, html, head e body, con i percorsi `../../` tolti), `css/sito.css`,
+  `stile.css`, `livelli.js`, `gioco.js` (con `BASE = 'assets/'` e
+  `leggi('sbloccati', N)` per sbloccare tutti i livelli) e la cartella
+  `assets/`. Si pubblica con `files` e `root`.
 - **Copioni del giocatore simulato**: i copioni usati per verificare i
   livelli non sono nel repository; per un livello nuovo vanno riscritti
   (passi vai, salta, sali, frusta, dondola) e fatti girare con Playwright.

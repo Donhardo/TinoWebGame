@@ -56,12 +56,30 @@
     3: { nome: 'Graffetta', file: 'graffetta' },
     4: { nome: 'Fiocco', file: 'fiocco' },
     5: { nome: 'Carta di credito scaduta', file: 'carta-scaduta' },
+    6: { nome: 'Tappo a corona', file: 'tappo' },
+    7: { nome: 'Biglia', file: 'biglia' },
   };
   const PORTA = { tempo: 6, apre: 2.5, chiude: 0.9 };
   // Trappole a tempo (secondi)
   const CESOIE = { aperte: 1.4, chiude: 0.12, chiuse: 0.48, apre: 0.2, sfasa: 0.7 };
   const SPUNTONI = { periodo: 2.4, su: 1.1, avviso: 0.35 };
   const STALATTITI = { vista: 110, trema: 0.35, gravita: 2000, ritorno: 5 };
+  // Ispettore capo: non si stordisce, insegue Tino di stanza in stanza e va seminato
+  const CAPO = {
+    vel: 220,          // più lento di Tino (250), ma non si ferma davanti alle trappole
+    salto: 720,        // sale su gradini di un quadretto...
+    velSalto: 240,     // ...e salta buchi larghi al massimo due quadretti
+    sveglia: 0.8,      // secondi tra il risveglio e l'inseguimento
+    risveglio: 2.5 * T, // si sveglia quando Tino lo supera di tanto così
+    ahi: 0.6,          // la frusta (o una trappola) lo ferma per un attimo...
+    immune: 1.4,       // ...poi per un po' non si ferma più
+    festa: 1.4,        // dopo aver preso Tino
+    festaTrappola: 2.2, // se Tino cade in una trappola vicino a lui, ride e aspetta
+    caduta: 2.5,       // se cade in un baratro ricompare dopo un po'
+    arriva: 4,         // ripartendo da un punto di partenza, arriva dopo tanto così
+    pesante: 0.3,      // il pavimento crepato sotto di lui crolla prima
+    megafono: { ogni: 3.6, carica: 0.5, vel: 380, min: 3 * T, max: 9 * T },
+  };
 
   // Cappello e frusta sulle foto di Tino: [x, y, larghezza, rotazione] in pixel dell'immagine.
   const POSE = {
@@ -109,6 +127,7 @@
     frusta: 'tino/accessori/frusta.svg',
     retino: 'agenti-tari/agente-retino.svg',
     timbro: 'agenti-tari/agente-timbro.svg',
+    capo: 'agenti-tari/ispettore-capo.svg',
     cece: 'oggetti/cece.svg',
     chiave: 'oggetti/chiave.svg',
   };
@@ -188,6 +207,7 @@
     }
     figure.retino = rasterizza(img.retino, 100);
     figure.timbro = rasterizza(img.timbro, 100);
+    figure.capo = rasterizza(img.capo, 132);
     figure.cece = rasterizza(img.cece, 30);
     figure.chiave = rasterizza(img.chiave, 40);
     for (const k of Object.keys(ROBIVECCHI)) figure['robi' + k] = rasterizza(img['robi' + k], 40);
@@ -230,6 +250,9 @@
     lucchetto: () => { suono(220, 0.08, 'square', 0.05); setTimeout(() => suono(330, 0.25, 'triangle', 0.06, 660), 90); },
     robivecchio: () => [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => suono(f, 0.1, 'triangle', 0.07), i * 70)),
     vittoria: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => suono(f, 0.16, 'triangle', 0.08), i * 120)),
+    capo: () => { suono(220, 0.12, 'sawtooth', 0.05, 330); setTimeout(() => suono(330, 0.18, 'sawtooth', 0.05, 200), 120); },
+    megafono: () => { suono(260, 0.3, 'sawtooth', 0.05, 520); suono(130, 0.3, 'square', 0.03, 260); },
+    tonfo: () => suono(70, 0.25, 'square', 0.06, 35),
     ko: () => [392, 330, 262, 196].forEach((f, i) => setTimeout(() => suono(f, 0.2, 'sawtooth', 0.045), i * 150)),
   };
 
@@ -254,6 +277,9 @@
     particelle: [],
     scritte: [],
     bollette: [],
+    onde: [],            // onde del megafono dell'ispettore capo
+    uscite: {},          // da dove Tino è uscito da ogni stanza (l'ispettore lo segue)
+    scossa: 0,
     cartello: null,
     tempoMorte: 0,
   };
@@ -282,7 +308,7 @@
       stanzeW: colStanze, stanzeH: righeStanze,
       porte: [], pulsanti: [], crepe: [], ceci: [], pioli: [], torce: [], cartelli: [],
       controlli: [], agenti: [], robivecchi: [], uscita: null, partenza: null, ceciTotali: 0,
-      cesoie: [], stalattiti: [], chiavi: [], serrature: [],
+      cesoie: [], stalattiti: [], chiavi: [], serrature: [], capo: null,
     };
     for (let y = 0; y < lh; y++) griglia.push(new Array(lw).fill('.'));
     let nCartello = 0;
@@ -316,6 +342,14 @@
             else if (ch === 'U') liv.uscita = { x: cx, y: (gy + 1) * T };
             else if (ch === 'T') liv.partenza = { x: cx, y: (gy + 1) * T };
             else if (ch === 'i') liv.cartelli.push({ x: cx, y: (gy + 1) * T, testo: (def.cartelli || [])[nCartello++] || { pc: '', touch: '' } });
+            else if (ch === 'I') {
+              liv.capo = {
+                x: cx, y: (gy + 1) * T, vx: 0, vy: 0, dir: 1, w: 50, h: 112,
+                stato: 'dorme', t: 0, immune: 0, passo: 0, aTerra: true, saltando: false,
+                megafono: CAPO.megafono.ogni * 0.5, bloccato: 0, scrivania: { x: cx, y: (gy + 1) * T },
+                terra: { x: cx, y: (gy + 1) * T }, stanzaX: sx,
+              };
+            }
             else if (ch === 'r' || ch === 't') {
               liv.agenti.push({
                 tipo: ch === 'r' ? 'retino' : 'timbro',
@@ -405,8 +439,22 @@
     G.particelle.length = 0;
     G.scritte.length = 0;
     G.bollette.length = 0;
+    G.onde.length = 0;
+    G.uscite = {};
+    G.scossa = 0;
     G.cartello = null;
     G.raccolti = 0;
+    // ripartendo da un punto di partenza più avanti della scrivania, l'ispettore arriva da dietro
+    const c = G.liv.capo;
+    if (c && daControllo && Math.floor(daControllo.x / L) > c.stanzaX) {
+      c.stato = 'arriva';
+      c.t = CAPO.arriva;
+      // entra dal bordo sinistro della stanza (o, se lì non c'è pavimento, dalla torcia)
+      c.x = Math.max(Math.floor(daControllo.x / L) * L + 30, daControllo.x - 3 * T);
+      c.y = daControllo.y;
+      if (urtaMuri(c) || !solido(Math.floor(c.x / T), Math.floor(c.y / T))) c.x = daControllo.x;
+      c.terra = { x: c.x, y: c.y };
+    }
     elTitolo.textContent = `${n + 1}. ${G.liv.def.nome}`;
     aggiornaStanza(true);
     aggiornaCeci();
@@ -861,6 +909,11 @@
         coriandoli(b.x, b.y, '#ffffff', 6);
       }
     }
+    const c = G.liv.capo;
+    if (c && sovrappone(colpo, scatola(c))) {
+      if (c.stato === 'dorme') svegliaCapo(c);
+      else fermaCapo(c, t.dir, 'frusta');
+    }
   }
 
   function colpito(dir, causa) {
@@ -890,6 +943,13 @@
     t.quotaCaduta = t.y;
     aggiornaStanza();
     colpito(0, 'trappola');
+    const c = G.liv.capo;
+    if (c && attivo(c) && Math.abs(c.x - t.x) < 5 * T && Math.abs(c.y - t.y) < 2 * T) {
+      c.stato = 'festa';
+      c.t = CAPO.festaTrappola;
+      c.vx = 0;
+      scritta(c.x, c.y - c.h - 20, 'Ah ah ah!', '#ff8a7a');
+    }
   }
 
   function koTino() {
@@ -1017,7 +1077,9 @@
       }
       if (G.liv.cesoie.some((c) => Math.abs(c.x - gx) <= 1 && Math.abs(c.y - gy) <= 1)) trappoleVicine = true;
       if (G.liv.stalattiti.some((k) => Math.abs(k.x - t.x) < STALATTITI.vista + 20 && k.y0 < t.y)) trappoleVicine = true;
-      const agentiVicini = G.liv.agenti.some((a) => a.stato !== 'stordito' && Math.abs(a.x - t.x) < 3 * T && Math.abs(a.y - t.y) < T);
+      const c = G.liv.capo;
+      const agentiVicini = G.liv.agenti.some((a) => a.stato !== 'stordito' && Math.abs(a.x - t.x) < 3 * T && Math.abs(a.y - t.y) < T)
+        || (c && attivo(c) && Math.abs(c.x - t.x) < 4 * T && Math.abs(c.y - t.y) < 2 * T);
       if (fermo && !trappoleVicine && !agentiVicini) t.sicuro = { x: t.x, y: t.y };
     }
   }
@@ -1049,7 +1111,8 @@
       } else if (d.apertura > 0) {
         // non si chiude addosso a Tino
         const cellaPorta = { l: d.x * T, r: d.x * T + T, t: d.y * T, b: d.y * T + T };
-        const sotto = sovrappone(scatola(t), cellaPorta) || liv.agenti.some((a) => sovrappone(scatola(a), cellaPorta));
+        const sotto = sovrappone(scatola(t), cellaPorta) || liv.agenti.some((a) => sovrappone(scatola(a), cellaPorta))
+          || (liv.capo && liv.capo.stato !== 'arriva' && liv.capo.stato !== 'cade' && sovrappone(scatola(liv.capo), cellaPorta));
         if (!sotto) {
           const primaA = d.apertura;
           d.apertura = Math.max(0, d.apertura - PORTA.chiude * dt);
@@ -1075,6 +1138,10 @@
           colpito(0);
           k.stato = 'rotta'; k.t = STALATTITI.ritorno;
           coriandoli(k.x, k.y + 30, '#9b8264', 10);
+        } else if (liv.capo && attivo(liv.capo) && sovrappone(punta, scatola(liv.capo))) {
+          fermaCapo(liv.capo, 0, 'trappola');
+          k.stato = 'rotta'; k.t = STALATTITI.ritorno;
+          coriandoli(k.x, k.y + 30, '#9b8264', 10);
         } else if (solido(Math.floor(k.x / T), Math.floor((k.y + 44) / T)) || k.y > (liv.lh + 1) * T) {
           k.stato = 'rotta'; k.t = STALATTITI.ritorno;
           suoni.crollo();
@@ -1087,8 +1154,11 @@
     }
     // pavimento crepato
     const sotto = t.aTerra ? sottoPiedi(t) : [];
+    const capo = liv.capo;
+    const sottoCapo = capo && capo.aTerra && attivo(capo) ? sottoPiedi(capo) : [];
     for (const c of liv.crepe) {
       if (c.stato === 'intatta' && sotto.some(([x, y]) => x === c.x && y === c.y)) { c.stato = 'trema'; c.t = CREPA.trema; }
+      else if (c.stato === 'intatta' && sottoCapo.some(([x, y]) => x === c.x && y === c.y)) { c.stato = 'trema'; c.t = CAPO.pesante; }
       else if (c.stato === 'trema') {
         c.t -= dt;
         if (c.t <= 0) {
@@ -1102,7 +1172,7 @@
       } else if (c.stato === 'caduta') {
         c.t -= dt;
         const cellaC = { l: c.x * T, r: c.x * T + T, t: c.y * T, b: c.y * T + T };
-        if (c.t <= 0 && !sovrappone(scatola(t), cellaC)) c.stato = 'intatta';
+        if (c.t <= 0 && !sovrappone(scatola(t), cellaC) && !(capo && attivo(capo) && sovrappone(scatola(capo), cellaC))) c.stato = 'intatta';
       }
     }
   }
@@ -1185,6 +1255,211 @@
     G.bollette = G.bollette.filter((b) => !b.via);
   }
 
+  // ---------------------------------------------------------------- ispettore capo
+  // attivo: sveglio e in campo (non dorme, non è caduto, non sta arrivando)
+  function attivo(c) { return c.stato !== 'dorme' && c.stato !== 'arriva' && c.stato !== 'cade'; }
+
+  function svegliaCapo(c) {
+    c.stato = 'sveglia';
+    c.t = CAPO.sveglia;
+    c.vx = 0;
+    c.dir = segno(G.tino.x - c.x) || 1;
+    suoni.capo();
+    scritta(c.x, c.y - c.h - 40, 'FERMO LÌ! Sei in arretrato!', '#ff8a7a');
+  }
+
+  // la frusta e le trappole non lo stordiscono: lo fermano solo un attimo
+  function fermaCapo(c, dir, causa) {
+    if (!attivo(c) || c.stato === 'sveglia') return;
+    if (c.immune > 0) {
+      if (causa === 'frusta') scritta(c.x, c.y - c.h - 14, 'Non mi fai niente!', '#ffe680');
+      return;
+    }
+    c.stato = 'ahi';
+    c.t = CAPO.ahi;
+    c.immune = CAPO.ahi + CAPO.immune;
+    if (c.aTerra) c.vx = 0;
+    if (dir) { c.x += dir * 14; if (urtaMuri(c)) c.x -= dir * 14; }
+    suoni.stordito();
+    scritta(c.x, c.y - c.h - 14, causa === 'frusta' ? 'Ahi! Non vale!' : 'Ahia!', '#ffe680');
+  }
+
+  function aggiornaCapo(dt) {
+    const c = G.liv.capo;
+    if (!c) return;
+    const t = G.tino;
+    const vivo = t.stato !== 'ko' && t.stato !== 'uscita';
+    c.passo += dt;
+    c.immune = Math.max(0, c.immune - dt);
+    const st = stanzaDi(c.x, c.y - c.h / 2);
+    const stessa = st.x === G.stanza.x && st.y === G.stanza.y;
+
+    if (c.stato === 'dorme') {
+      // si sveglia se Tino lo supera o gli passa troppo vicino
+      if (vivo && stessa && Math.abs(t.y - c.y) < 2 * T && (t.x - c.x > CAPO.risveglio || Math.abs(t.x - c.x) < 40)) svegliaCapo(c);
+      return;
+    }
+    if (c.stato === 'arriva' || c.stato === 'cade') {
+      c.t -= dt;
+      if (c.t <= 0) {
+        const caduto = c.stato === 'cade';
+        if (caduto) { c.x = c.terra.x; c.y = c.terra.y; }
+        c.vx = c.vy = 0;
+        c.stato = 'insegue';
+        c.immune = CAPO.immune;
+        c.megafono = CAPO.megafono.ogni;
+        polvere(c.x, c.y, 10);
+        suoni.capo();
+        if (stanzaDi(c.x, c.y - c.h / 2).x === G.stanza.x) scritta(c.x, c.y - c.h - 20, caduto ? 'Eccomi di nuovo!' : 'Ti ho ritrovato!', '#ff8a7a');
+      }
+      return;
+    }
+    if (c.stato === 'sveglia' || c.stato === 'ahi' || c.stato === 'festa') {
+      c.t -= dt;
+      if (c.aTerra) c.vx = 0;
+      if (c.t <= 0) c.stato = 'insegue';
+    } else if (c.stato === 'urla') {
+      c.t -= dt;
+      c.vx = 0;
+      if (c.t <= 0) { sparaOnda(c); c.stato = 'insegue'; }
+    } else if (c.stato === 'insegue') {
+      pensaCapo(c, t, stessa && vivo, st, dt);
+    }
+
+    // fisica
+    if (!c.aTerra && c.saltando) c.vx = c.dir * CAPO.velSalto;
+    c.vy = Math.min(FISICA.cadutaMax, c.vy + FISICA.gravita * dt);
+    const vyPrima = c.vy;
+    const eraATerra = c.aTerra;
+    c.aTerra = muovi(c, dt);
+    if (c.aTerra && !eraATerra) {
+      if (c.saltando || vyPrima > 400) atterraCapo(c, stessa);
+      c.saltando = false;
+      if (c.stato === 'insegue') c.vx = 0;
+    }
+    if (c.aTerra && sottoPiedi(c).every(([gx, gy]) => cella(gx, gy) === '#')) c.terra = { x: c.x, y: c.y };
+    // nel baratro
+    if (c.y - c.h > G.liv.lh * T + 40) {
+      c.stato = 'cade';
+      c.t = CAPO.caduta;
+      c.vx = c.vy = 0;
+      c.saltando = false;
+      return;
+    }
+    // cesoie
+    for (const k of G.liv.cesoie) {
+      if (chiusura(k) < 0.7) continue;
+      if (sovrappone(scatola(c), { l: k.x * T + 16, r: k.x * T + T - 16, t: (k.y - 1) * T, b: (k.y + 1) * T })) { fermaCapo(c, 0, 'trappola'); break; }
+    }
+    // presa!
+    if (vivo && (c.stato === 'insegue' || c.stato === 'urla') && t.invulnerabile <= 0) {
+      const s = scatola(c);
+      const presa = { l: s.l - 10, r: s.r + 10, t: s.t, b: s.b };
+      if (sovrappone(presa, scatola(t))) {
+        colpito(segno(t.x - c.x) || c.dir);
+        if (t.stato !== 'ko') t.vx = segno(t.vx) * 60; // solo un saltello: non lo butta sulle trappole
+        c.stato = 'festa';
+        c.t = CAPO.festa;
+        c.vx = 0;
+        scritta(c.x, c.y - c.h - 14, 'Multato!', '#ff8a7a');
+      }
+    }
+  }
+
+  function pensaCapo(c, t, vedeTino, st, dt) {
+    if (!c.aTerra) return;
+    let tx, ty;
+    if (vedeTino) { tx = t.x; ty = t.y; }
+    else {
+      // Tino è in un'altra stanza: va dove l'ha visto uscire
+      const u = G.uscite[st.x + ',' + st.y];
+      if (!u) { c.vx = 0; return; }
+      tx = u.x + u.dir * 90; ty = u.y + (u.giu ? 3 * T : 0);
+    }
+    const dx = tx - c.x;
+    // megafono: se Tino scappa sullo stesso piano, gli spara contro un'onda da saltare
+    c.megafono -= dt;
+    const M = CAPO.megafono;
+    if (vedeTino && c.megafono <= 0 && Math.abs(t.y - c.y) < 25 && Math.abs(dx) > M.min && Math.abs(dx) < M.max) {
+      c.stato = 'urla';
+      c.t = M.carica;
+      c.dir = segno(dx);
+      c.vx = 0;
+      c.megafono = M.ogni;
+      scritta(c.x, c.y - c.h - 20, 'ALT!', '#ff8a7a');
+      return;
+    }
+    if (Math.abs(dx) < 10) { c.vx = 0; c.bloccato = 0; return; }
+    c.dir = segno(dx);
+    const fy = Math.floor((c.y - 1) / T);
+    const gx = Math.floor((c.x + c.dir * (c.w / 2 + 6)) / T);
+    const appoggio = (x, y) => solido(x, y) || cella(x, y) === '-';
+    let azione = 'cammina';
+    if (solido(gx, fy)) {
+      // gradino alto un quadretto, con spazio sopra: lo salta
+      azione = !solido(gx, fy - 1) && !solido(gx, fy - 2) && !solido(Math.floor(c.x / T), fy - 2) ? 'salta' : 'fermo';
+    } else if (!appoggio(gx, fy + 1)) {
+      let largo = 0;
+      for (let k = 1; k <= 3; k++) if (appoggio(gx + c.dir * k, fy + 1)) { largo = k; break; }
+      let fondo = false;
+      for (let y = fy + 2; y < fy + 6; y++) if (appoggio(gx, y)) { fondo = true; break; }
+      if (fondo && ty > c.y + T / 2) azione = 'cammina';           // scende
+      else if (largo && largo <= 2 && !solido(gx + c.dir * largo, fy)) azione = 'salta';
+      else azione = 'fermo';                                         // burrone troppo largo
+    }
+    if (azione === 'fermo') {
+      c.vx = 0;
+      const prima = c.bloccato;
+      c.bloccato += dt;
+      if (vedeTino && Math.floor(c.bloccato / 3) !== Math.floor(prima / 3)) {
+        scritta(c.x, c.y - c.h - 20, ['Torna qui!', 'Tornerò! Con gli interessi!', 'Non finisce qui!'][Math.floor(c.bloccato / 3) % 3], '#ff8a7a');
+      }
+      return;
+    }
+    c.bloccato = 0;
+    if (azione === 'salta') {
+      c.vy = -CAPO.salto;
+      c.vx = c.dir * CAPO.velSalto;
+      c.aTerra = false;
+      c.saltando = true;
+    } else c.vx = c.dir * CAPO.vel;
+  }
+
+  // l'ispettore pesa: quando atterra trema tutto e le stalattiti vicine cadono
+  function atterraCapo(c, stessa) {
+    polvere(c.x, c.y, 10);
+    if (!stessa) return;
+    G.scossa = 0.25;
+    suoni.tonfo();
+    for (const k of G.liv.stalattiti) {
+      if (k.stato === 'appesa' && Math.abs(k.x - c.x) < 6 * T && Math.floor(k.y0 / A) === G.stanza.y && Math.floor(k.x / L) === G.stanza.x) {
+        k.stato = 'trema';
+        k.t = STALATTITI.trema;
+      }
+    }
+  }
+
+  function sparaOnda(c) {
+    G.onde.push({ x: c.x + c.dir * 46, y: c.y - 38, vx: c.dir * CAPO.megafono.vel, vita: 3, nata: G.tempo });
+    suoni.megafono();
+  }
+
+  function aggiornaOnde(dt) {
+    const t = G.tino;
+    for (const o of G.onde) {
+      o.x += o.vx * dt;
+      o.vita -= dt;
+      // le onde restano nella stanza in cui sono partite
+      if (o.vita <= 0 || Math.floor(o.x / L) !== G.stanza.x || solido(Math.floor((o.x + segno(o.vx) * 14) / T), Math.floor(o.y / T))) { o.via = true; continue; }
+      const s = scatola(t);
+      if (t.stato !== 'ko' && t.stato !== 'uscita' && o.x + 14 > s.l + 4 && o.x - 14 < s.r - 4 && o.y + 16 > s.t + 6 && o.y - 16 < s.b) {
+        o.via = true;
+        colpito(0); // niente spinta: non deve buttare Tino sulle trappole
+      }
+    }
+    G.onde = G.onde.filter((o) => !o.via);
+  }
+
   function lanciaBolletta(a, t) {
     const x0 = a.x + a.dir * 20, y0 = a.y - a.h + 10;
     const volo = AGENTI.volo;
@@ -1232,8 +1507,11 @@
     const t = G.tino;
     const s = stanzaDi(t.x, t.y - t.h / 2);
     if (forza || s.x !== G.stanza.x || s.y !== G.stanza.y) {
+      // l'ispettore capo seguirà Tino passando dallo stesso punto
+      if (!forza) G.uscite[G.stanza.x + ',' + G.stanza.y] = { x: t.x, y: t.y, dir: segno(s.x - G.stanza.x), giu: s.y > G.stanza.y };
       G.stanza = s;
       G.bollette.length = 0;
+      G.onde.length = 0;
       chiaveStanza = '';
     }
   }
@@ -1245,7 +1523,10 @@
     aggiornaTino(dt);
     aggiornaOggetti(dt);
     aggiornaAgenti(dt);
+    aggiornaCapo(dt);
+    aggiornaOnde(dt);
     controllaTino(dt);
+    G.scossa = Math.max(0, G.scossa - dt);
     aggiornaStanza();
     aggiornaEffetti(dt);
     const t = G.tino;
@@ -1385,10 +1666,14 @@
       return;
     }
     preparaStanza();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(telaStanza, 0, 0);
     const k = scala * dpr;
-    ctx.setTransform(k, 0, 0, k, -G.stanza.x * L * k, -G.stanza.y * A * k);
+    // quando l'ispettore capo atterra trema tutto
+    const sx = G.scossa > 0 ? (Math.random() - 0.5) * 16 * G.scossa / 0.25 : 0;
+    const sy = G.scossa > 0 ? (Math.random() - 0.5) * 12 * G.scossa / 0.25 : 0;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (sx || sy) { ctx.fillStyle = '#2c1e10'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    ctx.drawImage(telaStanza, sx * k, sy * k);
+    ctx.setTransform(k, 0, 0, k, (sx - G.stanza.x * L) * k, (sy - G.stanza.y * A) * k);
     const visibile = (x, y, m = 100) => x > G.stanza.x * L - m && x < (G.stanza.x + 1) * L + m && y > G.stanza.y * A - m && y < (G.stanza.y + 1) * A + m;
     const tm = G.tempo;
     const liv = G.liv;
@@ -1652,6 +1937,16 @@
       if (!visibile(a.x, a.y)) continue;
       disegnaAgente(a, tm);
     }
+    // ispettore capo (dorme dietro la scrivania)
+    if (liv.capo) {
+      const c = liv.capo;
+      const sc = c.scrivania;
+      if (c.stato !== 'dorme' && visibile(sc.x, sc.y)) disegnaScrivania(sc.x, sc.y);
+      if (visibile(c.x, c.y, 200)) disegnaCapo(c, tm);
+      if (c.stato === 'dorme' && visibile(sc.x, sc.y)) disegnaScrivania(sc.x, sc.y);
+    }
+    // onde del megafono
+    for (const o of G.onde) disegnaOnda(o, tm);
     // bollette
     for (const b of G.bollette) {
       ctx.save();
@@ -1780,6 +2075,107 @@
     }
   }
 
+  function disegnaScrivania(x, y) {
+    // piano, gambe, pratiche e un timbro
+    ctx.fillStyle = '#5b3a1e';
+    ctx.fillRect(x - 62, y - 58, 124, 12);
+    ctx.fillStyle = '#4a2e16';
+    ctx.fillRect(x - 56, y - 46, 112, 46);
+    ctx.fillStyle = '#6e4626';
+    ctx.fillRect(x - 50, y - 40, 46, 16);
+    ctx.fillRect(x + 4, y - 40, 46, 16);
+    ctx.fillStyle = '#e8b33a';
+    ctx.fillRect(x - 30, y - 34, 8, 4);
+    ctx.fillRect(x + 24, y - 34, 8, 4);
+    ctx.strokeStyle = '#2a1608';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 62, y - 58, 124, 12);
+    ctx.strokeRect(x - 56, y - 46, 112, 46);
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = i % 2 ? '#f4efe2' : '#e6dcc4';
+      ctx.fillRect(x - 52 + i * 2, y - 66 - i * 5, 34, 6);
+      ctx.strokeStyle = '#8c94a6'; ctx.lineWidth = 1;
+      ctx.strokeRect(x - 52 + i * 2, y - 66 - i * 5, 34, 6);
+    }
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(x + 30, y - 66, 18, 8);
+    ctx.fillStyle = '#5b3a1e';
+    ctx.fillRect(x + 36, y - 78, 6, 12);
+    ctx.beginPath(); ctx.arc(x + 39, y - 80, 6, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function disegnaCapo(c, tm) {
+    if (c.stato === 'arriva' || c.stato === 'cade') return;
+    const fig = figure.capo;
+    if (!fig) return;
+    const alto = 132, largo = alto * fig.width / fig.height;
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    let rot = 0, su = 0, sx = 1, sy = 1;
+    if (c.stato === 'dorme') { rot = 0.07 + Math.sin(tm * 1.6) * 0.02; sy = 1 + Math.sin(tm * 1.6) * 0.015; }
+    else if (c.stato === 'sveglia') su = -Math.abs(Math.sin(c.t * 12)) * 16;
+    else if (c.stato === 'urla') { sx = 1.04; sy = 0.97; ctx.translate((Math.random() - 0.5) * 3, 0); }
+    else if (c.stato === 'ahi') rot = -c.dir * 0.14 + Math.sin(tm * 40) * 0.04;
+    else if (c.stato === 'festa') su = -Math.abs(Math.sin(tm * 10)) * 12;
+    else if (!c.aTerra) { rot = -c.dir * 0.06; sx = 0.96; sy = 1.04; }
+    else if (Math.abs(c.vx) > 1) { rot = Math.sin(c.passo * 11) * 0.06; su = -Math.abs(Math.sin(c.passo * 11)) * 5; }
+    else rot = Math.sin(c.passo * 2) * 0.02;
+    ctx.translate(0, su);
+    ctx.rotate(rot);
+    ctx.scale(sx, sy);
+    if (c.immune > 0 && c.stato !== 'ahi' && Math.floor(tm * 10) % 2) ctx.globalAlpha = 0.8;
+    // la figura guarda a destra: il corpo è a circa il 42% della larghezza
+    ctx.drawImage(fig, -largo * 0.42, -alto + 4, largo, alto);
+    ctx.restore();
+    ctx.textAlign = 'center';
+    ctx.lineJoin = 'round';
+    const scrivi = (testo, x, y, dim, colore) => {
+      ctx.font = `700 ${dim}px Fredoka, sans-serif`;
+      ctx.lineWidth = 5; ctx.strokeStyle = '#2a1004'; ctx.strokeText(testo, x, y);
+      ctx.fillStyle = colore; ctx.fillText(testo, x, y);
+    };
+    if (c.stato === 'dorme') {
+      for (let i = 0; i < 3; i++) {
+        const f = (tm * 0.5 + i / 3) % 1;
+        ctx.globalAlpha = Math.sin(f * Math.PI);
+        scrivi('z', c.x + 30 + f * 30, c.y - alto - f * 40, 16 + i * 5, '#ffffff');
+      }
+      ctx.globalAlpha = 1;
+    } else if (c.stato === 'sveglia') scrivi('!', c.x, c.y - alto - 16, 40, '#ffe680');
+    else if (c.stato === 'urla') {
+      // il megafono si gonfia
+      const mx = c.x - largo * 0.42 + largo * (232 / 260), my = c.y - alto + 4 + alto * (112 / 320);
+      ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 3;
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(mx, my, 10 + i * 8 + (tm * 40) % 8, -0.6, 0.6); ctx.stroke(); }
+    }
+    if (c.stato === 'ahi') for (let i = 0; i < 3; i++) {
+      const an = tm * 5 + i * 2.1;
+      stella(c.x + Math.cos(an) * 30, c.y - alto - 6 + Math.sin(an) * 7, 7, '#ffe680');
+    }
+  }
+
+  // onda del megafono: archi e la scritta MULTA!
+  function disegnaOnda(o, tm) {
+    const d = segno(o.vx);
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const r = 10 + i * 7;
+      ctx.beginPath();
+      ctx.arc(o.x - d * (24 - i * 4), o.y, r, d > 0 ? -0.9 : Math.PI - 0.9, d > 0 ? 0.9 : Math.PI + 0.9);
+      ctx.strokeStyle = '#2a1004'; ctx.lineWidth = 7; ctx.stroke();
+      ctx.strokeStyle = i === 2 ? '#ff6a4d' : '#ffe680'; ctx.lineWidth = 4; ctx.stroke();
+    }
+    ctx.font = '700 15px "Alfa Slab One", Fredoka, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#2a1004';
+    const y = o.y - 24 + Math.sin(tm * 20) * 2;
+    ctx.strokeText('MULTA!', o.x - d * 10, y);
+    ctx.fillStyle = '#ff6a4d';
+    ctx.fillText('MULTA!', o.x - d * 10, y);
+    ctx.restore();
+  }
+
   function stella(x, y, r, colore) {
     ctx.fillStyle = colore;
     ctx.strokeStyle = '#7a5d10';
@@ -1798,7 +2194,9 @@
     if (t.stato === 'ko') return 'ko';
     if (t.ferito > 0) return 'ferito';
     const agentiVicini = G.liv.agenti.some((a) => a.stato !== 'stordito' && a.stanzaX === G.stanza.x && a.stanzaY === G.stanza.y && Math.abs(a.x - t.x) < 4 * T && Math.abs(a.y - t.y) < 2 * T);
-    if (t.ceci === 1 || agentiVicini) return 'arrabbiato';
+    const c = G.liv.capo;
+    const capoVicino = c && attivo(c) && Math.abs(c.x - t.x) < 6 * T && Math.abs(c.y - t.y) < 3 * T;
+    if (t.ceci === 1 || agentiVicini || capoVicino) return 'arrabbiato';
     return 'normale';
   }
 
@@ -1994,6 +2392,7 @@
       <h2>Livello superato!</h2>
       <p class="statistiche">Ceci raccolti: <b>${G.raccolti}</b> su ${G.liv.ceciTotali} · Tempo: <b>${minuti}:${String(secondi).padStart(2, '0')}</b></p>
       ${G.liv.robivecchi.length ? `<p class="statistiche">Robivecchi: ${G.liv.robivecchi.map((r) => `<img class="robi-mini ${r.preso || r.giaTrovato ? '' : 'vuoto'}" src="${BASE + SORGENTI['robi' + r.tipo]}" alt="${ROBIVECCHI[r.tipo].nome}" title="${ROBIVECCHI[r.tipo].nome}">`).join(' ')}</p>` : ''}
+      ${G.liv.def.fine ? `<p>${G.liv.def.fine}</p>` : ''}
       ${ultimo ? '<p>Gino è ancora prigioniero più in fondo nel tempio: i prossimi livelli arrivano presto!</p>' : ''}
       <div class="scelte">
         ${ultimo ? '' : '<button class="bottone" type="button" data-azione="prossimo">Livello successivo</button>'}
@@ -2060,7 +2459,7 @@
 
   // Per le prove automatiche: si possono simulare partite senza tempo reale.
   window.ghiandaDOro = {
-    G, comandi, FISICA, FRUSTA, AGENTI, VITA, TINO, POSE,
+    G, comandi, FISICA, FRUSTA, AGENTI, VITA, TINO, POSE, CAPO,
     pronto: caricate,
     avvia,
     passo(dt = PASSO) { aggiorna(dt); },

@@ -22,6 +22,8 @@
                                   le L una sopra l'altra sono la stessa porta)
     x  cesoie a tempo (le lame occupano questa casella e quella sopra)
     v  spuntoni a scomparsa   Y  stalattite (cade quando Tino ci passa sotto)
+    I  ispettore capo (dorme alla scrivania; sveglio, insegue Tino di stanza in stanza)
+    6 7  altri robivecchi: tappo a corona, biglia
 */
 window.LIVELLI = [
   {
@@ -262,6 +264,96 @@ window.LIVELLI = [
         '###.......######',
         '###.......######',
         '###.......######',
+      ],
+    ]],
+  },
+  {
+    nome: 'L\'ispettore capo',
+    fine: 'Hai seminato l\'ispettore capo! Le radici della Quercia sono alle spalle: più giù comincia il tempio sepolto.',
+    cartelli: [
+      {
+        pc: 'Lassù luccica qualcosa: mentre dondoli accorcia la frusta con ↑ per salire più in alto.',
+        touch: 'Lassù luccica qualcosa: mentre dondoli accorcia la frusta con ▲ per salire più in alto.',
+      },
+      {
+        pc: 'Più avanti dorme l\'ispettore capo della Tari. La frusta non lo stordisce, al massimo lo ferma un attimo: se si sveglia, scappa a destra e non fermarti!',
+        touch: 'Più avanti dorme l\'ispettore capo della Tari. La frusta non lo stordisce, al massimo lo ferma un attimo: se si sveglia, scappa a destra e non fermarti!',
+      },
+      {
+        pc: 'Salta le onde del megafono! L\'ispettore pesa tanto: sul pavimento crepato rischia di finire di sotto.',
+        touch: 'Salta le onde del megafono! L\'ispettore pesa tanto: sul pavimento crepato rischia di finire di sotto.',
+      },
+      {
+        pc: 'L\'ispettore non sa usare la frusta: dondola oltre il burrone e lascialo dall\'altra parte!',
+        touch: 'L\'ispettore non sa usare la frusta: dondola oltre il burrone e lascialo dall\'altra parte!',
+      },
+    ],
+    stanze: [[
+      [
+        '################',
+        '#...............',
+        '#........P......',
+        '#...............',
+        '#..........6....',
+        '#.f.........o...',
+        '#...............',
+        '#T.i...^^^^^....',
+        '################',
+      ],
+      [
+        '################',
+        '................',
+        '................',
+        '.......o........',
+        '......###.......',
+        '................',
+        '...##.....##....',
+        '...##..r..##.iK.',
+        '################',
+      ],
+      [
+        '################',
+        '................',
+        '............Y...',
+        '................',
+        '.....f..........',
+        '................',
+        '................',
+        '..I.......#..^..',
+        '################',
+      ],
+      [
+        '################',
+        '................',
+        '................',
+        '................',
+        '..........o.....',
+        '................',
+        '................',
+        '.i....vv....x...',
+        '#############~~#',
+      ],
+      [
+        '################',
+        '.....Y..........',
+        '................',
+        '.............7..',
+        '............##..',
+        '..........#.....',
+        '.........##.....',
+        '.K......###.^...',
+        '################',
+      ],
+      [
+        '################',
+        '...............#',
+        '.......P.......#',
+        '...............#',
+        '...............#',
+        '..o............#',
+        '...............#',
+        '.i...........U.#',
+        '#####.....######',
       ],
     ]],
   },
