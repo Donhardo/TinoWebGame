@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bozzetti avventura</title>
+  <meta name="description" content="Bozzetti del nuovo gioco: Tino avventuriero con cappello e frusta, gli agenti della Tari e il titolo.">
+  <link rel="icon" href="../assets/tino/tino-normale.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/sito.css">
+  <style>
+    :root {
+      --sabbia: #f4e3c1;
+      --pietra: #6d5a45;
+      --pietra-scura: #3e3226;
+      --oro: #e8b33a;
+      --rosso: #b8321f;
+    }
+    body {
+      background:
+        radial-gradient(circle at 10% 0%, #fff1cf 0, transparent 40%),
+        radial-gradient(circle at 95% 15%, #f3dcb0 0, transparent 35%),
+        var(--crema);
+    }
+    main { max-width: 1040px; margin: 0 auto; padding: 16px 16px 48px; }
+    h2 {
+      font-family: "Alfa Slab One", Georgia, serif;
+      font-weight: 400;
+      color: var(--marrone);
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      margin: 1.6em 0 0.3em;
+    }
+    h2 small { display: block; font-family: var(--font); font-size: 0.55em; color: var(--testo); opacity: 0.75; margin-top: 0.2em; }
+    p { line-height: 1.5; max-width: 46em; }
+    .nota { background: #fff; border-left: 5px solid var(--oro); border-radius: 10px; padding: 10px 14px; box-shadow: var(--ombra); max-width: 46em; }
+
+    /* ---------- Titolo ---------- */
+    .loghi { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .logo-scheda {
+      background: radial-gradient(ellipse at 50% 40%, #6b4a2b 0, #2c1d10 80%);
+      border-radius: var(--raggio);
+      box-shadow: var(--ombra);
+      padding: 10px 10px 14px;
+      text-align: center;
+      color: #f6e7c8;
+    }
+    .logo-scheda svg { width: 100%; height: auto; display: block; }
+    .logo-scheda .etichetta { font-size: 0.95rem; opacity: 0.85; }
+    .logo-scheda.consigliato { outline: 3px solid var(--oro); outline-offset: 3px; }
+
+    /* ---------- Tino avventuriero ---------- */
+    .pose { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; align-items: end; }
+    .posa { background: #fff; border-radius: var(--raggio); box-shadow: var(--ombra); padding: 18px 12px 10px; text-align: center; overflow: hidden; }
+    .posa figcaption { margin-top: 8px; font-weight: 600; color: var(--marrone); }
+    .posa figcaption span { display: block; font-weight: 400; font-size: 0.9rem; color: var(--testo); }
+    figure { margin: 0; }
+    .tino-avv { position: relative; margin: 0 auto; }
+    .tino-avv img { position: absolute; display: block; pointer-events: none; }
+    .anima-saltello { transform-origin: 50% 100%; animation: saltello 2.4s ease-in-out infinite; }
+    .anima-trema { animation: trema 0.5s linear infinite; }
+    @keyframes trema { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-3px) rotate(-1deg) } 75% { transform: translateX(3px) rotate(1deg) } }
+
+    /* ---------- Frusta in azione ---------- */
+    .scena-frusta {
+      position: relative;
+      height: 340px;
+      border-radius: var(--raggio);
+      overflow: hidden;
+      box-shadow: var(--ombra);
+      background: linear-gradient(#2c2016, #4b3826 70%, #2c2016);
+    }
+    .scena-frusta .baratro-sx, .scena-frusta .baratro-dx {
+      position: absolute; bottom: 0; height: 70px; background: #8a7357;
+      border-top: 6px solid #a88f6c;
+      background-image: repeating-linear-gradient(90deg, transparent 0 46px, rgba(0,0,0,0.25) 46px 48px);
+    }
+    .baratro-sx { left: 0; width: 22%; }
+    .baratro-dx { right: 0; width: 22%; }
+    .piolo { position: absolute; left: 50%; top: 26px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; border: 6px solid var(--oro); box-shadow: 0 0 0 3px #3e2a0a inset, 0 0 0 2px #3e2a0a; }
+    .piolo::before { content: ""; position: absolute; left: 50%; top: -30px; width: 6px; height: 26px; margin-left: -3px; background: #5b4a38; }
+    .pendolo { position: absolute; left: 50%; top: 39px; width: 0; height: 0; animation: pendolo 2.6s ease-in-out infinite alternate; }
+    @keyframes pendolo { from { transform: rotate(38deg); } to { transform: rotate(-38deg); } }
+    .pendolo .corda { position: absolute; left: -2px; top: 0; width: 4px; height: 170px; background: #5a3418; border-radius: 2px; box-shadow: 0 0 0 1px #2e1c0e; }
+    .pendolo .appeso { position: absolute; left: -62px; top: 150px; width: 120px; }
+
+    /* ---------- Agenti ---------- */
+    .agenti { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .agente { background: #fff; border-radius: var(--raggio); box-shadow: var(--ombra); padding: 14px; }
+    .agente img { width: 100%; max-width: 220px; display: block; margin: 0 auto; transform-origin: 50% 100%; animation: marcia 0.9s ease-in-out infinite; }
+    .agente:nth-child(2) img { animation-delay: -0.3s; }
+    .agente:nth-child(3) img { animation-duration: 1.4s; }
+    @keyframes marcia { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-4px); } }
+    .agente h3 { margin: 6px 0 4px; color: var(--marrone); }
+    .agente p { margin: 0; font-size: 0.95rem; }
+
+    /* ---------- Stanza di esempio ---------- */
+    .stanza { width: 100%; height: auto; display: block; border-radius: var(--raggio); box-shadow: var(--ombra); }
+    .legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0; list-style: none; font-size: 0.95rem; }
+    .legenda b { color: var(--marrone); }
+
+    ol.domande li, ul.punti li { margin: 0.35em 0; line-height: 1.45; }
+  </style>
+</head>
+<body>
+<main>
+  <h2>Il titolo <small>Lettere grosse, inclinate e ad arco, oro e rosso con il bordo scuro: lo stile delle locandine d'avventura</small></h2>
+  <div class="loghi" id="loghi"></div>
+
+  <h2>Tino avventuriero <small>Foto originali di Tino, con cappello e frusta aggiunti sopra come accessori</small></h2>
+  <div class="pose" id="pose"></div>
+  <p class="nota">Tino non viene ridisegnato: cappello e frusta sono due immagini a parte (<code>assets/tino/accessori/</code>)
+    appoggiate su ogni foto con posizione e inclinazione su misura. Quando è ferito il cappello finisce di traverso;
+    quando è KO gli cade per terra.</p>
+
+  <h2>Frusta in azione <small>Tino si aggancia a un piolo e oscilla sopra il baratro</small></h2>
+  <div class="scena-frusta">
+    <div class="baratro-sx"></div><div class="baratro-dx"></div>
+    <div class="piolo"></div>
+    <div class="pendolo">
+      <div class="corda"></div>
+      <div class="appeso tino-avv" data-posa="appeso"></div>
+    </div>
+  </div>
+
+  <h2>Gli agenti della Tari <small>Omini in divisa che vogliono solo una cosa: acchiappare Tino</small></h2>
+  <div class="agenti">
+    <div class="agente">
+      <img src="../assets/agenti-tari/agente-retino.svg" alt="Agente della Tari con il retino">
+      <h3>Agente col retino</h3>
+      <p>Il più comune. Fa la ronda avanti e indietro; quando vede Tino accelera e prova a prenderlo col retino.
+        Gilet giallo fluorescente con <b>TARI</b> sul petto e stemma sul berretto.</p>
+    </div>
+    <div class="agente">
+      <img src="../assets/agenti-tari/agente-timbro.svg" alt="Agente della Tari con il timbro e le bollette">
+      <h3>Agente col timbro</h3>
+      <p>Sta fermo nei punti alti e lancia bollette della <b>TARI</b> che volano a parabola: vanno schivate o saltate.
+        Da vicino tenta di timbrare Tino.</p>
+    </div>
+    <div class="agente">
+      <img src="../assets/agenti-tari/ispettore-capo.svg" alt="Ispettore capo della Tari con megafono e valigetta">
+      <h3>Ispettore capo</h3>
+      <p>Il capo, alla fine di ogni mondo. Più grosso e più lento, col megafono chiama rinforzi e fa tremare il pavimento.
+        Valigetta e distintivo <b>TARI</b>.</p>
+    </div>
+  </div>
+  <p class="nota">Gli agenti non sono peluche, quindi sono disegnati (vettoriali, si animano con oscillazioni e saltelli come Tino).
+    Se però avete un pupazzetto o un omino da fotografare, si può fare come per Tino e Gino.</p>
+
+  <h2>Una stanza di esempio <small>Come potrebbe apparire un pezzo di livello</small></h2>
+  <svg class="stanza" id="stanza" viewBox="0 0 960 540" role="img" aria-label="Stanza di esempio del gioco"></svg>
+  <ul class="legenda">
+    <li><b>A</b> partenza</li><li><b>B</b> uscita</li><li><b>1</b> pulsante a terra</li><li><b>2</b> saracinesca</li>
+    <li><b>3</b> spuntoni</li><li><b>4</b> piolo per la frusta</li><li><b>5</b> pavimento che crolla</li><li><b>6</b> ceci</li>
+  </ul>
+</main>
+
+<script>
+// Posizione di cappello e frusta su ogni foto di Tino, in pixel dell'immagine originale:
+// [x, y, larghezza, rotazione in gradi]. Sono gli stessi valori che userà il gioco.
+const POSE = {
+  normale:    { src: "tino-normale",    w: 376, h: 512, cappello: [148, 12, 215, 7],   frusta: [292, 286, 104, -6] },
+  arrabbiato: { src: "tino-arrabbiato", w: 243, h: 381, cappello: [42, 0, 168, -4],    frusta: [168, 214, 76, -6] },
+  ferito:     { src: "tino-ferito",     w: 247, h: 445, cappello: [26, -34, 172, -20], frusta: [176, 262, 76, -6] },
+  ko:         { src: "tino-ko",         w: 362, h: 210, cappello: [-50, 118, 120, 172], frusta: [292, 112, 70, 80] },
+};
+
+function tinoAvventuriero(contenitore, posa, larghezza, conFrusta = true) {
+  const p = POSE[posa];
+  const k = larghezza / p.w;
+  contenitore.style.width = larghezza + "px";
+  contenitore.style.height = p.h * k + "px";
+  const metti = (src, [x, y, w, r]) => {
+    const i = document.createElement("img");
+    i.src = src; i.alt = "";
+    Object.assign(i.style, { left: x * k + "px", top: y * k + "px", width: w * k + "px", transform: `rotate(${r}deg)` });
+    contenitore.appendChild(i);
+  };
+  const t = document.createElement("img");
+  t.src = `../assets/tino/${p.src}.png`; t.alt = "Tino";
+  Object.assign(t.style, { left: 0, top: 0, width: "100%" });
+  if (posa === "ko") metti("../assets/tino/accessori/cappello.svg", p.cappello);
+  contenitore.appendChild(t);
+  if (posa !== "ko") metti("../assets/tino/accessori/cappello.svg", p.cappello);
+  if (conFrusta) metti("../assets/tino/accessori/frusta.svg", p.frusta);
+}
+
+// ---- Pose ----
+const descrizioni = {
+  normale: ["Normale", "in gioco"],
+  arrabbiato: ["Arrabbiato", "agenti vicini, pochi ceci"],
+  ferito: ["Ferito", "colpito, perde un cece"],
+  ko: ["KO", "game over"],
+};
+const pose = document.getElementById("pose");
+for (const posa of Object.keys(POSE)) {
+  const fig = document.createElement("figure");
+  fig.className = "posa";
+  const box = document.createElement("div");
+  box.className = "tino-avv " + (posa === "ferito" ? "anima-trema" : posa === "ko" ? "" : "anima-saltello");
+  fig.appendChild(box);
+  const [t, s] = descrizioni[posa];
+  fig.insertAdjacentHTML("beforeend", `<figcaption>${t}<span>${s}</span></figcaption>`);
+  pose.appendChild(fig);
+  tinoAvventuriero(box, posa, posa === "ko" ? 150 : POSE[posa].w * 0.42 * (posa === "normale" ? 1.05 : 1.5));
+}
+
+// ---- Tino appeso alla frusta: la mano alzata verso il piolo, frusta tesa (corda) ----
+tinoAvventuriero(document.querySelector('[data-posa="appeso"]'), "normale", 120, false);
+
+// ---- Loghi ----
+const titoli = [
+  { grande: "TINO", piccolo: "e la Ghianda d'Oro", nota: "Proposta consigliata", consigliato: true },
+  { grande: "TINO", piccolo: "e il Tempio dei Ceci", nota: "Alternativa" },
+  { grande: "TINO", piccolo: "in fuga dalla Tari", nota: "Alternativa, più comica" },
+];
+const loghi = document.getElementById("loghi");
+titoli.forEach((t, n) => {
+  const id = "l" + n;
+  loghi.insertAdjacentHTML("beforeend", `
+  <div class="logo-scheda${t.consigliato ? " consigliato" : ""}">
+    <svg viewBox="0 0 400 230" aria-label="TINO ${t.piccolo}">
+      <defs>
+        <linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffe680"/><stop offset="0.45" stop-color="#f2a93b"/><stop offset="1" stop-color="#c2401c"/>
+        </linearGradient>
+        <path id="${id}a" d="M40 150 Q200 40 360 150"/>
+      </defs>
+      <g font-family="'Alfa Slab One', Georgia, serif" font-size="96" text-anchor="middle" letter-spacing="4">
+        ${[8, 6, 4, 2].map(d => `<text transform="translate(${d * 0.6} ${d})" fill="#3a1606"><textPath href="#${id}a" startOffset="50%">${t.grande}</textPath></text>`).join("")}
+        <text fill="url(#${id}g)" stroke="#2a1004" stroke-width="3" paint-order="stroke"><textPath href="#${id}a" startOffset="50%">${t.grande}</textPath></text>
+      </g>
+      <g transform="translate(200 196) rotate(-3)">
+        <rect x="-150" y="-26" width="300" height="40" rx="4" fill="#b8321f" stroke="#2a1004" stroke-width="3"/>
+        <path d="M-150 -26 L-172 -6 L-150 14 M150 -26 L172 -6 L150 14" fill="#8e2414" stroke="#2a1004" stroke-width="3" stroke-linejoin="round"/>
+        <text y="3" text-anchor="middle" font-family="'Alfa Slab One', Georgia, serif" font-size="23" fill="#ffe7a8">${t.piccolo}</text>
+      </g>
+    </svg>
+    <div class="etichetta">${t.nota}</div>
+  </div>`);
+});
+
+// ---- Stanza di esempio ----
+const S = document.getElementById("stanza");
+const ns = "http://www.w3.org/2000/svg";
+const T = 60; // un quadretto
+let h = `
+  <defs>
+    <pattern id="mattoni" width="120" height="60" patternUnits="userSpaceOnUse">
+      <rect width="120" height="60" fill="#5d4b39"/>
+      <path d="M0 0 H120 M0 30 H120 M60 0 V30 M0 30 V60 M120 30 V60" stroke="#3e3226" stroke-width="3"/>
+    </pattern>
+    <pattern id="pavimento" width="60" height="60" patternUnits="userSpaceOnUse">
+      <rect width="60" height="60" fill="#9b8264"/>
+      <rect width="60" height="10" fill="#b79c78"/>
+      <path d="M0 0 V60" stroke="#6d5a45" stroke-width="3"/>
+    </pattern>
+  </defs>
+  <rect width="960" height="540" fill="url(#mattoni)"/>
+  <rect width="960" height="540" fill="#1b120a" opacity="0.35"/>`;
+// pavimenti: [x, y, larghezza in quadretti]
+const pav = [[0, 420, 4], [420, 420, 3], [840, 300, 2], [600, 300, 2], [0, 180, 3, 30]];
+for (const [x, y, n, alto = 540 - y] of pav) h += `<rect x="${x}" y="${y}" width="${n * T}" height="${alto}" fill="url(#pavimento)" stroke="#3e3226" stroke-width="3"/>`;
+// baratro
+h += `<rect x="240" y="470" width="180" height="70" fill="#120b05"/><rect x="600" y="470" width="240" height="70" fill="#120b05"/>`;
+// spuntoni (3)
+for (let i = 0; i < 4; i++) h += `<path d="M${430 + i * 42} 420 l14 -30 l14 30 z" fill="#d7d7d7" stroke="#3a3a3a" stroke-width="2"/>`;
+// pulsante (1)
+h += `<rect x="120" y="412" width="60" height="10" rx="3" fill="#e8b33a" stroke="#3e2a0a" stroke-width="3"/>`;
+// saracinesca (2)
+h += `<rect x="604" y="180" width="18" height="120" fill="#4a4f5c" stroke="#1f2433" stroke-width="3"/>`;
+for (let y = 196; y < 300; y += 22) h += `<rect x="598" y="${y}" width="30" height="6" fill="#2b2f38"/>`;
+// pavimento che crolla (5)
+h += `<rect x="660" y="300" width="60" height="18" fill="#b79c78" stroke="#3e3226" stroke-width="3"/><path d="M672 300 l8 10 l-6 8 M700 300 l-6 9 l10 9" stroke="#3e3226" stroke-width="2" fill="none"/>`;
+// piolo (4)
+h += `<rect x="327" y="0" width="6" height="64" fill="#5b4a38"/><circle cx="330" cy="76" r="14" fill="none" stroke="#e8b33a" stroke-width="7"/>`;
+// torce
+for (const x of [60, 500, 900]) h += `<rect x="${x - 5}" y="${x === 900 ? 200 : 300}" width="10" height="34" fill="#5b3a1e"/><ellipse cx="${x}" cy="${x === 900 ? 192 : 292}" rx="12" ry="18" fill="#f5a623" opacity="0.9"/><ellipse cx="${x}" cy="${x === 900 ? 196 : 296}" rx="6" ry="10" fill="#ffe680"/>`;
+// uscita (B)
+h += `<path d="M860 300 V200 Q900 160 940 200 V300 Z" fill="#120b05" stroke="#e8b33a" stroke-width="5"/>`;
+// etichette
+const tag = (x, y, t) => `<g><circle cx="${x}" cy="${y}" r="15" fill="#fff8ec" stroke="#3e2a0a" stroke-width="3"/><text x="${x}" y="${y + 6}" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="17" fill="#3e2a0a">${t}</text></g>`;
+h += tag(30, 395, "A") + tag(900, 150, "B") + tag(150, 395, "1") + tag(613, 160, "2") + tag(472, 370, "3") + tag(360, 70, "4") + tag(690, 340, "5") + tag(470, 230, "6");
+// ceci (6)
+for (const [x, y] of [[440, 240], [480, 220], [520, 240], [140, 130]]) h += `<image href="../assets/oggetti/cece.svg" x="${x - 14}" y="${y - 14}" width="28" height="28"/>`;
+// HUD: ceci in alto a sinistra
+h += `<rect x="10" y="10" width="190" height="44" rx="10" fill="#000" opacity="0.4"/>`;
+for (let i = 0; i < 3; i++) h += `<image href="../assets/oggetti/cece.svg" x="${22 + i * 40}" y="16" width="32" height="32"/>`;
+h += `<image href="../assets/oggetti/cece.svg" x="142" y="16" width="32" height="32" opacity="0.25"/>`;
+// Tino, agente
+h += `<g transform="translate(40 300)">
+  <image href="../assets/tino/tino-normale.png" width="88" height="120"/>
+  <image href="../assets/tino/accessori/cappello.svg" x="${148 * 88 / 376}" y="${12 * 88 / 376}" width="${215 * 88 / 376}" height="${130 * 215 / 240 * 88 / 376}" transform="rotate(7 ${(148 + 107) * 88 / 376} ${70 * 88 / 376})"/>
+  <image href="../assets/tino/accessori/frusta.svg" x="${292 * 88 / 376}" y="${286 * 88 / 376}" width="${104 * 88 / 376}" height="${104 * 210 / 130 * 88 / 376}"/>
+</g>`;
+h += `<g transform="translate(626 182)"><image href="../assets/agenti-tari/agente-retino.svg" x="0" y="0" width="${260 * 0.37}" height="${320 * 0.37}"/></g>`;
+S.innerHTML = h;
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 130">
+  <defs>
+    <linearGradient id="feltro" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6b4220"/>
+      <stop offset="0.45" stop-color="#9a6633"/>
+      <stop offset="1" stop-color="#5c381a"/>
+    </linearGradient>
+    <linearGradient id="tesa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d4f26"/>
+      <stop offset="1" stop-color="#4e2f15"/>
+    </linearGradient>
+  </defs>
+  <!-- tesa: parte dietro -->
+  <path d="M6 96 C 30 74, 210 74, 234 96 C 220 116, 20 116, 6 96 Z" fill="url(#tesa)" stroke="#2e1c0e" stroke-width="3"/>
+  <!-- cupola con la piega in alto -->
+  <path d="M60 100 C 54 64, 62 34, 92 26 Q 120 40 148 26 C 178 34, 186 64, 180 100 Q 120 116 60 100 Z" fill="url(#feltro)" stroke="#2e1c0e" stroke-width="3"/>
+  <path d="M98 34 Q 104 60 100 84" fill="none" stroke="#4a2c12" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M142 34 Q 136 60 140 84" fill="none" stroke="#4a2c12" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M74 44 Q 70 60 72 78" fill="none" stroke="#c48a4e" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+  <!-- nastro -->
+  <path d="M60 82 Q 120 96 180 82 L 181 100 Q 120 116 59 100 Z" fill="#2f1d0d" stroke="#1d1107" stroke-width="2"/>
+  <path d="M64 86 Q 120 99 177 86" fill="none" stroke="#5a3a1c" stroke-width="2" opacity="0.8"/>
+  <!-- tesa: bordo davanti -->
+  <path d="M6 96 C 30 112, 90 122, 120 122 C 150 122, 210 112, 234 96 C 226 112, 170 128, 120 128 C 70 128, 14 112, 6 96 Z" fill="#5a3618" stroke="#2e1c0e" stroke-width="3" stroke-linejoin="round"/>
+</svg>
