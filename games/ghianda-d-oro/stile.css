@@ -53,6 +53,8 @@ body {
 .ceci img.vuoto { opacity: 0.22; filter: grayscale(1); }
 .ceci img.nuovo { animation: saltello 0.5s ease-out; }
 
+.chiavi { display: flex; align-items: center; gap: 2px; margin-right: 6px; color: #f2c14e; font-size: 0.95rem; }
+.chiavi img { width: 26px; height: 26px; animation: saltello 0.6s ease-out; }
 .robivecchi { display: flex; gap: 3px; margin-right: 8px; }
 .robivecchi img { width: 26px; height: 26px; filter: drop-shadow(0 0 4px rgba(255, 220, 120, 0.6)); }
 .robivecchi img.vuoto, .vetrina img.vuoto, .robi-mini.vuoto { filter: grayscale(1) brightness(0.4); opacity: 0.5; }

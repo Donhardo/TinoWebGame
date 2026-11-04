@@ -18,6 +18,10 @@
                                   compaiono: stanza per stanza, riga per riga)
     r  agente col retino     t  agente col timbro
     1 2 3 4 5  robivecchi: moneta, bottone, graffetta, fiocco, carta di credito scaduta
+    k  chiave                L  porta col lucchetto (si apre toccandola con una chiave;
+                                  le L una sopra l'altra sono la stessa porta)
+    x  cesoie a tempo (le lame occupano questa casella e quella sopra)
+    v  spuntoni a scomparsa   Y  stalattite (cade quando Tino ci passa sotto)
 */
 window.LIVELLI = [
   {
@@ -101,6 +105,10 @@ window.LIVELLI = [
         pc: 'Due pioli: dal primo staccati con Spazio e premi subito X per agganciarti al secondo.',
         touch: 'Due pioli: dal primo staccati con Salta e tocca subito Frusta per agganciarti al secondo.',
       },
+      {
+        pc: 'Le stalattiti cadono quando ci passi sotto: rallenta e lasciale cadere. Le cesoie si chiudono a tempo. Nel buco c\'è una chiave: apre le porte col lucchetto.',
+        touch: 'Le stalattiti cadono quando ci passi sotto: rallenta e lasciale cadere. Le cesoie si chiudono a tempo. Nel buco c\'è una chiave: apre le porte col lucchetto.',
+      },
     ],
     stanze: [
       [
@@ -121,10 +129,21 @@ window.LIVELLI = [
           '..i.............',
           '####............',
           '#............###',
-          '#.....3.........',
-          '#...............',
-          '#^^^^^^^^^^--...',
-          '###########.....',
+          '#.....3......###',
+          '#............###',
+          '#^^^^^^^^^^^^###',
+          '################',
+        ],
+        [
+          '################',
+          '....Y......Y....',
+          '................',
+          'Ki......x.......',
+          '####...#####....',
+          '####...#####....',
+          '####vk######....',
+          '##############..',
+          '##############..',
         ],
       ],
       [
@@ -140,14 +159,25 @@ window.LIVELLI = [
           '######~~~~######',
         ],
         [
-          '###########.....',
+          '################',
           '#...............',
           '#...........####',
           '#...............',
           '#...o...........',
           '#........###....',
           '................',
-          '......r...K..a..',
+          '......r......a..',
+          '################',
+        ],
+        [
+          '#...............',
+          '#...............',
+          '#............###',
+          '#....o....K.....',
+          '#........####...',
+          '#...............',
+          'L...............',
+          'L..x....r.......',
           '################',
         ],
       ],
@@ -160,6 +190,10 @@ window.LIVELLI = [
       {
         pc: 'Il pilastro è alto: accorcia la frusta con ↑ per passarci sopra, poi aggrappati al piolo successivo.',
         touch: 'Il pilastro è alto: accorcia la frusta con ▲ per passarci sopra, poi aggrappati al piolo successivo.',
+      },
+      {
+        pc: 'Cesoie e spuntoni a scomparsa: guarda il ritmo e passa quando sono aperti.',
+        touch: 'Cesoie e spuntoni a scomparsa: guarda il ritmo e passa quando sono aperti.',
       },
     ],
     stanze: [[
@@ -193,6 +227,28 @@ window.LIVELLI = [
         '.a.K....#....A..',
         '#####..###..####',
         '#####^^###^^####',
+        '################',
+        '################',
+      ],
+      [
+        '################',
+        '................',
+        '.........o......',
+        '................',
+        '.i.x.vv.x.v.x...',
+        '################',
+        '################',
+        '################',
+        '################',
+      ],
+      [
+        '################',
+        '..Y.......Y...L.',
+        '..k...........L.',
+        '.###..........L.',
+        '..............L.',
+        'K....#..v.r...L.',
+        '################',
         '################',
         '################',
       ],

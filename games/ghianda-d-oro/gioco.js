@@ -58,6 +58,10 @@
     5: { nome: 'Carta di credito scaduta', file: 'carta-scaduta' },
   };
   const PORTA = { tempo: 6, apre: 2.5, chiude: 0.9 };
+  // Trappole a tempo (secondi)
+  const CESOIE = { aperte: 1.4, chiude: 0.12, chiuse: 0.48, apre: 0.2, sfasa: 0.7 };
+  const SPUNTONI = { periodo: 2.4, su: 1.1, avviso: 0.35 };
+  const STALATTITI = { vista: 110, trema: 0.35, gravita: 2000, ritorno: 5 };
 
   // Cappello e frusta sulle foto di Tino: [x, y, larghezza, rotazione] in pixel dell'immagine.
   const POSE = {
@@ -76,6 +80,7 @@
   const elCeci = $('#ceci');
   const elTitolo = $('#titolo-livello');
   const elRobi = $('#robivecchi');
+  const elChiavi = $('#chiavi');
 
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const segno = (x) => (x > 0 ? 1 : x < 0 ? -1 : 0);
@@ -105,6 +110,7 @@
     retino: 'agenti-tari/agente-retino.svg',
     timbro: 'agenti-tari/agente-timbro.svg',
     cece: 'oggetti/cece.svg',
+    chiave: 'oggetti/chiave.svg',
   };
   for (const [k, r] of Object.entries(ROBIVECCHI)) SORGENTI['robi' + k] = `oggetti/robivecchi/${r.file}.svg`;
   const img = {};
@@ -183,6 +189,7 @@
     figure.retino = rasterizza(img.retino, 100);
     figure.timbro = rasterizza(img.timbro, 100);
     figure.cece = rasterizza(img.cece, 30);
+    figure.chiave = rasterizza(img.chiave, 40);
     for (const k of Object.keys(ROBIVECCHI)) figure['robi' + k] = rasterizza(img['robi' + k], 40);
   }
 
@@ -219,6 +226,8 @@
     stordito: () => [900, 700, 900].forEach((f, i) => setTimeout(() => suono(f, 0.06, 'triangle', 0.05), i * 70)),
     bolletta: () => suono(500, 0.12, 'triangle', 0.035, 300),
     partenza: () => [523, 784].forEach((f, i) => setTimeout(() => suono(f, 0.12, 'triangle', 0.06), i * 90)),
+    chiave: () => [660, 990].forEach((f, i) => setTimeout(() => suono(f, 0.1, 'triangle', 0.07), i * 80)),
+    lucchetto: () => { suono(220, 0.08, 'square', 0.05); setTimeout(() => suono(330, 0.25, 'triangle', 0.06, 660), 90); },
     robivecchio: () => [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => suono(f, 0.1, 'triangle', 0.07), i * 70)),
     vittoria: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => suono(f, 0.16, 'triangle', 0.08), i * 120)),
     ko: () => [392, 330, 262, 196].forEach((f, i) => setTimeout(() => suono(f, 0.2, 'sawtooth', 0.045), i * 150)),
@@ -273,6 +282,7 @@
       stanzeW: colStanze, stanzeH: righeStanze,
       porte: [], pulsanti: [], crepe: [], ceci: [], pioli: [], torce: [], cartelli: [],
       controlli: [], agenti: [], robivecchi: [], uscita: null, partenza: null, ceciTotali: 0,
+      cesoie: [], stalattiti: [], chiavi: [], serrature: [],
     };
     for (let y = 0; y < lh; y++) griglia.push(new Array(lw).fill('.'));
     let nCartello = 0;
@@ -286,7 +296,11 @@
             const gx = sx * COL + x, gy = sy * RIG + y;
             const cx = gx * T + T / 2, cy = gy * T + T / 2;
             let cella = '.';
-            if (ch === '#' || ch === '-' || ch === '^') cella = ch;
+            if (ch === '#' || ch === '-' || ch === '^' || ch === 'v') cella = ch;
+            else if (ch === 'x') liv.cesoie.push({ x: gx, y: gy, fase: liv.cesoie.length * CESOIE.sfasa });
+            else if (ch === 'Y') liv.stalattiti.push({ x: cx, y0: gy * T, y: gy * T, vy: 0, stato: 'appesa', t: 0 });
+            else if (ch === 'k') liv.chiavi.push({ x: cx, y: cy, preso: false });
+            else if (ch === 'L') { cella = 'L'; liv.serrature.push({ x: gx, y: gy, aperta: 0, apre: false }); }
             else if (ch === '~') { cella = '~'; liv.crepe.push({ x: gx, y: gy, stato: 'intatta', t: 0 }); }
             else if (ch >= 'A' && ch <= 'D') { cella = '|'; liv.porte.push({ x: gx, y: gy, lettera: ch, apertura: 0, timer: 0 }); }
             else if (ch >= 'a' && ch <= 'd') liv.pulsanti.push({ x: gx, y: gy, lettera: ch.toUpperCase(), premuto: false });
@@ -328,6 +342,27 @@
   }
 
   function porta(gx, gy) { return G.liv.porte.find((p) => p.x === gx && p.y === gy); }
+  function serratura(gx, gy) { return G.liv.serrature.find((p) => p.x === gx && p.y === gy); }
+
+  // 0 = cesoie aperte, 1 = chiuse
+  function chiusura(c) {
+    const C = CESOIE;
+    const periodo = C.aperte + C.chiude + C.chiuse + C.apre;
+    let tt = (G.tempo + c.fase) % periodo;
+    if (tt < C.aperte) return 0;
+    tt -= C.aperte;
+    if (tt < C.chiude) return tt / C.chiude;
+    tt -= C.chiude;
+    if (tt < C.chiuse) return 1;
+    return 1 - (tt - C.chiuse) / C.apre;
+  }
+  // spuntoni a scomparsa: 0 = nascosti, 1 = fuori
+  function spuntoniFuori() {
+    const tt = G.tempo % SPUNTONI.periodo;
+    if (tt < SPUNTONI.su) return 1;
+    if (tt > SPUNTONI.periodo - SPUNTONI.avviso) return 0.25; // stanno per uscire
+    return 0;
+  }
   function crepa(gx, gy) { return G.liv.crepe.find((c) => c.x === gx && c.y === gy); }
 
   // solido per Tino (e per gli agenti)
@@ -335,6 +370,7 @@
     const c = cella(gx, gy);
     if (c === '#') return true;
     if (c === '|') { const p = porta(gx, gy); return !p || p.apertura < 0.9; }
+    if (c === 'L') { const p = serratura(gx, gy); return !p || p.aperta < 0.9; }
     if (c === '~') { const k = crepa(gx, gy); return !k || k.stato !== 'caduta'; }
     return false;
   }
@@ -348,7 +384,7 @@
       coyote: 0, buffer: 0, invulnerabile: 0, ferito: 0, schiaccia: 0,
       quotaCaduta: y, presaPausa: 0, spintaMuro: 0,
       appiglio: null, sale: 0, daSale: null,
-      piolo: null, angolo: 0, omega: 0, corda: 0, lasca: false,
+      piolo: null, angolo: 0, omega: 0, corda: 0, lasca: false, chiavi: 0,
       schiocco: 0, ricarica: 0, passo: 0,
       sicuro: { x, y }, controllo: { x, y },
     };
@@ -375,6 +411,7 @@
     aggiornaStanza(true);
     aggiornaCeci();
     aggiornaRobivecchi();
+    aggiornaChiavi();
   }
 
   function aggiornaRobivecchi() {
@@ -389,6 +426,12 @@
       if (!(r.preso || r.giaTrovato)) im.className = 'vuoto';
       elRobi.appendChild(im);
     }
+  }
+
+  function aggiornaChiavi() {
+    const n = G.tino ? G.tino.chiavi : 0;
+    elChiavi.innerHTML = n ? `<img src="${BASE + SORGENTI.chiave}" alt="">${n > 1 ? '<b>×' + n + '</b>' : ''}` : '';
+    elChiavi.setAttribute('aria-label', `Chiavi: ${n}`);
   }
 
   function aggiornaCeci() {
@@ -565,8 +608,8 @@
     const palmo = t.y - 28;
     const gy = Math.round(palmo / T);
     const cima = gy * T;
-    if (Math.abs(palmo - cima) > 22) return null;
-    if (!solido(gx, gy) || cella(gx, gy) === '|') return null;
+    if (Math.abs(palmo - cima) > 28) return null;
+    if (!solido(gx, gy) || cella(gx, gy) === '|' || cella(gx, gy) === 'L') return null;
     if (solido(gx, gy - 1) || solido(gx, gy - 2)) return null;
     // sopra Tino deve esserci spazio per salire
     const miaX = Math.floor(t.x / T);
@@ -866,12 +909,51 @@
     // spuntoni
     for (let gy = Math.floor(s.t / T); gy <= Math.floor((s.b - 0.01) / T); gy++) {
       for (let gx = Math.floor(s.l / T); gx <= Math.floor((s.r - 0.01) / T); gx++) {
-        if (cella(gx, gy) !== '^') continue;
+        const c = cella(gx, gy);
+        if (c !== '^' && !(c === 'v' && spuntoniFuori() === 1)) continue;
         if (sovrappone(piccola, { l: gx * T + 6, r: gx * T + T - 6, t: gy * T + 30, b: gy * T + T })) { trappola(); return; }
       }
     }
     // baratro
     if (t.y - t.h > G.liv.lh * T + 40) { trappola(); return; }
+
+    // cesoie: colpiscono se sono quasi chiuse
+    for (const c of G.liv.cesoie) {
+      if (chiusura(c) < 0.7) continue;
+      const area = { l: c.x * T + 16, r: c.x * T + T - 16, t: (c.y - 1) * T, b: (c.y + 1) * T };
+      if (sovrappone(piccola, area)) { colpito(-t.dir || -1); break; }
+    }
+
+    // chiavi
+    for (const k of G.liv.chiavi) {
+      if (k.preso) continue;
+      if (k.x > s.l - 16 && k.x < s.r + 16 && k.y > s.t - 16 && k.y < s.b + 16) {
+        k.preso = true;
+        t.chiavi++;
+        aggiornaChiavi();
+        suoni.chiave();
+        coriandoli(k.x, k.y, '#ffd23a', 12);
+        scritta(k.x, k.y - 26, 'Una chiave!', '#ffe680');
+      }
+    }
+    // porte col lucchetto: si aprono toccandole con una chiave
+    const vicino = { l: s.l - 6, r: s.r + 6, t: s.t, b: s.b };
+    for (const p of G.liv.serrature) {
+      if (p.apre) continue;
+      if (!sovrappone(vicino, { l: p.x * T, r: p.x * T + T, t: p.y * T, b: p.y * T + T })) continue;
+      if (t.chiavi > 0) {
+        t.chiavi--;
+        aggiornaChiavi();
+        // si apre tutta la porta (le celle una sopra l'altra)
+        for (const q of G.liv.serrature) if (q.x === p.x && Math.abs(q.y - p.y) < 8) q.apre = true;
+        suoni.lucchetto();
+        scritta(p.x * T + T / 2, p.y * T - 10, 'Aperta!', '#ffe680');
+      } else if (G.tempo > (G.avvisoChiave || 0)) {
+        G.avvisoChiave = G.tempo + 2;
+        scritta(p.x * T + T / 2, p.y * T - 10, 'Serve una chiave!', '#ff8a7a');
+      }
+      break;
+    }
 
     // ceci
     for (const c of G.liv.ceci) {
@@ -930,7 +1012,11 @@
       const fermo = sotto.every(([gx, gy]) => cella(gx, gy) === '#');
       const gx = Math.floor(t.x / T), gy = Math.floor((t.y - 1) / T);
       let trappoleVicine = false;
-      for (let x = gx - 1; x <= gx + 1; x++) if (cella(x, gy) === '^' || cella(x, gy + 1) === '^' || cella(x, gy + 1) === '.') trappoleVicine = true;
+      for (let x = gx - 1; x <= gx + 1; x++) {
+        if (cella(x, gy) === '^' || cella(x, gy) === 'v' || cella(x, gy + 1) === '.') trappoleVicine = true;
+      }
+      if (G.liv.cesoie.some((c) => Math.abs(c.x - gx) <= 1 && Math.abs(c.y - gy) <= 1)) trappoleVicine = true;
+      if (G.liv.stalattiti.some((k) => Math.abs(k.x - t.x) < STALATTITI.vista + 20 && k.y0 < t.y)) trappoleVicine = true;
       const agentiVicini = G.liv.agenti.some((a) => a.stato !== 'stordito' && Math.abs(a.x - t.x) < 3 * T && Math.abs(a.y - t.y) < T);
       if (fermo && !trappoleVicine && !agentiVicini) t.sicuro = { x: t.x, y: t.y };
     }
@@ -969,6 +1055,34 @@
           d.apertura = Math.max(0, d.apertura - PORTA.chiude * dt);
           if (primaA >= 0.9 && d.apertura < 0.9 && d === liv.porte.find((q) => q.lettera === d.lettera)) suoni.porta();
         }
+      }
+    }
+    // porte col lucchetto che si aprono
+    for (const p of liv.serrature) if (p.apre && p.aperta < 1) p.aperta = Math.min(1, p.aperta + 1.2 * dt);
+    // stalattiti: cadono quando Tino ci passa sotto
+    for (const k of liv.stalattiti) {
+      const nellaStanza = Math.floor(k.x / L) === G.stanza.x && Math.floor(k.y0 / A) === G.stanza.y;
+      if (k.stato === 'appesa') {
+        if (nellaStanza && t.stato !== 'ko' && Math.abs(t.x - k.x) < STALATTITI.vista && t.y > k.y0 + T) { k.stato = 'trema'; k.t = STALATTITI.trema; }
+      } else if (k.stato === 'trema') {
+        k.t -= dt;
+        if (k.t <= 0) { k.stato = 'cade'; k.vy = 0; suoni.crollo(); }
+      } else if (k.stato === 'cade') {
+        k.vy += STALATTITI.gravita * dt;
+        k.y += k.vy * dt;
+        const punta = { l: k.x - 10, r: k.x + 10, t: k.y + 10, b: k.y + 44 };
+        if (t.stato !== 'ko' && sovrappone(punta, scatola(t))) {
+          colpito(0);
+          k.stato = 'rotta'; k.t = STALATTITI.ritorno;
+          coriandoli(k.x, k.y + 30, '#9b8264', 10);
+        } else if (solido(Math.floor(k.x / T), Math.floor((k.y + 44) / T)) || k.y > (liv.lh + 1) * T) {
+          k.stato = 'rotta'; k.t = STALATTITI.ritorno;
+          suoni.crollo();
+          for (let i = 0; i < 8; i++) G.particelle.push({ x: k.x + (Math.random() - 0.5) * 20, y: k.y + 40, vx: (Math.random() - 0.5) * 220, vy: -Math.random() * 200, vita: 0.7, colore: '#8a7357', r: 3 + Math.random() * 4, peso: 1 });
+        }
+      } else if (k.stato === 'rotta') {
+        k.t -= dt;
+        if (k.t <= 0) { k.stato = 'appesa'; k.y = k.y0; }
       }
     }
     // pavimento crepato
@@ -1382,6 +1496,110 @@
         }
       }
     }
+    // spuntoni a scomparsa
+    const fuori = spuntoniFuori();
+    for (let gy = G.stanza.y * RIG; gy < (G.stanza.y + 1) * RIG; gy++) {
+      for (let gx = G.stanza.x * COL; gx < (G.stanza.x + 1) * COL; gx++) {
+        if (cella(gx, gy) !== 'v') continue;
+        const x = gx * T, y = gy * T;
+        ctx.fillStyle = '#2a1e14';
+        for (let i = 0; i < 3; i++) ctx.fillRect(x + 6 + i * 18, y + T - 4, 12, 4);
+        if (!fuori) continue;
+        const h = fuori === 1 ? 30 : 9;
+        for (let i = 0; i < 3; i++) {
+          const sx = x + 4 + i * 18;
+          ctx.fillStyle = fuori === 1 ? '#c9ced6' : '#8c94a6';
+          ctx.beginPath();
+          ctx.moveTo(sx, y + T); ctx.lineTo(sx + 8, y + T - h); ctx.lineTo(sx + 16, y + T);
+          ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 2; ctx.stroke();
+        }
+      }
+    }
+    // cesoie: due lame che si chiudono a tempo
+    for (const c of liv.cesoie) {
+      const x = c.x * T + T / 2, alto = (c.y - 1) * T, basso = (c.y + 1) * T;
+      if (!visibile(x, alto)) continue;
+      const k = chiusura(c);
+      const lung = 6 + (T - 6) * k;
+      ctx.fillStyle = '#2a1e14';
+      ctx.fillRect(x - 18, alto, 36, 8);
+      ctx.fillRect(x - 18, basso - 6, 36, 6);
+      for (const [y0, verso] of [[alto + 4, 1], [basso - 3, -1]]) {
+        const y1 = y0 + verso * lung;
+        ctx.fillStyle = k > 0.7 ? '#e6e9ee' : '#b9c0cc';
+        ctx.strokeStyle = '#2b2f38';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - 13, y0);
+        ctx.lineTo(x + 13, y0);
+        ctx.lineTo(x + 13, y1 - verso * 10);
+        for (let i = 0; i < 3; i++) { ctx.lineTo(x + 13 - (i * 2 + 1) * 4.3, y1); ctx.lineTo(x + 13 - (i * 2 + 2) * 4.3, y1 - verso * 7); }
+        ctx.lineTo(x - 13, y1 - verso * 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillRect(x - 9, Math.min(y0, y1) + 3, 3, Math.max(0, Math.abs(y1 - y0) - 14));
+      }
+    }
+    // stalattiti
+    for (const k of liv.stalattiti) {
+      if (!visibile(k.x, k.y0)) continue;
+      ctx.fillStyle = '#5f4b37';
+      ctx.beginPath(); ctx.ellipse(k.x, k.y0 + 2, 18, 7, 0, 0, Math.PI * 2); ctx.fill();
+      if (k.stato === 'rotta') continue;
+      const tr = k.stato === 'trema' ? (Math.random() - 0.5) * 5 : 0;
+      ctx.fillStyle = '#8a7357';
+      ctx.strokeStyle = '#3e3226';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(k.x - 15 + tr, k.y);
+      ctx.lineTo(k.x + 15 + tr, k.y);
+      ctx.lineTo(k.x + 5 + tr, k.y + 28);
+      ctx.lineTo(k.x + tr, k.y + 46);
+      ctx.lineTo(k.x - 6 + tr, k.y + 26);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,240,210,0.3)';
+      ctx.fillRect(k.x - 8 + tr, k.y + 3, 4, 18);
+    }
+    // porte col lucchetto (salgono quando si aprono)
+    for (const p of liv.serrature) {
+      const x = p.x * T, y = p.y * T;
+      if (!visibile(x, y)) continue;
+      const alto = T * (1 - p.aperta);
+      if (alto <= 1) continue;
+      ctx.fillStyle = '#7a4a22';
+      ctx.fillRect(x + 6, y, T - 12, alto);
+      ctx.strokeStyle = '#3a2414';
+      ctx.lineWidth = 2;
+      for (let i = 1; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x + 6 + i * 16, y); ctx.lineTo(x + 6 + i * 16, y + alto); ctx.stroke(); }
+      ctx.strokeRect(x + 6, y, T - 12, alto);
+      ctx.fillStyle = '#3e3e46';
+      if (alto > 16) ctx.fillRect(x + 4, y + 8, T - 8, 6);
+      if (alto > 50) ctx.fillRect(x + 4, y + 44, T - 8, 6);
+      // lucchetto sulla cella più in basso
+      if (cella(p.x, p.y + 1) !== 'L' && !p.apre) {
+        const cx = x + T / 2, cy = y + 30;
+        ctx.strokeStyle = '#6b5014'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(cx, cy - 6, 8, Math.PI, 0); ctx.stroke();
+        ctx.fillStyle = '#e8b33a'; ctx.strokeStyle = '#6b5014'; ctx.lineWidth = 2;
+        tondo(cx - 12, cy - 6, 24, 20, 4); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#3a2414';
+        ctx.beginPath(); ctx.arc(cx, cy + 2, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(cx - 1.5, cy + 2, 3, 7);
+      }
+    }
+    // chiavi
+    for (const k of liv.chiavi) {
+      if (k.preso || !visibile(k.x, k.y)) continue;
+      const by = Math.sin(tm * 3 + k.x) * 4;
+      const b = ctx.createRadialGradient(k.x, k.y + by, 2, k.x, k.y + by, 34);
+      b.addColorStop(0, 'rgba(255,220,90,0.55)'); b.addColorStop(1, 'rgba(255,220,90,0)');
+      ctx.fillStyle = b; ctx.fillRect(k.x - 34, k.y + by - 34, 68, 68);
+      ctx.drawImage(figure.chiave, k.x - 20, k.y + by - 20, 40, 40);
+    }
     // pavimento crepato
     for (const c of liv.crepe) {
       if (c.stato === 'caduta') continue;
@@ -1476,7 +1694,11 @@
 
     // testo del cartello (in alto, fisso sullo schermo)
     ctx.setTransform(k, 0, 0, k, 0, 0);
-    if (G.cartello && G.tino.stato !== 'ko') disegnaFumetto(touch ? G.cartello.testo.touch : G.cartello.testo.pc);
+    if (G.cartello && G.tino.stato !== 'ko') {
+      // se Tino è nella metà alta dello schermo il fumetto va in basso, per non coprire niente
+      const inAlto = G.tino.y - G.stanza.y * A < A * 0.55;
+      disegnaFumetto(touch ? G.cartello.testo.touch : G.cartello.testo.pc, inAlto);
+    }
   }
 
   function tondo(x, y, w, h, r) {
@@ -1489,7 +1711,7 @@
     ctx.closePath();
   }
 
-  function disegnaFumetto(testo) {
+  function disegnaFumetto(testo, inBasso = false) {
     if (!testo) return;
     ctx.font = '600 21px Fredoka, sans-serif';
     const parole = testo.split(' ');
@@ -1501,14 +1723,15 @@
     }
     righe.push(riga);
     const h = 22 + righe.length * 27;
+    const y0 = inBasso ? A - 12 - h : 12;
     ctx.fillStyle = 'rgba(255,248,236,0.94)';
     ctx.strokeStyle = '#7a4a22';
     ctx.lineWidth = 3;
-    tondo(L / 2 - 400, 12, 800, h, 14);
+    tondo(L / 2 - 400, y0, 800, h, 14);
     ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#3b2a1a';
     ctx.textAlign = 'center';
-    righe.forEach((r, i) => ctx.fillText(r, L / 2, 12 + 32 + i * 27));
+    righe.forEach((r, i) => ctx.fillText(r, L / 2, y0 + 32 + i * 27));
   }
 
   function disegnaFiamma(x, y, s, tm) {
@@ -1842,6 +2065,6 @@
     avvia,
     passo(dt = PASSO) { aggiorna(dt); },
     premi(nuovi) { for (const k in comandi) comandi[k] = !!nuovi[k]; },
-    cella, solido, ROBIVECCHI,
+    cella, solido, ROBIVECCHI, chiusura, spuntoniFuori,
   };
 })();

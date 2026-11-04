@@ -127,6 +127,14 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   moneta, bottone, graffetta, fiocco, carta di credito scaduta; disegni in
   `assets/oggetti/robivecchi/`). Salvati in `localStorage` appena presi; si
   vedono nella barra (quelli del livello), a fine livello e nel menu (collezione).
+- **Chiavi e lucchetti**: `k` chiave (si accumulano, si vedono nella barra),
+  `L` porta col lucchetto (si apre toccandola con una chiave, che si consuma;
+  le `L` una sopra l'altra sono la stessa porta).
+- **Trappole**: `^` spuntoni fissi, `v` spuntoni a scomparsa (tabella `SPUNTONI`),
+  `x` cesoie a tempo che occupano la casella e quella sopra (tabella `CESOIE`,
+  ogni cesoia è sfasata rispetto alla precedente), `Y` stalattiti che cadono
+  quando Tino ci passa sotto (tabella `STALATTITI`), `~` pavimento che crolla,
+  baratri. Il fumetto dei cartelli va in basso se Tino è nella metà alta.
 - **Agenti della Tari** (`assets/agenti-tari/`, disegni vettoriali con scritta
   TARI già in tracciati): col retino (ronda e insegue), col timbro (lancia
   bollette), ispettore capo (per la fine dei mondi, non ancora usato).
@@ -134,11 +142,16 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   appoggiano alle foto originali con la tabella `POSE` (posizione e rotazione
   per ogni espressione); anteprima in `bozzetti/avventura.html`.
 - **Tabelle** in cima a `gioco.js`: `FISICA`, `FRUSTA`, `AGENTI`, `VITA`, `PORTA`.
-- **Livelli fatti**: 1 "Le radici della Quercia" (guida, moneta in fondo al
-  baratro), 2 "Il pozzo delle radici" (2 × 2 stanze: agente col timbro,
-  due pioli, corsa alla porta di 5 s; bottone e graffetta), 3 "La galleria dei
-  pioli" (pilastro da superare accorciando la frusta, strada alta con pavimento
-  che crolla o bassa con due agenti, porta di 5 s; fiocco e carta di credito).
+- **Livelli fatti** (mondo 1, le radici della quercia):
+  1 "Le radici della Quercia" (4 stanze, guida; moneta in fondo al baratro);
+  2 "Il pozzo delle radici" (3 × 2 stanze: agente col timbro, due pioli,
+  stalattiti, buco con chiave e spuntoni a scomparsa, cesoie, porta col
+  lucchetto, corsa alla porta di 5 s; bottone e graffetta; ~35 s al giocatore
+  perfetto); 3 "La galleria dei pioli" (6 stanze in fila: pilastro da superare
+  accorciando la frusta, strada alta o bassa con due agenti, porta di 5 s,
+  corridoio di tre cesoie e spuntoni a scomparsa, chiave su una sporgenza sotto
+  una stalattite, porta col lucchetto, frusta dal pavimento che crolla;
+  fiocco e carta di credito; ~43 s).
 - **Prove automatiche**: `window.ghiandaDOro` (`G.test = true`, `avvia`,
   `premi`, `passo`) per far giocare un livello a un giocatore simulato con una
   sequenza di mosse (vai, salta, sali, frusta, dondola regolando la corda).
