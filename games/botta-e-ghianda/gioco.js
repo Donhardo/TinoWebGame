@@ -15,14 +15,26 @@
   const L = 960;               // lunghezza del campo
   const S = 540;               // larghezza del campo
   const R = 13;                // raggio della ghianda
-  const FACCIA = 118;          // distanza dal fondo del piano di battuta
-  const LUNG = 124;            // lunghezza utile della "racchetta"
-  const BOX_V = 150;           // ingombro immagine lungo v
-  const BOX_U = 112;           // ingombro immagine lungo u
+  const FACCIA = 128;          // distanza dal fondo della parte anteriore dei personaggi
+  // ingombro massimo delle immagini (lungo v e lungo u); sul telefono in
+  // verticale c'è più spazio in profondità
+  const BOX = { orizzontale: { v: 134, u: 100 }, verticale: { v: 134, u: 126 } };
   const ANGOLO_MAX = 55 * Math.PI / 180;
   const PUNTI_LIVELLO = 5;     // punti per superare un livello contro Gino
   const PUNTI_DUE = 7;         // punti per vincere in due giocatori
   const VEL_PUNTATORE = 2600;  // velocità massima quando si segue mouse o dito
+
+  // Super tiro: la barra si carica a ogni colpo e un poco col tempo;
+  // quando è piena il colpo successivo infuoca la ghianda, che poi scoppia
+  // e diventa un pop corn veloce e ballerino.
+  const SUPER = {
+    caricaColpo: 0.2,          // carica per ogni colpo (5 colpi = barra piena)
+    caricaSecondo: 0.015,      // carica al secondo durante lo scambio
+    velocita: 1.4,             // quanto è più veloce del tiro normale
+    fuoco: 0.3,                // secondi in fiamme prima dello scoppio
+    onda: 26,                  // ampiezza della traiettoria ballerina del pop corn
+    frequenza: 11,
+  };
 
   const ASSETS = '../../assets/';
   const immagini = {
@@ -80,6 +92,7 @@
       tremaT: 0,            // tremolio quando subisce
       festa: false,         // saltelli continui a fine partita
       caduta: 0,            // 0..1 quando perde la partita
+      carica: 0,            // barra del super tiro, 0..1
       ia: { timer: 0, bersaglio: S / 2, mira: 0, sbaglio: 0 },
     };
   }
@@ -93,8 +106,9 @@
     puntiGiocati: 0,
     timer: 0,
     versoServizio: 1,
-    palla: { u: L / 2, v: S / 2, vu: 0, vv: 0, vel: 0, rot: 0, visibile: true },
+    palla: { u: L / 2, v: S / 2, vu: 0, vv: 0, vel: 0, rot: 0, visibile: true, super: null },
     scia: [],
+    particelle: [],
     tino: nuovoGiocatore('tino'),
     gino: nuovoGiocatore('gino'),
     messaggio: null,       // { testo, t, durata }
@@ -168,6 +182,9 @@
     sponda: () => suono(220, 0.05, 'triangle', 0.06),
     punto: (buono) => buono ? suono(520, 0.25, 'triangle', 0.08, 880) : suono(300, 0.3, 'sawtooth', 0.05, 110),
     via: () => suono(660, 0.08, 'triangle', 0.06),
+    superTiro: () => { suono(160, 0.4, 'sawtooth', 0.06, 900); suono(90, 0.3, 'square', 0.04, 60); },
+    pop: () => { suono(1400, 0.05, 'square', 0.07, 600); setTimeout(() => suono(1800, 0.04, 'square', 0.05, 900), 40); },
+    spegni: () => suono(500, 0.18, 'triangle', 0.05, 180),
     vittoria: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => suono(f, 0.16, 'triangle', 0.08), i * 120)),
     sconfitta: () => [392, 330, 262, 196].forEach((f, i) => setTimeout(() => suono(f, 0.2, 'sawtooth', 0.045), i * 150)),
   };
@@ -195,6 +212,7 @@
     canvas.height = Math.round(alt * scala * dpr);
     ctx.setTransform(scala * dpr, 0, 0, scala * dpr, 0, 0);
     stato.scia.length = 0;
+    stato.particelle.length = 0;
   }
   new ResizeObserver(ridimensiona).observe(palco);
 
@@ -302,7 +320,7 @@
     stato.fase = stato.modo === 'demo' ? 'demo' : 'servizio';
     stato.timer = stato.modo === 'demo' ? 0.6 : 1.1;
     const b = stato.palla;
-    Object.assign(b, { u: L / 2, v: S / 2, vu: 0, vv: 0, vel: 0, visibile: true, inGioco: false });
+    Object.assign(b, { u: L / 2, v: S / 2, vu: 0, vv: 0, vel: 0, visibile: true, inGioco: false, super: null });
     stato.scia.length = 0;
     if (stato.modo !== 'demo') {
       const n = obiettivo() - 1;
@@ -442,8 +460,13 @@
       if (stato.messaggio.t > stato.messaggio.durata) stato.messaggio = null;
     }
 
+    aggiornaParticelle(dt);
+
     const fermi = stato.fase === 'fine' || stato.fase === 'fine-livello';
     if (!fermi) muoviGiocatori(dt);
+    if (stato.palla.inGioco) {
+      for (const g of [stato.tino, stato.gino]) caricaSuper(g, SUPER.caricaSecondo * dt);
+    }
 
     switch (stato.fase) {
       case 'demo':
@@ -485,7 +508,14 @@
   }
 
   function limitaV(v) {
-    return clamp(v, LUNG / 2 - 14, S - LUNG / 2 + 14);
+    return clamp(v, 50, S - 50);
+  }
+
+  // Contro il computer la barra di Gino si carica più piano nei primi livelli.
+  function caricaSuper(g, quanto) {
+    let k = 1;
+    if (g.lato === 'gino' && stato.modo === 'cpu') k = Math.min(1, 0.55 + 0.05 * difficolta());
+    g.carica = Math.min(1, g.carica + quanto * k);
   }
 
   function guidaUmano(g, dir, dt) {
@@ -526,7 +556,7 @@
   // e quanto sbaglierà la stima su questo tiro.
   function nuovaMira(g) {
     const p = parametriIA();
-    g.ia.mira = casuale(-1, 1) * p.mira * (LUNG / 2);
+    g.ia.mira = casuale(-1, 1) * p.mira * (sagoma(g).ev / 2);
     g.ia.sbaglio = casuale(-1, 1);
     g.ia.timer = 0;
   }
@@ -543,7 +573,8 @@
         const uArrivo = g.lato === 'gino' ? L - FACCIA - R : FACCIA + R;
         const pr = prevedi(b, uArrivo);
         // l'errore cala man mano che la ghianda si avvicina e restano meno sponde
-        const errore = p.errore + p.erroreVel * Math.abs(b.vv) + p.erroreSponda * pr.sponde;
+        let errore = p.errore + p.erroreVel * Math.abs(b.vv) + p.erroreSponda * pr.sponde;
+        if (b.super) errore += 30; // il pop corn balla ed è difficile da leggere
         g.ia.bersaglio = pr.v + g.ia.mira + g.ia.sbaglio * errore;
       } else {
         // in attesa torna verso il centro, seguendo un po' la ghianda
@@ -565,29 +596,17 @@
     const passi = Math.max(1, Math.ceil((b.vel * dt) / 6));
     const h = dt / passi;
     for (let i = 0; i < passi; i++) {
-      const uPrima = b.u;
-      const vPrima = b.v;
       b.u += b.vu * h;
       b.v += b.vv * h;
+      if (b.super) aggiornaSuper(b, h);
 
       // sponde
       if (b.v < R) { b.v = 2 * R - b.v; b.vv = Math.abs(b.vv); suoni.sponda(); }
       else if (b.v > S - R) { b.v = 2 * (S - R) - b.v; b.vv = -Math.abs(b.vv); suoni.sponda(); }
 
-      // Tino
-      const pianoT = FACCIA;
-      if (b.vu < 0 && uPrima - R >= pianoT && b.u - R < pianoT) {
-        const f = (uPrima - R - pianoT) / (uPrima - b.u);
-        const vColpo = vPrima + (b.v - vPrima) * f;
-        if (Math.abs(vColpo - stato.tino.v) <= LUNG / 2 + R * 0.7) battuta(stato.tino, vColpo);
-      }
-      // Gino
-      const pianoG = L - FACCIA;
-      if (b.vu > 0 && uPrima + R <= pianoG && b.u + R > pianoG) {
-        const f = (pianoG - uPrima - R) / (b.u - uPrima);
-        const vColpo = vPrima + (b.v - vPrima) * f;
-        if (Math.abs(vColpo - stato.gino.v) <= LUNG / 2 + R * 0.7) battuta(stato.gino, vColpo);
-      }
+      // tutta la sagoma dei personaggi fa da racchetta
+      if (b.vu < 0 && tocca(stato.tino, b)) battuta(stato.tino);
+      else if (b.vu > 0 && tocca(stato.gino, b)) battuta(stato.gino);
 
       if (b.u < -R * 2) { b.inGioco = false; punto('gino'); return; }
       if (b.u > L + R * 2) { b.inGioco = false; punto('tino'); return; }
@@ -595,26 +614,194 @@
     b.rot += (b.vel * dt) / R * Math.sign(b.vu || 1) * 0.5;
   }
 
-  function battuta(g, vColpo) {
+  function battuta(g) {
     const b = stato.palla;
     const p = parametriPalla();
     const verso = g.lato === 'tino' ? 1 : -1;
-    const scarto = clamp((vColpo - g.v) / (LUNG / 2 + R), -1, 1);
+    const sg = sagoma(g);
+    const scarto = clamp((b.v - g.v) / (sg.ev / 2 + R * 0.5), -1, 1);
     // il movimento del personaggio al momento del colpo dà un po' di effetto
     const effetto = clamp(g.vel / 2200, -0.22, 0.22);
     const angolo = clamp(scarto * ANGOLO_MAX + effetto, -ANGOLO_MAX, ANGOLO_MAX);
+
+    // chi respinge un super tiro lo spegne
+    if (b.super) {
+      b.super = null;
+      sbuffo(b);
+      suoni.spegni();
+    }
     b.vel = Math.min(b.vel * p.accel, p.max);
+
+    const superTiro = g.carica >= 1;
+    if (superTiro) {
+      g.carica = 0;
+      b.vel *= SUPER.velocita;
+      b.super = { chi: g.lato, fase: 'fuoco', t: 0 };
+      mostraMessaggio('Super tiro!', 0.9);
+      suoni.superTiro();
+    } else {
+      caricaSuper(g, SUPER.caricaColpo);
+    }
+
     b.vu = verso * b.vel * Math.cos(angolo);
     b.vv = b.vel * Math.sin(angolo);
-    b.u = verso > 0 ? FACCIA + R : L - FACCIA - R;
     g.schiaccia = 1;
-    const forza = b.vel / p.max;
-    if (forza > 0.82) {
+    const forza = Math.min(1, b.vel / p.max);
+    if (!superTiro && forza > 0.82) {
       if (g.lato === 'tino') imposta(g, 'ferito', 0.4);
       else g.tremaT = Math.max(g.tremaT, 0.2);
     }
-    suoni.battuta(forza);
+    if (!superTiro) suoni.battuta(forza);
     nuovaMira(g.lato === 'tino' ? stato.gino : stato.tino);
+  }
+
+  // La ghianda in fiamme scoppia e diventa pop corn, che avanza ondeggiando.
+  function aggiornaSuper(b, h) {
+    const sp = b.super;
+    sp.t += h;
+    if (sp.fase === 'fuoco' && sp.t >= SUPER.fuoco) {
+      sp.fase = 'popcorn';
+      sp.t = 0;
+      scoppio(b);
+      suoni.pop();
+    } else if (sp.fase === 'popcorn') {
+      b.v += Math.cos(sp.t * SUPER.frequenza) * SUPER.onda * SUPER.frequenza * h;
+      if (b.v < R) { b.v = 2 * R - b.v; b.vv = Math.abs(b.vv); }
+      else if (b.v > S - R) { b.v = 2 * (S - R) - b.v; b.vv = -Math.abs(b.vv); }
+    }
+  }
+
+  // ---------------------------------------------------------------- sagome
+  // Posizione e dimensioni a schermo dell'immagine di un personaggio, senza
+  // le animazioni: serve sia per disegnarlo sia per i colpi.
+  function sagoma(g) {
+    const img = immagineDi(g);
+    const nw = img.naturalWidth || 376;
+    const nh = img.naturalHeight || 512;
+    const box = verticale ? BOX.verticale : BOX.orizzontale;
+    const bw = verticale ? box.v : box.u;
+    const bh = verticale ? box.u : box.v;
+    const k = Math.min(bw / nw, bh / nh);
+    const w = nw * k;
+    const h = nh * k;
+    const eu = verticale ? h : w;   // profondità lungo u
+    const ev = verticale ? w : h;   // larghezza lungo v
+    const uCentro = g.lato === 'tino' ? FACCIA - eu / 2 : L - FACCIA + eu / 2;
+    const c = aSchermo(uCentro, g.v);
+    // Tino guarda verso Gino quando il campo è orizzontale
+    return { img, w, h, eu, ev, x: c.x, y: c.y, specchia: g.lato === 'tino' && !verticale };
+  }
+
+  // Maschera dei pixel non trasparenti di ogni immagine. Se il browser non
+  // permette di leggerla (pagina aperta da file), si usa il rettangolo.
+  const maschere = new Map();
+  function maschera(img) {
+    if (!img.complete || !img.naturalWidth) return null;
+    if (maschere.has(img)) return maschere.get(img);
+    let m = null;
+    try {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const cx = c.getContext('2d');
+      cx.drawImage(img, 0, 0);
+      const d = cx.getImageData(0, 0, c.width, c.height).data;
+      const a = new Uint8Array(c.width * c.height);
+      for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3] > 80 ? 1 : 0;
+      m = { w: c.width, h: c.height, a };
+    } catch (e) {
+      m = null;
+    }
+    maschere.set(img, m);
+    return m;
+  }
+
+  // La ghianda tocca il personaggio se il suo centro o un punto del suo bordo
+  // cade su un pixel visibile dell'immagine.
+  const PUNTI_BORDO = Array.from({ length: 16 }, (_, i) => [Math.cos(i * Math.PI / 8), Math.sin(i * Math.PI / 8)]);
+  function tocca(g, b) {
+    const sg = sagoma(g);
+    const p = aSchermo(b.u, b.v);
+    const dx = p.x - sg.x;
+    const dy = p.y - sg.y;
+    if (Math.abs(dx) > sg.w / 2 + R || Math.abs(dy) > sg.h / 2 + R) return false;
+    const m = maschera(sg.img);
+    if (!m) return true;
+    const prova = (x, y) => {
+      let lx = x / sg.w + 0.5;
+      const ly = y / sg.h + 0.5;
+      if (lx < 0 || lx >= 1 || ly < 0 || ly >= 1) return false;
+      if (sg.specchia) lx = 1 - lx;
+      return m.a[Math.floor(ly * m.h) * m.w + Math.floor(lx * m.w)] === 1;
+    };
+    if (prova(dx, dy)) return true;
+    for (const [cx, cy] of PUNTI_BORDO) {
+      if (prova(dx + cx * R, dy + cy * R) || prova(dx + cx * R * 0.55, dy + cy * R * 0.55)) return true;
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------- particelle
+  function direzioneSchermo(b) {
+    return verticale ? { x: b.vv, y: -b.vu } : { x: b.vu, y: b.vv };
+  }
+
+  function aggiungiParticella(q) {
+    if (stato.particelle.length < 260) stato.particelle.push(Object.assign({ t: 0 }, q));
+  }
+
+  function aggiornaParticelle(dt) {
+    const b = stato.palla;
+    // fiamme dietro alla ghianda infuocata, briciole dietro al pop corn
+    if (b.super && b.inGioco && b.visibile) {
+      const p = aSchermo(b.u, b.v);
+      const d = direzioneSchermo(b);
+      const n = Math.hypot(d.x, d.y) || 1;
+      const fuoco = b.super.fase === 'fuoco';
+      const quante = fuoco ? 5 : 2;
+      for (let i = 0; i < quante; i++) {
+        aggiungiParticella({
+          x: p.x + casuale(-6, 6), y: p.y + casuale(-6, 6),
+          vx: -d.x / n * casuale(40, 160) + casuale(-40, 40),
+          vy: -d.y / n * casuale(40, 160) + casuale(-40, 40) - (fuoco ? 40 : 0),
+          r: fuoco ? casuale(5, 11) : casuale(2, 4),
+          durata: fuoco ? casuale(0.25, 0.45) : casuale(0.3, 0.5),
+          tipo: fuoco ? 'fuoco' : 'briciola',
+        });
+      }
+    }
+    for (const q of stato.particelle) {
+      q.t += dt;
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      if (q.tipo === 'pezzo' || q.tipo === 'briciola') q.vy += 300 * dt;
+      q.vx *= 1 - 2 * dt;
+      q.vy *= 1 - (q.tipo === 'fuoco' ? 2 : 0.5) * dt;
+    }
+    stato.particelle = stato.particelle.filter((q) => q.t < q.durata);
+  }
+
+  function scoppio(b) {
+    const p = aSchermo(b.u, b.v);
+    for (let i = 0; i < 22; i++) {
+      const a = casuale(0, Math.PI * 2);
+      const v = casuale(120, 360);
+      aggiungiParticella({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, r: casuale(3, 6), durata: casuale(0.4, 0.7), tipo: 'pezzo' });
+    }
+    for (let i = 0; i < 10; i++) {
+      const a = casuale(0, Math.PI * 2);
+      aggiungiParticella({ x: p.x, y: p.y, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, r: casuale(8, 14), durata: 0.35, tipo: 'fuoco' });
+    }
+    aggiungiParticella({ x: p.x, y: p.y - 10, vx: 0, vy: -70, r: 0, durata: 0.7, tipo: 'testo', testo: 'POP!' });
+  }
+
+  function sbuffo(b) {
+    const p = aSchermo(b.u, b.v);
+    for (let i = 0; i < 12; i++) {
+      const a = casuale(0, Math.PI * 2);
+      const v = casuale(40, 140);
+      aggiungiParticella({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, r: casuale(6, 12), durata: casuale(0.4, 0.6), tipo: 'fumo' });
+    }
   }
 
   // ---------------------------------------------------------------- disegno
@@ -625,10 +812,13 @@
     disegnaCampo();
     ctx.restore();
 
+    disegnaBarre(tempo);
     disegnaScia();
     disegnaPersonaggio(stato.tino, tempo);
     disegnaPersonaggio(stato.gino, tempo);
+    disegnaParticelle(false);
     disegnaPalla(tempo);
+    disegnaParticelle(true);
     disegnaMessaggio();
   }
 
@@ -679,6 +869,9 @@
   }
 
   function facciaBaseTino() {
+    // concentrato prima di un super tiro: barra piena e ghianda in arrivo
+    const b = stato.palla;
+    if (stato.tino.carica >= 1 && b.inGioco && b.vu < 0) return 'arrabbiato';
     if (stato.fase === 'servizio' && stato.modo !== 'demo') {
       const n = obiettivo() - 1;
       if (stato.punti.tino === n || stato.punti.gino === n) return 'arrabbiato';
@@ -690,13 +883,10 @@
     const img = immagineDi(g);
     if (!img.complete || !img.naturalWidth) return;
 
-    const uCentro = g.lato === 'tino' ? FACCIA - BOX_U / 2 : L - FACCIA + BOX_U / 2;
-    const c = aSchermo(uCentro, g.v);
-    const bw = verticale ? BOX_V : BOX_U;
-    const bh = verticale ? BOX_U : BOX_V;
-    const k = Math.min(bw / img.naturalWidth, bh / img.naturalHeight);
-    const w = img.naturalWidth * k;
-    const h = img.naturalHeight * k;
+    const sg = sagoma(g);
+    const c = sg;
+    const w = sg.w;
+    const h = sg.h;
 
     let dx = 0, dy = 0, rot = 0;
     // schiacciamento lungo la direzione della ghianda
@@ -725,8 +915,7 @@
       dy += (1 - Math.pow(1 - g.caduta, 3)) * 12;
     }
 
-    // Tino guarda verso Gino quando il campo è orizzontale
-    const specchia = g.lato === 'tino' && !verticale;
+    const specchia = sg.specchia;
 
     ctx.save();
     ctx.translate(c.x + dx, c.y + dy);
@@ -745,7 +934,12 @@
     const p = aSchermo(b.u, b.v);
     let alfa = 1;
     if (!b.inGioco && stato.fase === 'servizio') alfa = 0.55 + 0.45 * Math.abs(Math.sin(tempo * 8));
-    disegnaGhianda(p.x, p.y, b.rot, alfa, 1);
+    if (b.super && b.super.fase === 'popcorn') {
+      disegnaPopcorn(p.x, p.y, b.rot * 0.4);
+    } else {
+      if (b.super) disegnaAlone(p.x, p.y, tempo);
+      disegnaGhianda(p.x, p.y, b.rot, alfa, 1);
+    }
     if (b.inGioco) {
       stato.scia.push({ x: p.x, y: p.y });
       if (stato.scia.length > 9) stato.scia.shift();
@@ -762,6 +956,147 @@
       ctx.fill();
     }
     if (!stato.palla.inGioco) stato.scia.length = 0;
+  }
+
+  function disegnaAlone(x, y, tempo) {
+    const r = R * (2.4 + 0.3 * Math.sin(tempo * 40));
+    const g = ctx.createRadialGradient(x, y, R * 0.4, x, y, r);
+    g.addColorStop(0, 'rgba(255, 240, 150, 0.95)');
+    g.addColorStop(0.45, 'rgba(255, 140, 30, 0.7)');
+    g.addColorStop(1, 'rgba(255, 60, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // pop corn: un grappolo di bolle chiare
+  const BOLLE_POPCORN = [[0, 0, 0.62], [-0.55, -0.35, 0.5], [0.55, -0.4, 0.52], [-0.5, 0.45, 0.48], [0.5, 0.45, 0.5], [0, -0.75, 0.45], [0.05, 0.7, 0.42]];
+  function disegnaPopcorn(x, y, rot) {
+    const r = R * 1.5;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#f3dc9b';
+    for (const [bx, by, br] of BOLLE_POPCORN) {
+      ctx.beginPath();
+      ctx.arc(bx * r, by * r, br * r + 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowColor = 'transparent';
+    for (const [bx, by, br] of BOLLE_POPCORN) {
+      ctx.fillStyle = '#fffaf0';
+      ctx.beginPath();
+      ctx.arc(bx * r - 1, by * r - 1, br * r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#c98a3c';
+    ctx.beginPath();
+    ctx.ellipse(r * 0.15, r * 0.15, r * 0.16, r * 0.1, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function disegnaParticelle(sopra) {
+    for (const q of stato.particelle) {
+      const davanti = q.tipo === 'testo' || q.tipo === 'pezzo';
+      if (davanti !== sopra) continue;
+      const k = 1 - q.t / q.durata;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, k);
+      if (q.tipo === 'fuoco') {
+        ctx.fillStyle = k > 0.6 ? '#ffe066' : k > 0.3 ? '#ff9a2e' : '#e8481c';
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, q.r * (0.4 + 0.6 * k), 0, Math.PI * 2);
+        ctx.fill();
+      } else if (q.tipo === 'fumo') {
+        ctx.fillStyle = 'rgba(235, 235, 235, 0.7)';
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, q.r * (1.6 - 0.6 * k), 0, Math.PI * 2);
+        ctx.fill();
+      } else if (q.tipo === 'pezzo' || q.tipo === 'briciola') {
+        ctx.fillStyle = '#fffaf0';
+        ctx.strokeStyle = '#e8c87a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (q.tipo === 'testo') {
+        ctx.font = '700 34px Fredoka, "Trebuchet MS", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 7;
+        ctx.strokeStyle = '#b5410f';
+        ctx.strokeText(q.testo, q.x, q.y);
+        ctx.fillStyle = '#fff3c4';
+        ctx.fillText(q.testo, q.x, q.y);
+      }
+      ctx.restore();
+    }
+  }
+
+  // Barre del super tiro, vicino alla linea di metà campo
+  function disegnaBarre(tempo) {
+    if (stato.modo === 'demo') return;
+    const W = 150, H = 14;
+    const pos = verticale
+      ? { tino: [16, L / 2 + 20], gino: [S - 16 - W, L / 2 - 20 - H] }
+      : { tino: [L / 2 - 28 - W, S - 34], gino: [L / 2 + 28, S - 34] };
+    for (const lato of ['tino', 'gino']) {
+      const g = stato[lato];
+      const [x, y] = pos[lato];
+      const piena = g.carica >= 1;
+      ctx.save();
+      ctx.fillStyle = 'rgba(30, 60, 25, 0.45)';
+      arrotondato(x - 3, y - 3, W + 6, H + 6, (H + 6) / 2);
+      ctx.fill();
+      if (g.carica > 0) {
+        const gr = ctx.createLinearGradient(x, 0, x + W, 0);
+        if (piena) {
+          gr.addColorStop(0, '#ffe066');
+          gr.addColorStop(0.5, '#ff9a2e');
+          gr.addColorStop(1, '#e8481c');
+        } else if (lato === 'tino') {
+          gr.addColorStop(0, '#ffd59a');
+          gr.addColorStop(1, '#ff9a2e');
+        } else {
+          gr.addColorStop(0, '#c9e6ff');
+          gr.addColorStop(1, '#5aa8e8');
+        }
+        ctx.fillStyle = gr;
+        if (piena) {
+          ctx.shadowColor = 'rgba(255, 150, 30, 0.9)';
+          ctx.shadowBlur = 8 + 6 * Math.abs(Math.sin(tempo * 6));
+        }
+        arrotondato(x, y, Math.max(H, W * g.carica), H, H / 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      if (piena) {
+        ctx.save();
+        ctx.font = '700 15px Fredoka, "Trebuchet MS", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#7a2a08';
+        ctx.fillText('SUPER!', x + W / 2, y + H / 2 + 1);
+        ctx.restore();
+      }
+    }
+  }
+
+  function arrotondato(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   }
 
   function disegnaGhianda(x, y, rot, alfa, k) {
@@ -874,6 +1209,7 @@
       <div class="ritratti">${img('normale', 'salta specchia')}<span class="vs">contro</span>${img('gino')}</div>
       <h1>Botta e Ghianda</h1>
       <p>Rimanda la ghianda e non lasciarla passare! Colpiscila con i bordi per tiri più angolati.</p>
+      <p>Ogni colpo carica la barra del <b>super tiro</b>: quando è piena, il colpo dopo infuoca la ghianda… e poi succede qualcosa di croccante!</p>
       ${rec}
       <div class="scelte">
         <button class="bottone" data-azione="cpu" data-primo>Sfida Gino</button>
@@ -976,5 +1312,5 @@
   requestAnimationFrame(ciclo);
 
   // utile per le prove automatiche
-  window.bottaEGhianda = { stato, iniziaPartita, aggiorna, prevedi, IA, PALLA };
+  window.bottaEGhianda = { stato, iniziaPartita, aggiorna, prevedi, IA, PALLA, SUPER, tocca, sagoma };
 })();
