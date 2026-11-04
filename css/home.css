@@ -80,9 +80,12 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
   overflow: hidden;
 }
 .anteprima-botta {
+  /* tovaglia da picnic con la fila di formiche a metà campo */
   background:
-    linear-gradient(90deg, transparent calc(50% - 2px), rgba(255, 255, 255, 0.7) calc(50% - 2px), rgba(255, 255, 255, 0.7) calc(50% + 2px), transparent calc(50% + 2px)),
-    repeating-linear-gradient(90deg, #67b356 0 40px, #5fab4e 40px 80px);
+    radial-gradient(ellipse 3px 4px, #2b1a12 90%, transparent 100%) 50% 0 / 10px 16px repeat-y,
+    linear-gradient(90deg, rgba(214, 52, 52, 0.42) 50%, transparent 50%) 0 0 / 40px 40px,
+    linear-gradient(rgba(214, 52, 52, 0.42) 50%, transparent 50%) 0 0 / 40px 40px,
+    #fff9f0;
 }
 .ap-tino, .ap-gino {
   position: absolute;

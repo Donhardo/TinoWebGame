@@ -461,6 +461,7 @@
     }
 
     aggiornaParticelle(dt);
+    aggiornaFormiche(dt);
 
     const fermi = stato.fase === 'fine' || stato.fase === 'fine-livello';
     if (!fermi) muoviGiocatori(dt);
@@ -822,44 +823,166 @@
     disegnaMessaggio();
   }
 
+  // Il campo è una tovaglia da picnic a quadretti, con briciole, una macchia
+  // di marmellata e una fila di formiche al posto della linea di metà campo.
+  const QUADRETTO = 60;
+  const BRICIOLE = (() => {
+    // posizioni fisse ma sparse (generatore pseudo-casuale con seme)
+    let seme = 7;
+    const rnd = () => { seme = (seme * 16807) % 2147483647; return seme / 2147483647; };
+    return Array.from({ length: 26 }, () => ({
+      u: 150 + rnd() * (L - 300), v: 30 + rnd() * (S - 60), r: 1.6 + rnd() * 2.6, a: rnd() * Math.PI,
+    })).filter((c) => Math.abs(c.u - L / 2) > 30);
+  })();
+  const MARMELLATE = [
+    { u: 300, v: 395, r: 34, forma: 1 },
+    { u: 668, v: 140, r: 18, forma: 2 },
+  ];
+
   function disegnaCampo() {
-    const g = ctx.createLinearGradient(0, 0, 0, S);
-    g.addColorStop(0, '#6cbb59');
-    g.addColorStop(1, '#58a748');
-    ctx.fillStyle = g;
+    // tovaglia
+    ctx.fillStyle = '#fff9f0';
     ctx.fillRect(0, 0, L, S);
+    ctx.fillStyle = 'rgba(214, 52, 52, 0.42)';
+    for (let u = 0; u < L; u += QUADRETTO) ctx.fillRect(u, 0, QUADRETTO / 2, S);
+    for (let v = 0; v < S; v += QUADRETTO) ctx.fillRect(0, v, L, QUADRETTO / 2);
 
-    // strisce d'erba
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
-    for (let u = 0; u < L; u += 120) ctx.fillRect(u, 0, 60, S);
-
-    // zone dei due personaggi
-    ctx.fillStyle = 'rgba(255, 213, 154, 0.16)';
-    ctx.fillRect(0, 0, FACCIA, S);
-    ctx.fillStyle = 'rgba(201, 230, 255, 0.16)';
-    ctx.fillRect(L - FACCIA, 0, FACCIA, S);
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(8, 8, L - 16, S - 16);
-
-    ctx.setLineDash([18, 14]);
-    ctx.beginPath();
-    ctx.moveTo(L / 2, 14);
-    ctx.lineTo(L / 2, S - 14);
-    ctx.stroke();
+    // orlo cucito
+    ctx.strokeStyle = 'rgba(150, 28, 28, 0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([9, 7]);
+    ctx.strokeRect(10, 10, L - 20, S - 20);
     ctx.setLineDash([]);
 
-    ctx.beginPath();
-    ctx.arc(L / 2, S / 2, 64, 0, Math.PI * 2);
-    ctx.stroke();
+    // marmellata di albicocca
+    for (const m of MARMELLATE) {
+      ctx.save();
+      ctx.translate(m.u, m.v);
+      ctx.beginPath();
+      for (let i = 0; i <= 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        const r = m.r * (1 + 0.18 * Math.sin(a * 3 + m.forma) + 0.1 * Math.sin(a * 5 + m.forma * 2));
+        if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+        else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(240, 150, 30, 0.7)';
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(-m.r * 0.3, -m.r * 0.3, m.r * 0.22, m.r * 0.12, -0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(FACCIA, 8); ctx.lineTo(FACCIA, S - 8);
-    ctx.moveTo(L - FACCIA, 8); ctx.lineTo(L - FACCIA, S - 8);
-    ctx.stroke();
+    // briciole
+    ctx.fillStyle = '#c9934a';
+    for (const c of BRICIOLE) {
+      ctx.beginPath();
+      ctx.ellipse(c.u, c.v, c.r, c.r * 0.7, c.a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    disegnaFormiche();
+  }
+
+  // ---------------------------------------------------------------- formiche
+  // Marciano lungo la metà campo; se la ghianda passa vicino scappano e poi
+  // tornano in fila. Alcune portano una briciola.
+  const FORMICHE = (() => {
+    const n = 22;
+    return Array.from({ length: n }, (_, i) => ({
+      base: i * ((S + 60) / n),
+      du: 0, dv: 0, vu: 0, vv: 0,   // spostamento dalla fila e sua velocità
+      paura: 0,
+      u: L / 2, v: 0, dir: Math.PI / 2,
+      briciola: i % 4 === 1,
+      fase: i * 1.7,
+    }));
+  })();
+  let marcia = 0;
+
+  function aggiornaFormiche(dt) {
+    marcia += dt * 24;
+    const b = stato.palla;
+    const pericolo = b.inGioco && b.visibile;
+    const raggio = b.super ? 80 : 46;
+    for (const f of FORMICHE) {
+      const giro = S + 60;
+      const vFila = ((f.base + marcia) % giro) - 30;
+      const prima = { u: f.u, v: f.v };
+      if (pericolo && f.paura <= 0) {
+        const du = f.u - b.u;
+        const dv = f.v - b.v;
+        const d = Math.hypot(du, dv);
+        if (d < raggio) {
+          const a = d > 0.1 ? Math.atan2(dv, du) : casuale(0, Math.PI * 2);
+          const fuga = casuale(160, 260) * (b.super ? 1.6 : 1);
+          f.vu = Math.cos(a + casuale(-0.5, 0.5)) * fuga;
+          f.vv = Math.sin(a + casuale(-0.5, 0.5)) * fuga;
+          f.paura = casuale(0.7, 1.1);
+        }
+      }
+      if (f.paura > 0) {
+        f.paura -= dt;
+        f.du += f.vu * dt;
+        f.dv += f.vv * dt;
+        f.vu *= 1 - 2.5 * dt;
+        f.vv *= 1 - 2.5 * dt;
+      } else {
+        // torna in fila con calma
+        const passo = 70 * dt;
+        const d = Math.hypot(f.du, f.dv);
+        if (d <= passo || d < 0.01) { f.du = 0; f.dv = 0; }
+        else { f.du -= (f.du / d) * passo; f.dv -= (f.dv / d) * passo; }
+      }
+      f.u = L / 2 + f.du + Math.sin(marcia * 0.08 + f.fase) * 2.5;
+      f.v = vFila + f.dv;
+      const mu = f.u - prima.u;
+      const mv = f.v - prima.v;
+      // orienta la formica dove cammina (salta il momento in cui ricomincia il giro)
+      if (Math.abs(mv) < 40 && Math.hypot(mu, mv) > 0.3) {
+        const voluto = Math.atan2(mv, mu);
+        let diff = voluto - f.dir;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        f.dir += diff * Math.min(1, dt * 12);
+      }
+    }
+  }
+
+  function disegnaFormiche() {
+    const t = marcia * 0.6;
+    for (const f of FORMICHE) {
+      if (f.v < -12 || f.v > S + 12) continue;
+      ctx.save();
+      ctx.translate(f.u, f.v);
+      ctx.rotate(f.dir);
+      const zampa = Math.sin(t + f.fase) * 2.2;
+      // zampe
+      ctx.strokeStyle = '#2b1a12';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      for (const [x, s] of [[-3, 1], [0, -1], [3, 1]]) {
+        const z = zampa * s;
+        ctx.moveTo(x, 0); ctx.lineTo(x + z, -6);
+        ctx.moveTo(x, 0); ctx.lineTo(x - z, 6);
+      }
+      // antenne
+      ctx.moveTo(7, -1); ctx.quadraticCurveTo(10, -3, 12, -5);
+      ctx.moveTo(7, 1); ctx.quadraticCurveTo(10, 3, 12, 5);
+      ctx.stroke();
+      // corpo: addome, torace, testa
+      ctx.fillStyle = '#2b1a12';
+      ctx.beginPath(); ctx.ellipse(-5.5, 0, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0.5, 0, 2.6, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(5.5, 0, 2.4, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+      if (f.briciola) {
+        ctx.fillStyle = '#e0ad5e';
+        ctx.beginPath(); ctx.ellipse(9.5, 0, 3.4, 2.8, 0.4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 
   function immagineDi(g) {
@@ -950,7 +1073,7 @@
     const n = stato.scia.length;
     for (let i = 0; i < n; i++) {
       const s = stato.scia[i];
-      ctx.fillStyle = `rgba(255, 244, 214, ${0.05 + 0.25 * (i / n)})`;
+      ctx.fillStyle = `rgba(150, 95, 40, ${0.04 + 0.18 * (i / n)})`;
       ctx.beginPath();
       ctx.arc(s.x, s.y, R * (0.4 + 0.5 * (i / n)), 0, Math.PI * 2);
       ctx.fill();
@@ -1013,7 +1136,7 @@
         ctx.arc(q.x, q.y, q.r * (0.4 + 0.6 * k), 0, Math.PI * 2);
         ctx.fill();
       } else if (q.tipo === 'fumo') {
-        ctx.fillStyle = 'rgba(235, 235, 235, 0.7)';
+        ctx.fillStyle = 'rgba(150, 150, 150, 0.55)';
         ctx.beginPath();
         ctx.arc(q.x, q.y, q.r * (1.6 - 0.6 * k), 0, Math.PI * 2);
         ctx.fill();
@@ -1045,14 +1168,14 @@
     if (stato.modo === 'demo') return;
     const W = 150, H = 14;
     const pos = verticale
-      ? { tino: [16, L / 2 + 20], gino: [S - 16 - W, L / 2 - 20 - H] }
+      ? { tino: [16, L / 2 + 40], gino: [S - 16 - W, L / 2 - 40 - H] }
       : { tino: [L / 2 - 28 - W, S - 34], gino: [L / 2 + 28, S - 34] };
     for (const lato of ['tino', 'gino']) {
       const g = stato[lato];
       const [x, y] = pos[lato];
       const piena = g.carica >= 1;
       ctx.save();
-      ctx.fillStyle = 'rgba(30, 60, 25, 0.45)';
+      ctx.fillStyle = 'rgba(90, 45, 20, 0.4)';
       arrotondato(x - 3, y - 3, W + 6, H + 6, (H + 6) / 2);
       ctx.fill();
       if (g.carica > 0) {
@@ -1159,7 +1282,7 @@
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
     ctx.lineWidth = 10;
-    ctx.strokeStyle = 'rgba(47, 90, 40, 0.85)';
+    ctx.strokeStyle = 'rgba(122, 40, 20, 0.85)';
     ctx.strokeText(m.testo, 0, 0);
     ctx.fillStyle = '#fff8ec';
     ctx.fillText(m.testo, 0, 0);
@@ -1303,7 +1426,7 @@
 
   let ultimo = performance.now();
   function ciclo(ora) {
-    const dt = Math.min(0.05, (ora - ultimo) / 1000);
+    const dt = clamp((ora - ultimo) / 1000, 0, 0.05);
     ultimo = ora;
     aggiorna(dt);
     disegna(ora / 1000);
