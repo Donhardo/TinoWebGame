@@ -101,6 +101,39 @@ logica, su canvas), `ghianda.svg` (usata nell'anteprima della home).
   (`iniziaPartita`, `aggiorna`, `prevedi`, `tocca`, `sagoma`, tabelle) per
   simulare partite senza tempo reale.
 
+### Tino e la Ghianda d'Oro (`games/ghianda-d-oro/`)
+Avventura a schermate fisse (meccaniche da classico d'azione nel tempio): Tino,
+con cappello e frusta, va dalla partenza all'uscita di ogni livello tra trappole,
+porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
+`index.html`, `stile.css`, `livelli.js` (mappe e testi), `gioco.js` (logica, su canvas).
+- **Decisioni prese**: titolo "Tino e la Ghianda d'Oro"; telecamera a stanze fisse
+  come l'originale; movimenti "via di mezzo" (Tino si aggrappa ai bordi da solo);
+  gli agenti si stordiscono e si evitano, non si eliminano; sul telefono si gioca
+  solo in orizzontale (in verticale compare l'invito a girarlo).
+- **Livelli**: in `livelli.js`, griglie di stanze da 16 × 9 quadretti (60 px,
+  schermo logico 960 × 540), scritte a caratteri; la legenda è in cima al file.
+  Testi dei cartelli in due versioni (`pc` e `touch`).
+- **Ceci = energia**: si parte con 3, si perde un cece se colpiti, presi da un
+  agente, sugli spuntoni, cadendo in un baratro o da troppo in alto (si riparte
+  dall'ultimo punto sicuro). A zero ceci Tino è KO e riparte dal punto di
+  partenza (torcia), senza limiti di tentativi. Il cece d'oro alza il massimo.
+- **Frusta**: vicino a un piolo d'oro si aggancia e Tino dondola (← → per lo
+  slancio, X o salto per staccarsi); altrimenti schiocca e stordisce gli agenti
+  e spazza via le bollette.
+- **Agenti della Tari** (`assets/agenti-tari/`, disegni vettoriali con scritta
+  TARI già in tracciati): col retino (ronda e insegue), col timbro (lancia
+  bollette), ispettore capo (per la fine dei mondi, non ancora usato).
+- **Tino vestito**: cappello e frusta sono in `assets/tino/accessori/` e si
+  appoggiano alle foto originali con la tabella `POSE` (posizione e rotazione
+  per ogni espressione); anteprima in `bozzetti/avventura.html`.
+- **Tabelle** in cima a `gioco.js`: `FISICA`, `FRUSTA`, `AGENTI`, `VITA`, `PORTA`.
+- **Prove automatiche**: `window.ghiandaDOro` (`G.test = true`, `avvia`,
+  `premi`, `passo`) per far giocare un livello a un giocatore simulato.
+  Il livello 1 si completa in ~15 s; lo stacco dal piolo funziona in un'ampia
+  finestra di angoli.
+- **Da fare**: altri livelli (3 mondi da 4: radici della quercia, tempio
+  sepolto, uffici della Tari), ispettore capo, liberazione di Gino.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)

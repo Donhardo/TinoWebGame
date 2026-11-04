@@ -52,7 +52,7 @@
 
     /* ---------- Tino avventuriero ---------- */
     .pose { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; align-items: end; }
-    .posa { background: #fff; border-radius: var(--raggio); box-shadow: var(--ombra); padding: 18px 12px 10px; text-align: center; overflow: hidden; }
+    .posa { background: #fff; border-radius: var(--raggio); box-shadow: var(--ombra); padding: 44px 12px 10px; text-align: center; overflow: hidden; }
     .posa figcaption { margin-top: 8px; font-weight: 600; color: var(--marrone); }
     .posa figcaption span { display: block; font-weight: 400; font-size: 0.9rem; color: var(--testo); }
     figure { margin: 0; }
@@ -160,10 +160,10 @@
 // Posizione di cappello e frusta su ogni foto di Tino, in pixel dell'immagine originale:
 // [x, y, larghezza, rotazione in gradi]. Sono gli stessi valori che userà il gioco.
 const POSE = {
-  normale:    { src: "tino-normale",    w: 376, h: 512, cappello: [148, 12, 215, 7],   frusta: [292, 286, 104, -6] },
-  arrabbiato: { src: "tino-arrabbiato", w: 243, h: 381, cappello: [42, 0, 168, -4],    frusta: [168, 214, 76, -6] },
-  ferito:     { src: "tino-ferito",     w: 247, h: 445, cappello: [26, -34, 172, -20], frusta: [176, 262, 76, -6] },
-  ko:         { src: "tino-ko",         w: 362, h: 210, cappello: [-50, 118, 120, 172], frusta: [292, 112, 70, 80] },
+  normale:    { src: "tino-normale",    w: 376, h: 512, cappello: [104, -8, 290, 6],    frusta: [262, 250, 150, -6] },
+  arrabbiato: { src: "tino-arrabbiato", w: 243, h: 381, cappello: [22, -20, 204, -4],   frusta: [156, 196, 106, -6] },
+  ferito:     { src: "tino-ferito",     w: 247, h: 445, cappello: [14, -40, 210, -16],  frusta: [164, 240, 106, -6] },
+  ko:         { src: "tino-ko",         w: 362, h: 210, cappello: [-70, 112, 150, 172], frusta: [280, 96, 96, 80] },
 };
 
 function tinoAvventuriero(contenitore, posa, larghezza, conFrusta = true) {
@@ -291,8 +291,8 @@ h += `<image href="../assets/oggetti/cece.svg" x="142" y="16" width="32" height=
 // Tino, agente
 h += `<g transform="translate(40 300)">
   <image href="../assets/tino/tino-normale.png" width="88" height="120"/>
-  <image href="../assets/tino/accessori/cappello.svg" x="${148 * 88 / 376}" y="${12 * 88 / 376}" width="${215 * 88 / 376}" height="${130 * 215 / 240 * 88 / 376}" transform="rotate(7 ${(148 + 107) * 88 / 376} ${70 * 88 / 376})"/>
-  <image href="../assets/tino/accessori/frusta.svg" x="${292 * 88 / 376}" y="${286 * 88 / 376}" width="${104 * 88 / 376}" height="${104 * 210 / 130 * 88 / 376}"/>
+  <image href="../assets/tino/accessori/cappello.svg" x="${104 * 88 / 376}" y="${-8 * 88 / 376}" width="${290 * 88 / 376}" height="${170 * 290 / 300 * 88 / 376}" transform="rotate(6 ${(104 + 145) * 88 / 376} ${60 * 88 / 376})"/>
+  <image href="../assets/tino/accessori/frusta.svg" x="${262 * 88 / 376}" y="${250 * 88 / 376}" width="${150 * 88 / 376}" height="${150 * 210 / 130 * 88 / 376}"/>
 </g>`;
 h += `<g transform="translate(626 182)"><image href="../assets/agenti-tari/agente-retino.svg" x="0" y="0" width="${260 * 0.37}" height="${320 * 0.37}"/></g>`;
 S.innerHTML = h;
