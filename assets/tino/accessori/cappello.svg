@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="170" viewBox="0 0 300 170">
+  <defs>
+    <linearGradient id="cupola" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5e3a1b"/>
+      <stop offset="0.35" stop-color="#a06a35"/>
+      <stop offset="0.6" stop-color="#8a5a2b"/>
+      <stop offset="1" stop-color="#4f3016"/>
+    </linearGradient>
+    <radialGradient id="tesa" cx="0.5" cy="0.35" r="0.65">
+      <stop offset="0" stop-color="#a87039"/>
+      <stop offset="0.7" stop-color="#7d4f26"/>
+      <stop offset="1" stop-color="#5c381a"/>
+    </radialGradient>
+  </defs>
+  <!-- spessore della tesa (si vede sul davanti) -->
+  <path d="M8 94 C 18 80, 54 84, 84 92 L 216 92 C 246 84, 282 80, 292 94 C 298 124, 232 158, 150 158 C 68 158, 2 124, 8 94 Z" transform="translate(0 7)" fill="#3f2610" stroke="#24150a" stroke-width="3" stroke-linejoin="round"/>
+  <!-- tesa vista dall'alto -->
+  <path d="M8 94 C 18 80, 54 84, 84 92 L 216 92 C 246 84, 282 80, 292 94 C 298 124, 232 158, 150 158 C 68 158, 2 124, 8 94 Z" fill="url(#tesa)" stroke="#24150a" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M22 98 C 30 90, 56 92, 80 98 M220 98 C 244 92, 270 90, 278 98" fill="none" stroke="#c48a4e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <path d="M40 124 C 80 146, 220 146, 260 124" fill="none" stroke="#c48a4e" stroke-width="3" stroke-linecap="round" opacity="0.35"/>
+  <!-- ombra della cupola sulla tesa -->
+  <ellipse cx="156" cy="122" rx="80" ry="22" fill="#2e1c0e" opacity="0.35"/>
+  <!-- cupola: la base segue la prospettiva della tesa -->
+  <path d="M78 112 C 76 82, 84 54, 100 36 Q 150 26 200 36 C 216 54, 224 82, 222 112 A 72 20 0 0 1 78 112 Z" fill="url(#cupola)" stroke="#24150a" stroke-width="3" stroke-linejoin="round"/>
+  <!-- piega in cima (la conca vista dall'alto) -->
+  <path d="M102 38 Q 150 24 198 38 Q 172 50 150 56 Q 128 50 102 38 Z" fill="#4a2c12" stroke="#24150a" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M150 30 L 150 54" fill="none" stroke="#2e1c0e" stroke-width="2" opacity="0.6"/>
+  <!-- pizzichi sul davanti -->
+  <path d="M124 52 Q 118 68 122 86" fill="none" stroke="#3a220e" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M176 52 Q 182 68 178 86" fill="none" stroke="#3a220e" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M96 52 Q 90 72 92 96" fill="none" stroke="#d29a5c" stroke-width="5" stroke-linecap="round" opacity="0.45"/>
+  <!-- nastro -->
+  <path d="M78 112 A 72 20 0 0 0 222 112 L 221 92 A 71 20 0 0 1 79 92 Z" fill="#2a190b" stroke="#1a0f06" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M82 98 A 68 18 0 0 0 218 98" fill="none" stroke="#5a3a1c" stroke-width="2" opacity="0.8"/>
+  <!-- fiocco laterale del nastro -->
+  <path d="M196 124 L 206 108 L 214 122 Z" fill="#1f1308" stroke="#1a0f06" stroke-width="2" stroke-linejoin="round"/>
+</svg>
