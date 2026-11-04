@@ -80,12 +80,14 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
   overflow: hidden;
 }
 .anteprima-botta {
-  /* tovaglia da picnic con la fila di formiche a metà campo */
+  /* prato con fiorellini e la fila di formiche a metà campo */
   background:
     radial-gradient(ellipse 3px 4px, #2b1a12 90%, transparent 100%) 50% 0 / 10px 16px repeat-y,
-    linear-gradient(90deg, rgba(214, 52, 52, 0.42) 50%, transparent 50%) 0 0 / 40px 40px,
-    linear-gradient(rgba(214, 52, 52, 0.42) 50%, transparent 50%) 0 0 / 40px 40px,
-    #fff9f0;
+    radial-gradient(circle, #f5c518 2px, #fff 2.5px, #fff 5px, transparent 5.5px) 18px 22px / 140px 110px,
+    radial-gradient(circle, #ffd83a 3.5px, transparent 4px) 95px 70px / 150px 95px,
+    radial-gradient(circle, #f59ac0 3.5px, transparent 4px) 60px 10px / 170px 120px,
+    radial-gradient(circle at 30% 40%, rgba(200, 235, 120, 0.25), transparent 40%),
+    linear-gradient(135deg, #7cc45c, #64b04a);
 }
 .ap-tino, .ap-gino {
   position: absolute;
