@@ -359,6 +359,25 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 - **Espressioni**: Tino arrabbiato quando è colpito, con poca vita o quando il
   nemico è quasi KO; ferito sui colpi da 180 in su; ko quando perde. Gino trema
   quando è colpito, saltella quando colpisce, cade ruotato quando perde.
+- **Provarlo su Claude**: come per l'avventura, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
+  `css/sito.css`, `stile.css`, `mezzi.js`, `terreno.js`, `gioco.js` (con
+  `BASE = 'assets/'`), `fondali/` e `assets/tino/`, `assets/gino/`; si pubblica
+  con `files` e `root`. Le partite simulate (computer contro computer a vari
+  livelli, con `stato.test = true`) si fanno girare con Playwright; i copioni
+  non sono nel repository.
+- **Prossimo passo: tappa 2** (approvata, da fare in una nuova sessione):
+  - mezzi nuovi, ognuno con due colpi e uno speciale: cannone a tappi (danno
+    alto da vicino, poco da lontano; speciale raffica di tappi), talpa trivella
+    (colpi che scavano nel terreno; speciale galleria sotto il nemico),
+    soffiabolle (colpi leggeri spinti dal vento; speciale bolla che solleva e
+    lascia cadere);
+  - oggetti, un paio per partita a scelta: cerotto (cura), ombrello (dimezza il
+    prossimo danno), doppio tiro, vento fermo, teletrasporto a ghianda;
+  - campagna contro gli agenti della Tari (`assets/agenti-tari/`, anche più
+    agenti per partita, squadre già previste in `squadra`), con l'ispettore capo
+    alla fine; l'IA va adattata ai colpi nuovi (la simulazione va estesa a
+    scavo, bolle e teletrasporto) e ritarata con le partite simulate.
 - **Prove automatiche**: `window.tinoBum` (`stato`, `iniziaPartita(modo,
   livello, { cpu0, liv, mezzo0, mezzo1, seme, tipo })`, `aggiorna`,
   `simulaTiro`, `cercaTiro`, `pianificaIA`); con `stato.test = true` il gioco
