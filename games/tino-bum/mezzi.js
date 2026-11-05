@@ -179,3 +179,25 @@
     },
   };
 })();
+
+/*
+ * Gli oggetti: se ne scelgono due per partita, ognuno si usa una volta sola
+ * (al massimo uno per turno, prima di tirare).
+ */
+(() => {
+  'use strict';
+  const TB = window.TinoBum;
+  TB.OGGETTI = {
+    cerotto: { nome: 'Cerotto', descrizione: 'Cura 250 punti di vita.', cura: 250 },
+    ombrello: { nome: 'Ombrello', descrizione: 'Dimezza i danni del prossimo colpo che ti prende.' },
+    doppio: { nome: 'Doppio tiro', descrizione: 'In questo turno tiri due volte.' },
+    vento: { nome: 'Vento fermo', descrizione: 'Il vento si ferma per questo turno.' },
+    teletrasporto: {
+      nome: 'Teletrasporto', descrizione: 'Tiri una ghianda magica e ti ritrovi dove cade.',
+      colpo: {
+        nome: 'Ghianda magica', raggio: 0, danno: 0, vento: 1, gravita: 1, ritardo: 80,
+        disegno: 'magica', dimensione: 8, teletrasporto: true,
+      },
+    },
+  };
+})();

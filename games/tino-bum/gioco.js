@@ -16,6 +16,10 @@
   const TB = window.TinoBum;
   const { W, H, ACQUA } = TB.MONDO;
   const MEZZI = TB.MEZZI;
+  const OGGETTI = TB.OGGETTI;
+  // oggetti che il computer sa usare (il teletrasporto no)
+  const OGGETTI_IA = ['cerotto', 'ombrello', 'doppio', 'vento'];
+  const IA_OGGETTI = { cerotto: 550, ombrello: 600, vento: 5, doppio: 150 };
 
   // ---------------------------------------------------------------- tabelle
   const FISICA = {
@@ -207,7 +211,13 @@
       colpitoT: 0, feritoT: 0, festaT: 0, tremaT: 0, caduta: 0,
       ultimoTurno: 0, ia: null, memoria: { bersaglio: null, x: 0, colpi: 0 },
       tieniAngolo: 0,
+      oggetti: (o.oggetti || []).map((tipo) => ({ tipo, usato: false })),
+      oggettoTurno: false, ombrello: false, ombrelloUsato: false, doppio: false, doppioPronto: false, magica: false,
     };
+  }
+  function oggettiACaso() {
+    const k = OGGETTI_IA.slice().sort(() => Math.random() - 0.5);
+    return k.slice(0, 2);
   }
 
   // ---------------------------------------------------------------- mondo
@@ -299,6 +309,7 @@
   }
   function toccaGiocatore(p, x, y, amb) {
     const c = p.colpo;
+    if (c.teletrasporto) return null;
     for (const g of amb.giocatori) {
       if (g.morto || g.annegato || (g === p.prop && p.t < 0.35)) continue;
       if (dist(x, y, g.x, g.y - FISICA.corpoY) < FISICA.corpoR + c.dimensione * 0.6) return g;
@@ -473,9 +484,11 @@
       const mezzoCpu = () => { const k = Object.keys(MEZZI); return k[Math.floor(Math.random() * k.length)]; };
       stato.giocatori.push(nuovoGiocatore({
         id: 0, personaggio: 'tino', squadra: 0, mezzo: scelte.mezzo0 || mezzoCpu(), cpu: modo === 'demo' || !!scelte.cpu0, liv: scelte.liv0 || liv,
+        oggetti: scelte.oggetti0 || oggettiACaso(),
       }));
       stato.giocatori.push(nuovoGiocatore({
         id: 1, personaggio: 'gino', squadra: 1, mezzo: scelte.mezzo1 || mezzoCpu(), cpu: modo !== 'due', liv,
+        oggetti: scelte.oggetti1 || oggettiACaso(),
       }));
       if (piazzaGiocatori() && mappaGiocabile()) break;
       if (++tentativi > 12) break;
@@ -536,6 +549,9 @@
 
   function iniziaTurno() {
     if (controllaFine()) return;
+    for (const h of stato.giocatori) if (h.ombrelloUsato) { h.ombrello = false; h.ombrelloUsato = false; }
+    const prima = stato.attivo;
+    if (prima && prima.doppioPronto && !prima.morto) { secondoTiro(prima); return; }
     const vivi = stato.giocatori.filter((g) => !g.morto);
     vivi.sort((a, b) => a.ritardo - b.ritardo || a.ultimoTurno - b.ultimoTurno);
     const g = vivi[0];
@@ -547,6 +563,8 @@
     g.passi = 0;
     g.potenza = 0;
     g.carica = false;
+    g.oggettoTurno = false;
+    g.magica = false;
     if (stato.numeroTurno > 2) g.speciale = Math.min(1, g.speciale + TURNO.speciale);
     if (g.colpo === 2 && g.speciale < 1) g.colpo = 0;
     const vm = ventoMassimo(stato.modo === 'due' ? 8 : stato.livello);
@@ -560,10 +578,67 @@
     aggiornaPlancia(true);
   }
 
+  // dopo il primo tiro del doppio tiro: stesso giocatore, stesso vento
+  function secondoTiro(g) {
+    g.doppioPronto = false;
+    g.potenza = 0;
+    g.carica = false;
+    stato.tempoTurno = TURNO.tempo;
+    stato.fase = 'mira';
+    stato.zoomUtente = 1;
+    if (g.colpo === 2 && g.speciale < 1) g.colpo = 0;
+    g.ia = g.cpu ? { fase: 'pensa', t: IA.pensa * 0.6, piano: null } : null;
+    mostraMessaggio('Secondo tiro!', 1.1);
+    suoni.turno();
+    aggiornaPlancia(true);
+  }
+
+  function usaOggetto(g, i) {
+    const o = g.oggetti[i];
+    if (!o || stato.fase !== 'mira' || stato.attivo !== g || g.carica || !g.aTerra) return false;
+    if (o.tipo === 'teletrasporto' && g.magica) { g.magica = false; g.oggettoTurno = false; aggiornaPlancia(true); return true; }
+    if (o.usato || g.oggettoTurno) return false;
+    g.oggettoTurno = true;
+    const O = OGGETTI[o.tipo];
+    if (o.tipo === 'teletrasporto') {
+      // si consuma solo quando si tira
+      g.magica = true;
+      suoni.clic();
+      aggiornaPlancia(true);
+      return true;
+    }
+    o.usato = true;
+    if (o.tipo === 'cerotto') {
+      const c = Math.min(O.cura, VITA - g.vita);
+      g.vita += c;
+      aggiungiParticella({ tipo: 'numero', x: g.x, y: g.y - 70, vy: -50, vita: 1.3, durata: 1.3, testo: '+' + c, colore: '#6cd04a' });
+      g.festaT = 0.8;
+    } else if (o.tipo === 'ombrello') {
+      g.ombrello = true;
+      g.ombrelloUsato = false;
+    } else if (o.tipo === 'doppio') {
+      g.doppio = true;
+    } else if (o.tipo === 'vento') {
+      stato.vento = 0;
+    }
+    stellineSu(g);
+    mostraMessaggio(O.nome + '!', 1);
+    suoni.oggetto();
+    aggiornaPlancia(true);
+    return true;
+  }
+
   function spara(g) {
     if (stato.fase !== 'mira' || stato.attivo !== g) return;
     const M = MEZZI[g.mezzo];
-    const colpo = M.colpi[g.colpo];
+    let colpo = M.colpi[g.colpo];
+    if (g.magica) {
+      colpo = OGGETTI.teletrasporto.colpo;
+      g.magica = false;
+      const o = g.oggetti.find((q) => q.tipo === 'teletrasporto' && !q.usato);
+      if (o) o.usato = true;
+    }
+    if (g.doppio) { g.doppio = false; g.doppioPronto = true; }
     const potenza = clamp(g.potenza, 0.03, 1);
     const angolo = Math.round(g.angolo);
     stato.proiettili.push(...creaProiettili(g, colpo, angolo, g.verso, potenza));
@@ -764,8 +839,11 @@
   // ---------------------------------------------------------------- esplosioni
   function eventoReale(e) {
     if (e.tipo === 'esplosione') esplodi(e);
-    else if (e.tipo === 'acqua') { spruzzi(e.x, ACQUA, 12); suoni.splash(); }
-    else if (e.tipo === 'fuori') mostraMessaggio('Fuori!', 0.9);
+    else if (e.tipo === 'acqua') {
+      spruzzi(e.x, ACQUA, 12);
+      suoni.splash();
+      if (e.p.colpo.teletrasporto) mostraMessaggio('La ghianda magica è in acqua!', 1.2);
+    } else if (e.tipo === 'fuori') mostraMessaggio('Fuori!', 0.9);
     else if (e.tipo === 'rimbalzo') { suoni.rimbalzo(); polvere(e.x, e.y, 3); }
     else if (e.tipo === 'divide') { suoni.divide(); fumo(e.x, e.y, 10, 4); }
     else if (e.tipo === 'scavo') TB.terreno.scava(stato.terreno, e.x, e.y, e.raggio);
@@ -807,7 +885,37 @@
     if (e.bolla) suoni.bolla();
   }
 
+  function teletrasporta(g, x, y) {
+    if (!g || g.morto) return;
+    x = clamp(x, 16, W - 16);
+    for (let yy = Math.floor(y); yy > y - 160; yy--) {
+      if (corpoBloccato(x, yy)) continue;
+      stellineSu(g);
+      g.x = x;
+      g.y = yy;
+      g.vx = 0;
+      g.vy = 0;
+      g.aTerra = false;
+      g.inclinazione = 0;
+      stellineSu(g);
+      suoni.oggetto();
+      mostraMessaggio('Teletrasporto!', 1);
+      return;
+    }
+    mostraMessaggio('Teletrasporto fallito!', 1);
+  }
+  function stellineSu(g) {
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 90;
+      aggiungiParticella({
+        tipo: 'stella', x: g.x + (Math.random() - 0.5) * 30, y: g.y - 30 + (Math.random() - 0.5) * 40,
+        vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, vita: 0.9, durata: 0.9, r: 4 + Math.random() * 4,
+      });
+    }
+  }
+
   function colpisci(g, d, autore) {
+    if (g.ombrello) { d = Math.round(d / 2); g.ombrelloUsato = true; }
     g.vita = Math.max(0, g.vita - d);
     g.colpitoT = 1.5;
     g.tremaT = 0.6;
@@ -875,6 +983,11 @@
       } else if (q.tipo === 'fumo') {
         q.x += q.vx * dt;
         q.y += q.vy * dt;
+      } else if (q.tipo === 'stella') {
+        q.x += q.vx * dt;
+        q.y += q.vy * dt;
+        q.vx *= 1 - 2 * dt;
+        q.vy *= 1 - 2 * dt;
       } else if (q.tipo === 'numero') {
         q.y += q.vy * dt;
         q.vy *= 1 - 1.5 * dt;
@@ -1063,8 +1176,15 @@
     if (ia.fase === 'pensa') {
       ia.t -= dt;
       if (ia.t > 0) return;
+      const ha = (tipo) => g.oggetti.findIndex((o) => o.tipo === tipo && !o.usato);
+      if (!g.oggettoTurno) {
+        if (ha('cerotto') >= 0 && g.vita <= IA_OGGETTI.cerotto) usaOggetto(g, ha('cerotto'));
+        else if (ha('ombrello') >= 0 && g.vita <= IA_OGGETTI.ombrello) usaOggetto(g, ha('ombrello'));
+        else if (ha('vento') >= 0 && Math.abs(stato.vento) >= IA_OGGETTI.vento) usaOggetto(g, ha('vento'));
+      }
       ia.piano = pianificaIA(g, true);
       if (!ia.piano) { passaTurno(g); return; }
+      if (!g.oggettoTurno && ha('doppio') >= 0 && ia.piano.valore >= IA_OGGETTI.doppio) usaOggetto(g, ha('doppio'));
       ia.fase = ia.piano.destinazione !== null ? 'cammina' : 'mira';
       if (ia.fase === 'mira') erroreIA(g, ia.piano);
     } else if (ia.fase === 'cammina') {
@@ -1201,6 +1321,7 @@
     else if (g && (e.code === 'ArrowUp' || e.code === 'KeyW')) { cambiaAngolo(g, 1); g.angolo = Math.round(g.angolo); }
     else if (g && (e.code === 'ArrowDown' || e.code === 'KeyS')) { cambiaAngolo(g, -1); g.angolo = Math.round(g.angolo); }
     else if (g && /^Digit[123]$/.test(e.code)) scegliColpo(g, Number(e.code.slice(5)) - 1);
+    else if (g && /^Digit[45]$/.test(e.code)) usaOggetto(g, Number(e.code.slice(5)) - 4);
     else if (e.code === 'Equal' || e.code === 'NumpadAdd') stato.zoomUtente = clamp(stato.zoomUtente * 1.2, 1, 2.2);
     else if (e.code === 'Minus' || e.code === 'NumpadSubtract') stato.zoomUtente = clamp(stato.zoomUtente / 1.2, 1, 2.2);
   });
@@ -1210,6 +1331,7 @@
 
   function scegliColpo(g, i) {
     if (g.carica) return;
+    if (g.magica) { g.magica = false; g.oggettoTurno = false; }
     if (i === 2 && g.speciale < 1) return;
     g.colpo = i;
     suoni.clic();
@@ -1233,6 +1355,8 @@
     const c = e.target.closest('[data-colpo]');
     const g = turnoUmano();
     if (c && g) scegliColpo(g, Number(c.dataset.colpo));
+    const o = e.target.closest('[data-oggetto]');
+    if (o && g) usaOggetto(g, Number(o.dataset.oggetto));
   });
   const lascia = (e) => {
     const b = e.target.closest && e.target.closest('[data-tieni]');
@@ -1267,10 +1391,17 @@
   }
 
   // ---------------------------------------------------------------- plancia
+  const ICONE = {
+    cerotto: '<svg viewBox="0 0 24 24"><rect x="2" y="8" width="20" height="8" rx="4" transform="rotate(-35 12 12)" fill="#f2c79a" stroke="#7a4a22" stroke-width="1.6"/><rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(-35 12 12)" fill="#fff" stroke="#7a4a22" stroke-width="1"/></svg>',
+    ombrello: '<svg viewBox="0 0 24 24"><path d="M2 12 Q3 3 12 3 Q21 3 22 12 Q19.5 10 17 12 Q14.5 10 12 12 Q9.5 10 7 12 Q4.5 10 2 12Z" fill="#e8553f" stroke="#7a4a22" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 12 V19 Q12 22 9 21" fill="none" stroke="#7a4a22" stroke-width="2" stroke-linecap="round"/></svg>',
+    doppio: '<svg viewBox="0 0 24 24"><g stroke="#7a4a22" stroke-width="1.3"><path d="M3 9 Q3 16 7 18 Q11 16 11 9Z" fill="#c98a3c"/><path d="M2.5 9.5 Q7 4 11.5 9.5Z" fill="#7a4a22"/><path d="M13 9 Q13 16 17 18 Q21 16 21 9Z" fill="#c98a3c"/><path d="M12.5 9.5 Q17 4 21.5 9.5Z" fill="#7a4a22"/></g></svg>',
+    vento: '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M3 9 H14 A3 3 0 1 0 11 6 M3 14 H18 A3 3 0 1 1 15 17" stroke="#3a8fd0" stroke-width="2"/><path d="M4 21 L20 3" stroke="#e8553f" stroke-width="2.5"/></svg>',
+    teletrasporto: '<svg viewBox="0 0 24 24"><path d="M6 10 Q6 18 12 21 Q18 18 18 10Z" fill="#ffd84a" stroke="#7a4a22" stroke-width="1.4"/><path d="M5.5 10.5 Q12 3 18.5 10.5Z" fill="#e8a514" stroke="#7a4a22" stroke-width="1.4"/><path d="M20 2 L21 4.5 L23.5 5 L21 5.5 L20 8 L19 5.5 L16.5 5 L19 4.5Z M4 14 L4.7 15.5 L6 16 L4.7 16.5 L4 18 L3.3 16.5 L2 16 L3.3 15.5Z" fill="#fff3b0" stroke="#c98a1c" stroke-width="0.8"/></svg>',
+  };
   let planciaFirma = '';
   const el = {
     energia: $('#barra-energia'), riempi: $('#riempi'), segno: $('#segno'), angolo: $('#angolo'),
-    colpi: $('#colpi'), tempo: $('#tempo'),
+    colpi: $('#colpi'), tempo: $('#tempo'), oggetti: $('#oggetti'),
   };
   function aggiornaPlancia(forza) {
     const g = stato.attivo;
@@ -1284,7 +1415,8 @@
     el.riempi.style.width = (g.potenza * 100).toFixed(1) + '%';
     el.segno.style.left = g.ultimaPotenza === null ? '-10px' : (g.ultimaPotenza * 100).toFixed(1) + '%';
     el.angolo.textContent = Math.round(g.angolo) + '°';
-    const firma = [g.id, g.colpo, g.speciale >= 1, Math.round(g.speciale * 20), g.mezzo].join(',');
+    const firma = [g.id, g.colpo, g.speciale >= 1, Math.round(g.speciale * 20), g.mezzo, g.magica, g.oggettoTurno,
+      g.oggetti.map((o) => o.usato).join('')].join(',');
     if (forza || firma !== planciaFirma) {
       planciaFirma = firma;
       el.colpi.innerHTML = M.colpi.map((c, i) => {
@@ -1293,6 +1425,13 @@
         return `<button type="button" class="colpo${i === g.colpo ? ' scelto' : ''}${bloccato ? ' bloccato' : ''}${i === 2 ? ' speciale' : ''}" data-colpo="${i}">
           ${carica}<span class="tasto">${i + 1}</span><span class="nome-colpo">${c.nome}</span></button>`;
       }).join('');
+      el.oggetti.innerHTML = g.oggetti.map((o, i) => {
+        const O = OGGETTI[o.tipo];
+        const spento = o.usato || (g.oggettoTurno && !(o.tipo === 'teletrasporto' && g.magica));
+        return `<button type="button" class="oggetto${spento ? ' usato' : ''}${o.tipo === 'teletrasporto' && g.magica ? ' scelto' : ''}"
+          data-oggetto="${i}" title="${O.nome} (${i + 4}): ${O.descrizione}" aria-label="${O.nome}">${ICONE[o.tipo]}<span class="tasto">${i + 4}</span></button>`;
+      }).join('');
+      el.colpi.classList.toggle('magica', g.magica);
       const s = parseFloat(schermo.style.getPropertyValue('--s')) || 1;
       stato.margineBasso = (plancia.offsetHeight || 60) / s;
       elTurno.innerHTML = `<span style="color:${PERSONAGGI[g.personaggio].colore}">${g.nome}</span> · ${M.nome}`;
@@ -1736,6 +1875,7 @@
     disegnaPersonaggioLocale(g, S);
     disegnaMezzo(g.mezzo, aLocale, g.carica ? g.potenza : 0);
     ctx.restore();
+    if (g.ombrello) disegnaOmbrello(g.x - g.verso * 10, g.y - 70);
     if (g.bolla) {
       const r = 58 + Math.sin(stato.tempo * 5) * 2;
       ctx.save();
@@ -1759,6 +1899,36 @@
     ctx.translate(S.x, S.y);
     ctx.scale(g.verso, 1);
     disegnaPersonaggio(g, 0, 0);
+    ctx.restore();
+  }
+
+  function disegnaOmbrello(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.sin(stato.tempo * 2) * 0.08);
+    ctx.scale(0.8, 0.8);
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.lineTo(0, 30);
+    ctx.quadraticCurveTo(0, 36, -6, 34);
+    bordo(4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-34, 6);
+    ctx.quadraticCurveTo(-32, -22, 0, -24);
+    ctx.quadraticCurveTo(32, -22, 34, 6);
+    for (let i = 0; i < 4; i++) ctx.quadraticCurveTo(25.5 - i * 17, -2, 17 - i * 17, 6);
+    ctx.closePath();
+    ctx.fillStyle = '#e8553f';
+    ctx.fill();
+    bordo(3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-17, 6);
+    ctx.quadraticCurveTo(-12, -16, 0, -24);
+    ctx.quadraticCurveTo(12, -16, 17, 6);
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -1905,6 +2075,33 @@
       ctx.arc(-r * 0.3, -r * 0.35, r * 0.25, 0, Math.PI * 2);
       ctx.fillStyle = '#c4cad3';
       ctx.fill();
+    } else if (tipo === 'magica') {
+      // ghianda dorata con le stelline intorno
+      ctx.save();
+      ctx.rotate(-rot);
+      for (let i = 0; i < 3; i++) {
+        const a = stato.tempo * 5 + i * 2.1;
+        ctx.save();
+        ctx.translate(Math.cos(a) * r * 1.8, Math.sin(a) * r * 1.8);
+        stella(r * 0.45, '#fff3b0', '#c98a1c');
+        ctx.restore();
+      }
+      ctx.restore();
+      bordo(2.5);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.86, -r * 0.15);
+      ctx.bezierCurveTo(-r * 0.9, r * 0.7, -r * 0.3, r * 1.1, 0, r * 1.2);
+      ctx.bezierCurveTo(r * 0.3, r * 1.1, r * 0.9, r * 0.7, r * 0.86, -r * 0.15);
+      ctx.closePath();
+      ctx.fillStyle = '#ffd84a';
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.2, r, r * 0.62, 0, Math.PI, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#e8a514';
+      ctx.fill();
+      ctx.stroke();
     } else if (tipo === 'tappo') {
       // tappo di sughero visto di lato
       ctx.beginPath();
@@ -1978,6 +2175,20 @@
     ctx.restore();
   }
 
+  function stella(r, fill, bordoC) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const rr = i % 2 ? r * 0.45 : r;
+      const a = i / 10 * Math.PI * 2 - Math.PI / 2;
+      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    bordo(1.5, bordoC);
+    ctx.stroke();
+  }
+
   function disegnaParticelle() {
     for (const q of stato.particelle) {
       const k = clamp(q.vita / q.durata, 0, 1);
@@ -2038,8 +2249,13 @@
         ctx.lineWidth = 5;
         ctx.strokeStyle = '#3a2210';
         ctx.strokeText(q.testo, q.x, q.y);
-        ctx.fillStyle = '#ff6b4a';
+        ctx.fillStyle = q.colore || '#ff6b4a';
         ctx.fillText(q.testo, q.x, q.y);
+      } else if (q.tipo === 'stella') {
+        ctx.globalAlpha = k;
+        ctx.translate(q.x, q.y);
+        ctx.rotate(stato.tempo * 4);
+        stella(q.r, '#ffe27a', '#c98a1c');
       }
       ctx.restore();
     }
@@ -2227,12 +2443,14 @@
       return `<div class="comandi">
         <p><b>Muoversi:</b> ◀ ▶ · <b>Alzo:</b> ▲ ▼ oppure tocca il cielo nella direzione in cui vuoi tirare.</p>
         <p><b>Tirare:</b> tieni premuto <b>TIRA</b> e lascia alla potenza giusta. Il segno rosso è la potenza del tiro prima.</p>
+        <p><b>Oggetti:</b> tocca le icone accanto ai colpi (uno per turno).</p>
       </div>`;
     }
     return `<div class="comandi">
       <p><b>Muoversi:</b> <kbd>←</kbd> <kbd>→</kbd> · <b>Alzo:</b> <kbd>↑</kbd> <kbd>↓</kbd> oppure punta col mouse</p>
       <p><b>Tirare:</b> tieni premuto <kbd>Spazio</kbd> o il tasto del mouse e lascia alla potenza giusta</p>
-      <p><b>Colpi:</b> <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> (il 3 è lo speciale) · <kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>P</kbd> pausa · <kbd>M</kbd> suoni</p>
+      <p><b>Colpi:</b> <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> (il 3 è lo speciale) · <b>Oggetti:</b> <kbd>4</kbd> <kbd>5</kbd></p>
+      <p><kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>P</kbd> pausa · <kbd>M</kbd> suoni</p>
     </div>`;
   }
 
@@ -2274,6 +2492,25 @@
       <h2>${titolo}</h2>
       <div class="mezzi">${schede}</div>
       <div class="scelte"><button class="bottone secondario" data-azione="menu">Indietro</button></div>
+    </div>`;
+  }
+
+  function pannelloOggetti() {
+    const nome = scelta.chi === 0 ? 'Tino' : 'Gino';
+    const sel = scelta.oggetti[scelta.chi];
+    const schede = Object.entries(OGGETTI).map(([k, o]) => `
+      <button class="scheda-oggetto${sel.includes(k) ? ' scelto' : ''}" data-oggetto-scelto="${k}" aria-pressed="${sel.includes(k)}">
+        <span class="icona">${ICONE[k]}</span><b>${o.nome}</b><span class="desc">${o.descrizione}</span>
+      </button>`).join('');
+    const ultimo = scelta.modo !== 'due' || scelta.chi === 1;
+    return `<div class="riquadro largo">
+      <h2>${nome}, scegli due oggetti</h2>
+      <p>Ognuno si usa una volta sola, prima di tirare (${touch ? 'tocca l\'icona nella plancia' : 'tasti <kbd>4</kbd> e <kbd>5</kbd>'}).</p>
+      <div class="oggetti-scelta">${schede}</div>
+      <div class="scelte">
+        <button class="bottone" data-azione="via" data-primo${sel.length === 2 ? '' : ' disabled'}>${ultimo ? 'Si gioca!' : 'Avanti'}</button>
+        <button class="bottone secondario" data-azione="indietro">Indietro</button>
+      </div>
     </div>`;
   }
 
@@ -2346,7 +2583,7 @@
   }
 
   function apriScelta(modo, livello) {
-    scelta = { modo, livello, mezzi: [], chi: 0 };
+    scelta = { modo, livello, mezzi: [], oggetti: [], chi: 0 };
     mostraPannello(pannelloScelta());
   }
 
@@ -2355,24 +2592,49 @@
     if (m && scelta) {
       scelta.mezzi[scelta.chi] = m.dataset.mezzoScelto;
       suoni.clic();
-      if (scelta.modo === 'due' && scelta.chi === 0) {
-        scelta.chi = 1;
-        mostraPannello(pannelloScelta());
-        return;
-      }
-      ultimeScelte = { ...scelta };
-      iniziaPartita(scelta.modo, scelta.livello, { mezzo0: scelta.mezzi[0], mezzo1: scelta.mezzi[1] });
-      scelta = null;
+      scelta.oggetti[scelta.chi] = scelta.oggetti[scelta.chi] || leggi('oggetti-' + scelta.chi, ['cerotto', 'ombrello']).filter((k) => OGGETTI[k]);
+      mostraPannello(pannelloOggetti());
+      return;
+    }
+    const og = e.target.closest('[data-oggetto-scelto]');
+    if (og && scelta) {
+      const sel = scelta.oggetti[scelta.chi];
+      const k = og.dataset.oggettoScelto;
+      const i = sel.indexOf(k);
+      if (i >= 0) sel.splice(i, 1);
+      else { sel.push(k); if (sel.length > 2) sel.shift(); }
+      suoni.clic();
+      mostraPannello(pannelloOggetti());
+      const b = pannello.querySelector(`[data-oggetto-scelto="${k}"]`);
+      if (b && !touch) b.focus({ preventScroll: true });
       return;
     }
     const b = e.target.closest('button[data-azione]');
     if (!b) return;
     switch (b.dataset.azione) {
+      case 'via': {
+        if (!scelta || scelta.oggetti[scelta.chi].length !== 2) break;
+        scrivi('oggetti-' + scelta.chi, scelta.oggetti[scelta.chi]);
+        if (scelta.modo === 'due' && scelta.chi === 0) {
+          scelta.chi = 1;
+          mostraPannello(pannelloScelta());
+          break;
+        }
+        ultimeScelte = { ...scelta, oggetti: scelta.oggetti.slice() };
+        iniziaPartita(scelta.modo, scelta.livello, {
+          mezzo0: scelta.mezzi[0], mezzo1: scelta.mezzi[1], oggetti0: scelta.oggetti[0], oggetti1: scelta.oggetti[1],
+        });
+        scelta = null;
+        break;
+      }
+      case 'indietro': mostraPannello(pannelloScelta()); break;
       case 'cpu': apriScelta('cpu', 1); break;
       case 'continua': apriScelta('cpu', record); break;
       case 'due': apriScelta('due', 1); break;
       case 'prossimo': apriScelta('cpu', stato.livello + 1); break;
-      case 'riprova': iniziaPartita('cpu', stato.livello, { mezzo0: ultimeScelte ? ultimeScelte.mezzi[0] : null }); break;
+      case 'riprova': iniziaPartita('cpu', stato.livello, {
+        mezzo0: ultimeScelte ? ultimeScelte.mezzi[0] : null, oggetti0: ultimeScelte ? ultimeScelte.oggetti[0] : null,
+      }); break;
       case 'riprendi': riprendi(); break;
       case 'menu': vaiAlMenu(); break;
       default: break;
@@ -2404,6 +2666,6 @@
 
   window.tinoBum = {
     stato, FISICA, TURNO, IA, MEZZI, iniziaPartita, aggiorna, simulaTiro, cercaTiro, pianificaIA,
-    spara, danno, passoCammino, cammina,
+    spara, danno, passoCammino, cammina, usaOggetto, OGGETTI,
   };
 })();
