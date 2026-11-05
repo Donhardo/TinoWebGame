@@ -60,6 +60,10 @@
     ko: caricaImg('tino/tino-ko.png'),
     gino: caricaImg('gino/gino.png'),
   };
+  // fondale dipinto (se non si carica, si usa quello disegnato nel codice)
+  const FONDALE = new Image();
+  FONDALE.src = 'fondali/prato.png';
+  const fondaleDipinto = () => FONDALE.complete && FONDALE.naturalWidth > 0;
   const PERSONAGGI = {
     tino: { nome: 'Tino', colore: '#ffd59a', altezza: 58 },
     gino: { nome: 'Gino', colore: '#c9e6ff', altezza: 46 },
@@ -406,7 +410,7 @@
   function piazzaGiocatori() {
     const cand = [];
     const mat = stato.terreno.mat;
-    for (let x = 50; x < W - 50; x += 6) {
+    for (let x = 90; x < W - 90; x += 6) {
       for (let y = 1; y < ACQUA - 30; y++) {
         if (!mat[y * W + x] || mat[(y - 1) * W + x]) continue;
         const piedi = y - 1;
@@ -1199,6 +1203,17 @@
   }
 
   function disegnaCielo() {
+    if (fondaleDipinto() && stato.terreno) {
+      // un po' più grande dello schermo, scorre piano con la camera (parallasse)
+      const cam = stato.camera;
+      const k = 1.12;
+      const w = VW * k, h = VH * k;
+      const vw = VW / cam.z;
+      const fx = W > vw ? clamp(cam.x / (W - vw), 0, 1) : 0.5;
+      const fy = clamp((cam.y + 260) / (260 + H - VH / cam.z + 1), 0, 1);
+      ctx.drawImage(FONDALE, -(w - VW) * fx, -(h - VH) * fy, w, h);
+      return;
+    }
     const gr = ctx.createLinearGradient(0, 0, 0, VH);
     gr.addColorStop(0, '#5fb6ee');
     gr.addColorStop(0.65, '#a8dcf6');
@@ -1230,6 +1245,7 @@
   }
 
   function disegnaFondale() {
+    if (fondaleDipinto()) return;
     const f = stato.fondale;
     const cam = stato.camera;
     const strato = (img, k) => ctx.drawImage(img, cam.x * (1 - k), cam.y * (1 - k) + 40 * (1 - k));
