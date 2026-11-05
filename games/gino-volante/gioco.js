@@ -65,7 +65,6 @@
     colpoStrappata: 395,
     cadutaMax: 620,
     planata: 170,              // discesa massima sopra il tetto
-    crociera: [240, 0.11, 340], // velocità: base, aumento per metro, massimo
     slancio: 0.5,              // parte della velocità all'apertura che diventa slancio
     slancioMax: 420,
     smorza: 5,                 // secondi in cui lo slancio si consuma (costante di tempo)
@@ -75,22 +74,37 @@
     primoOstacolo: 820,        // distanza del primo ostacolo davanti a Gino
   };
 
-  // Ostacoli: la difficoltà cresce coi metri (t da 0 a 1 tra 0 e 900 m)
+  // Difficoltà: ogni voce è una curva [metri, valore], lineare tra un punto e
+  // l'altro e ferma dopo l'ultimo. Fino a 700 m cresce in fretta, poi più piano
+  // fino ai 2000 m, dove si ferma (sempre battibile: provato con voli simulati).
+  const CURVE = {
+    velocita: [[0, 240], [700, 340], [2000, 380]],   // px/s in avanti con la foglia
+    varco: [[0, 245], [700, 175], [2000, 158]],      // spazio libero tra sopra e sotto
+    distanza: [[0, 560], [700, 360], [2000, 310]],   // tra una coppia e l'altra
+    ampiezza: [[0, 0], [300, 0], [740, 44], [2000, 50]], // movimento su e giù degli ostacoli
+    raduraOgni: [[0, 8], [2000, 12]],                // coppie tra una radura con la corrente e l'altra
+    fogliaOgni: [[0, 11], [2000, 18]],               // coppie tra una foglia nuova e l'altra
+  };
+  function curva(punti, m) {
+    if (m <= punti[0][0]) return punti[0][1];
+    for (let i = 1; i < punti.length; i++) {
+      const [m1, v1] = punti[i];
+      if (m <= m1) {
+        const [m0, v0] = punti[i - 1];
+        return v0 + (v1 - v0) * (m - m0) / (m1 - m0);
+      }
+    }
+    return punti[punti.length - 1][1];
+  }
+
   const OSTACOLI = {
-    fine: 900,                 // metri a cui si arriva alla difficoltà massima
-    distanza: [560, 340],      // tra una coppia e l'altra
-    varco: [245, 168],         // spazio libero tra sopra e sotto
     larghezza: 84,
     margineBasso: 70,
     margineAlto: 40,
     salitaMax: 150,            // px/s di salita che si chiedono al giocatore
     discesaMax: 300,
-    mobiliDa: 350,             // metri da cui gli ostacoli si muovono
-    ampiezza: [0.1, 44],       // px di movimento per metro oltre mobiliDa, massimo
     periodo: [2.6, 3.8],       // secondi di un'andata e ritorno degli ostacoli mobili
-    radura: 8,                 // ogni quante coppie c'è una radura con la corrente
     lungRadura: 980,
-    foglia: 11,                // ogni quante coppie compare una foglia nuova
     tolleranza: 5,             // gli urti perdonano qualche pixel
   };
 
@@ -120,6 +134,37 @@
   const imgGhianda = new Image();
   imgGhianda.src = 'ghianda.svg';
 
+  // Disegni facoltativi (dipinti a parte): se un file manca, resta la grafica
+  // disegnata nel codice. Fondali: uno per tappa, in fondali/. Aliante: la
+  // foglia-aliante intera e strappata, vista di lato, con il manubrio in basso
+  // al centro (il punto a cui si tiene Gino è il centro del bordo inferiore).
+  function facoltativa(percorso) {
+    const im = new Image();
+    im.ok = false;
+    im.onload = () => { im.ok = im.naturalWidth > 0; };
+    im.src = percorso;
+    return im;
+  }
+  const FONDALI = ['fondali/prato.png', 'fondali/bosco.png', 'fondali/cielo.png'].map(facoltativa);
+  const ALIANTE = { intero: facoltativa('aliante.png'), strappato: facoltativa('aliante-strappato.png') };
+  const PARALLASSE_FONDALE = 0.15;
+  // colore della riga in alto del fondale, per riempire il cielo se la telecamera sale
+  function coloreCima(im) {
+    if (im.cima !== undefined) return im.cima;
+    im.cima = null;
+    try {
+      const c = document.createElement('canvas');
+      c.width = 16; c.height = 1;
+      const k = c.getContext('2d');
+      k.drawImage(im, 0, 0, im.naturalWidth, 4, 0, 0, 16, 1);
+      const d = k.getImageData(0, 0, 16, 1).data;
+      let r = 0, g = 0, b = 0;
+      for (let i = 0; i < 16; i++) { r += d[i * 4]; g += d[i * 4 + 1]; b += d[i * 4 + 2]; }
+      im.cima = `rgb(${Math.round(r / 16)},${Math.round(g / 16)},${Math.round(b / 16)})`;
+    } catch (e) { /* pixel non leggibili (pagina aperta da file) */ }
+    return im.cima;
+  }
+
   // ---------------------------------------------------------------- DOM
   const $ = (s) => document.querySelector(s);
   const canvas = $('#campo');
@@ -133,7 +178,6 @@
   // ---------------------------------------------------------------- utilità
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const lerp = (a, b, t) => a + (b - a) * t;
-  const cresce = ([base, passo, limite], d) => Math.min(limite, base + passo * d);
 
   let semeCasuale = null;
   function casuale() {
@@ -448,8 +492,8 @@
     if (stato.toccatoTerra || g.foglia) return;
     const d = g.x / PX_M;
     const vel = Math.hypot(g.vx, g.vy);
-    const crociera = cresce(FOGLIA.crociera, d);
-    let slancio = clamp(FOGLIA.slancio * vel - crociera, 0, FOGLIA.slancioMax);
+    const base = crociera(d);
+    let slancio = clamp(FOGLIA.slancio * vel - base, 0, FOGLIA.slancioMax);
     if (Math.abs(g.vy) < FOGLIA.apice && g.h > 200) {
       slancio *= FOGLIA.bonusApice;
       mostraMessaggio('Apertura perfetta!', 1.3, '#2f6b26');
@@ -458,7 +502,7 @@
     g.foglia = 1;
     g.fogliaApre = 0;
     g.slancio = slancio;
-    g.vx = crociera + slancio;
+    g.vx = base + slancio;
     g.vy = clamp(g.vy, -260, 260);
     g.vrot = 0;
     stato.apertaFoglia = true;
@@ -466,7 +510,7 @@
     stato.fase = 'foglia';
     // il primo ostacolo arriva solo dopo che Gino è planato sotto il tetto
     const planata = Math.max(0, g.h - FOGLIA.tetto) / FOGLIA.planata * 1.15 * g.vx;
-    stato.gen = { x: g.x + FOGLIA.primoOstacolo + planata, n: 0, centro: clamp(Math.min(g.h, FOGLIA.tetto), 140, FOGLIA.tetto - 140) };
+    stato.gen = { x: g.x + FOGLIA.primoOstacolo + planata, n: 0, finoRadura: CURVE.raduraOgni[0][1], finoFoglia: CURVE.fogliaOgni[0][1], centro: clamp(Math.min(g.h, FOGLIA.tetto), 140, FOGLIA.tetto - 140) };
     suoni.apri();
   }
 
@@ -581,8 +625,7 @@
   }
 
   // ---------------------------------------------------------------- difficoltà
-  function difficolta(metri) { return clamp(metri / OSTACOLI.fine, 0, 1); }
-  function crociera(metri) { return cresce(FOGLIA.crociera, metri); }
+  function crociera(metri) { return curva(CURVE.velocita, metri); }
   function tappaDi(metri) {
     let i = 0;
     for (let k = 0; k < TAPPE.length; k++) if (metri >= TAPPE[k].da) i = k;
@@ -593,9 +636,10 @@
     const gen = stato.gen;
     gen.n += 1;
     const metri = gen.x / PX_M;
-    const t = difficolta(metri);
     // radura con la corrente d'aria e una fila di ghiande
-    if (gen.n % OSTACOLI.radura === 0) {
+    gen.finoRadura -= 1;
+    if (gen.finoRadura <= 0) {
+      gen.finoRadura = Math.round(curva(CURVE.raduraOgni, metri));
       const cx = gen.x + 260;
       stato.correnti.push({ x: cx, larg: CORRENTE.larg });
       for (let i = 0; i < 6; i++) {
@@ -606,9 +650,9 @@
       gen.centro = FOGLIA.tetto - 140;
       return;
     }
-    const varco = lerp(OSTACOLI.varco[0], OSTACOLI.varco[1], t);
-    const spazio = lerp(OSTACOLI.distanza[0], OSTACOLI.distanza[1], t) * tra(0.92, 1.1);
-    const ampiezza = metri > OSTACOLI.mobiliDa ? Math.min(OSTACOLI.ampiezza[1], (metri - OSTACOLI.mobiliDa) * OSTACOLI.ampiezza[0]) * tra(0.5, 1) : 0;
+    const varco = curva(CURVE.varco, metri);
+    const spazio = curva(CURVE.distanza, metri) * tra(0.92, 1.1);
+    const ampiezza = curva(CURVE.ampiezza, metri) * tra(0.5, 1);
     const minC = OSTACOLI.margineBasso + varco / 2 + ampiezza;
     const maxC = FOGLIA.tetto - OSTACOLI.margineAlto - varco / 2 - ampiezza;
     const dt = spazio / crociera(metri);
@@ -626,7 +670,9 @@
     };
     stato.ostacoli.push(o);
     // premi nel varco
-    if (gen.n % OSTACOLI.foglia === 0) {
+    gen.finoFoglia -= 1;
+    if (gen.finoFoglia <= 0) {
+      gen.finoFoglia = Math.round(curva(CURVE.fogliaOgni, metri));
       stato.oggetti.push({ tipo: 'foglia', x: o.x + o.w / 2, dh: 0, ostacolo: o });
     } else if (casuale() < 0.55) {
       stato.oggetti.push({ tipo: 'ghianda', x: o.x + o.w / 2, dh: tra(-0.2, 0.2) * varco, ostacolo: o });
@@ -940,8 +986,10 @@
   function disegna() {
     const metri = Math.max(0, (stato.cam.x + xGino()) / PX_M);
     const pesi = pesiTappe(metri);
-    disegnaCielo(pesi);
-    disegnaLontano(pesi);
+    const conImmagine = pesi.map((p, i) => p > 0 && FONDALI[i].ok);
+    disegnaCielo(pesi, conImmagine);
+    disegnaLontano(pesi, conImmagine);
+    disegnaFondali(pesi, conImmagine);
     disegnaCorrenti();
     disegnaTerreno(pesi);
     disegnaPartenza();
@@ -955,12 +1003,14 @@
     disegnaMessaggi();
   }
 
-  function disegnaCielo(pesi) {
+  function disegnaCielo(pesi, conImmagine) {
     const gr = ctx.createLinearGradient(0, 0, 0, alt);
     gr.addColorStop(0, colore('cieloA', pesi));
     gr.addColorStop(1, colore('cieloB', pesi));
     ctx.fillStyle = gr;
     ctx.fillRect(0, 0, larg, alt);
+    // con i fondali dipinti, sole e nuvolette sono già nel disegno
+    if (pesi.every((p, i) => p === 0 || conImmagine[i])) return;
     // sole
     ctx.fillStyle = 'rgba(255, 236, 140, 0.9)';
     ctx.beginPath();
@@ -988,8 +1038,39 @@
     ctx.fill();
   }
 
-  function disegnaLontano(pesi) {
+  // Fondali dipinti: affiancati (uno sì e uno specchiato, così i bordi
+  // combaciano), scorrono piano con la telecamera; tra una tappa e l'altra sfumano.
+  function disegnaFondali(pesi, conImmagine) {
+    let primo = true;
+    pesi.forEach((peso, i) => {
+      if (!conImmagine[i]) return;
+      const im = FONDALI[i];
+      const hd = alt * 1.2;
+      const wd = im.naturalWidth * hd / im.naturalHeight;
+      const fondo = alt - SUOLO + 24 + stato.cam.h * 0.2;
+      const cima = fondo - hd;
+      ctx.globalAlpha = primo ? 1 : peso;
+      primo = false;
+      if (cima > 0) {
+        const col = coloreCima(im);
+        if (col) { ctx.fillStyle = col; ctx.fillRect(0, 0, larg, cima + 1); }
+      }
+      const ox = (stato.cam.x - (-420)) * PARALLASSE_FONDALE;
+      const n0 = Math.floor(ox / wd);
+      for (let n = n0; n * wd - ox < larg; n++) {
+        const x = n * wd - ox;
+        ctx.save();
+        if (n % 2) { ctx.translate(x + wd, cima); ctx.scale(-1, 1); } else ctx.translate(x, cima);
+        ctx.drawImage(im, 0, 0, wd + 1, hd);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  function disegnaLontano(pesi, conImmagine) {
     const base = sy(0);
+    pesi = pesi.map((p, i) => (conImmagine[i] ? 0 : p));
     // prato: colline morbide
     if (pesi[0] > 0) {
       ctx.globalAlpha = pesi[0];
@@ -1310,9 +1391,24 @@
         // foglia nuova che brilla
         ctx.fillStyle = 'rgba(255, 255, 200, 0.5)';
         ctx.beginPath(); ctx.arc(x, y, 26 + Math.sin(stato.tempo * 6) * 3, 0, Math.PI * 2); ctx.fill();
-        disegnaFoglia(x, y, 0.55, Math.sin(stato.tempo * 2) * 0.3, false);
+        if (!disegnaAliante(x, y + 18, 0.5, Math.sin(stato.tempo * 2) * 0.2, false)) disegnaFoglia(x, y, 0.55, Math.sin(stato.tempo * 2) * 0.3, false);
       }
     }
+  }
+
+  // la foglia-aliante dipinta: (x, y) è il punto del manubrio; false se il disegno non c'è
+  function disegnaAliante(x, y, k, rot, strappata) {
+    const im = strappata && ALIANTE.strappato.ok ? ALIANTE.strappato : ALIANTE.intero;
+    if (!im.ok) return false;
+    const w = 130 * k;
+    const h = w * im.naturalHeight / im.naturalWidth;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    if (strappata && im === ALIANTE.intero) ctx.filter = 'sepia(0.6) saturate(0.7)';
+    ctx.drawImage(im, -w / 2, -h, w, h);
+    ctx.restore();
+    return true;
   }
 
   // la foglia: k scala, rot rotazione, strappata = con un morso mancante
@@ -1395,7 +1491,10 @@
       const battito = g.battito;
       ctx.save();
       ctx.rotate(g.inclina * 0.6);
-      disegnaFoglia(0, -altezza * 0.55 - 14 + battito * 6, (0.3 + 0.45 * apre) * (1 - battito * 0.12), Math.sin(stato.tempo * 5) * 0.05, g.foglia === 2);
+      const k = (0.4 + 0.6 * apre) * (1 - battito * 0.1);
+      if (!disegnaAliante(0, -altezza / 2 + 6 + battito * 5, k, Math.sin(stato.tempo * 5) * 0.04, g.foglia === 2)) {
+        disegnaFoglia(0, -altezza * 0.55 - 14 + battito * 6, (0.3 + 0.45 * apre) * (1 - battito * 0.12), Math.sin(stato.tempo * 5) * 0.05, g.foglia === 2);
+      }
       ctx.restore();
     }
     const rot = g.foglia ? g.inclina : g.rot;
@@ -1645,6 +1744,6 @@
   // utile per le prove automatiche
   window.ginoVolante = {
     stato, avvia, premi, aggiorna, finisci, superficie, centroOstacolo, urtaOstacolo, crociera,
-    ALTALENA, TINO, LANCIO, VOLO, FOGLIA, OSTACOLI, CORRENTE, PX_M,
+    ALTALENA, TINO, LANCIO, VOLO, FOGLIA, OSTACOLI, CURVE, curva, CORRENTE, PX_M,
   };
 })();

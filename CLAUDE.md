@@ -470,9 +470,13 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   gravità tira giù. Il primo urto strappa la foglia (1,3 s di invulnerabilità, colpi
   d'ala un po' più deboli), il secondo chiude il volo; toccare terra chiude il volo.
 - **Ostacoli**: coppie sopra/sotto con un varco, sempre raggiungibile dal varco prima
-  (salita chiesta al massimo 150 px/s, discesa 300). Coi metri (fino a 900 m) il varco
-  passa da 245 a 168 px, la distanza tra le coppie da 560 a 340 px e la velocità da 240
-  a 340 px/s; dai 350 m gli ostacoli si muovono su e giù (fino a 44 px). Tappe: prato
+  (salita chiesta al massimo 150 px/s, discesa 300). La difficoltà è nella tabella
+  `CURVE` (curve a punti [metri, valore], lineari tra un punto e l'altro): fino a 700 m
+  cresce in fretta, poi più piano fino ai 2000 m, dove si ferma. Varco 245 → 175 → 158
+  px, distanza tra le coppie 560 → 360 → 310 px, velocità 240 → 340 → 380 px/s, ostacoli
+  che si muovono su e giù dai 300 m (44 px a 740 m, 50 a 2000); radure con la corrente
+  ogni 8 coppie all'inizio e ogni 12 a 2000 m, foglie nuove ogni 11 coppie all'inizio e
+  ogni 18 a 2000 m. Tappe: prato
   (0 m: fiori alti e rami), bosco (250 m: tronchi tagliati e rami col muschio), cielo
   (600 m: nuvoloni temporaleschi); colori e sfondi sfumano da una tappa all'altra.
 - **Aiuti e premi**: ghiande nei varchi e tra le coppie; ogni 8 coppie una radura con
@@ -487,17 +491,34 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   si schiaccia ai rimbalzi, si inclina ai colpi d'ala, trema negli urti, saltella
   quando si ferma.
 - **Difficoltà tarata** con voli simulati (giocatori simulati che mirano al varco
-  con errore, ritardo e colpi persi, 20-30 voli ciascuno): il perfetto arriva sempre
-  al limite della prova (3000 m) senza quasi mai urtare (sempre battibile); bravo
-  ~2300 m di media, medio ~1200 m, principiante ~600 m (da 110 a 1450 m). Le persone
-  vere reagiscono peggio dei copioni, quindi si arriva meno lontano.
+  con errore, ritardo e colpi persi, 30 voli ciascuno): bravo ~1800 m di media, medio
+  ~1000 m, principiante ~600 m (da 120 a 1500 m). Per dimostrare che è sempre battibile
+  c'è un giocatore che pianifica (prova le sequenze di colpi d'ala per 1,2 s avanti, con
+  un piccolo margine, correnti d'aria comprese, e mira al centro del varco quando
+  entrambe le mosse sono sicure): 16 voli su 16 fino a 3000 m senza strappi. Il
+  copione semplice che mira solo al varco invece cade ogni tanto oltre i 1900 m. Le
+  persone vere reagiscono peggio dei copioni, quindi si arriva meno lontano.
+- **Disegni dipinti (facoltativi)**: `fondali/prato.png`, `fondali/bosco.png`,
+  `fondali/cielo.png` (uno per tappa, 16:9, es. 1600 × 900) e `aliante.png`,
+  `aliante-strappato.png` (la foglia-aliante vista di lato, sfondo trasparente, con il
+  manubrio al centro del bordo inferiore: è il punto a cui si tiene Gino). Se un file
+  manca resta la grafica disegnata nel codice. I fondali si disegnano alti 1,2 volte lo
+  schermo, con il fondo 24 px sotto l'erba: la parte alta (~20%) si vede solo quando la
+  telecamera sale, e sopra il disegno si riempie col colore della sua riga in alto. Si
+  affiancano uno dritto e uno specchiato (così i bordi combaciano) e scorrono a 0,15
+  della telecamera; tra le tappe sfumano. Prompt per Gemini: stile come i fondali di
+  Tino Bum (cartone con contorni morbidi), sfondo lontano senza primo piano, orizzonte
+  nel terzo basso, centro sgombro (lì passano ostacoli e Gino), cielo semplice in alto;
+  per l'aliante sfondo magenta pieno da togliere poi (rendere trasparente, ritagliare,
+  ottimizzare come gli altri PNG).
 - **Prove automatiche**: `window.ginoVolante` (`stato`, `avvia(seme)`, `premi`,
   `aggiorna`, `centroOstacolo`, `urtaOstacolo`, tabelle); con `stato.test = true` il
   gioco non avanza da solo e non apre pannelli. I copioni non sono nel repository.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
-  `foglia.svg` e `assets/tino/`, `assets/gino/`; si pubblica con `files` e `root`.
+  `foglia.svg`, i disegni dipinti se ci sono e `assets/tino/`, `assets/gino/`; si
+  pubblica con `files` e `root`.
 - **Stato**: completo. Possibili seguiti, non ancora decisi: cappelli o foglie
   diverse da comprare con le ghiande, una musica di sottofondo, altre tappe oltre il
   cielo.
