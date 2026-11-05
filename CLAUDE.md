@@ -656,7 +656,11 @@ anteprima della home). I fondali sono quelli di Tino Bum (`../tino-bum/fondali/`
   Movimento a passi di 4 px; negli spigoli tra due mattoncini vicini il rimbalzo è
   dritto. Se per 15 s non si rompe niente, l'angolo si corregge un poco (giri chiusi).
 - **Controlli**: mouse (l'asse segue il puntatore), ← → o A D; clic, Spazio, ↑ o Invio
-  lanciano la ghianda. Sul telefono il dito sposta l'asse di quanto si sposta (×1,25,
+  lanciano la ghianda. Al primo clic nel campo il mouse si aggancia al gioco (Pointer
+  Lock, `aggancia`/`sgancia`): l'asse segue gli spostamenti (`movementX`, scartati i
+  salti oltre 250 px) anche se il puntatore uscirebbe dalla finestra. Prima, con l'asse
+  in fondo allo schermo, il puntatore usciva facilmente e l'asse si fermava. Esc lo
+  libera e mette in pausa; i pannelli lo liberano, riprendere lo riaggancia. Sul telefono il dito sposta l'asse di quanto si sposta (×1,25,
   così si tocca dove si vuole), un tocco breve lancia. P o Esc pausa, M suoni, N musica.
 - **Livelli** (`livelli.js`, legenda in cima): `a`-`f` colorati (il colore dipende dal
   mondo), `2` `3` resistenti, `#` indistruttibili, `*` petardo (fa saltare gli otto

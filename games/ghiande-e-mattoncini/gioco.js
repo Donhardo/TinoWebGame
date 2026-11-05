@@ -504,6 +504,8 @@
     tasti.add(e.code);
     document.body.classList.add('mostra-cursore');
     if (e.code === 'KeyP' || e.code === 'Escape') {
+      // l'Esc che ha appena liberato il mouse ha già messo in pausa
+      if (e.code === 'Escape' && performance.now() - sganciatoA < 400) return;
       if (stato.fase === 'pausa') riprendi();
       else if (inPartita()) pausa();
     } else if (e.code === 'KeyM') {
@@ -527,11 +529,39 @@
   // il dito (così si può toccare dove si vuole senza coprire l'asse).
   // Un tocco breve senza spostarsi lancia la ghianda.
   const dito = { id: null, x0: 0, asse0: 0, t0: 0, mosso: 0 };
+
+  // Col mouse, al primo clic nel campo il puntatore resta agganciato al gioco
+  // (Pointer Lock): l'asse si muove con gli spostamenti del mouse anche se il
+  // puntatore uscirebbe dalla finestra (l'asse è in fondo allo schermo, e
+  // prima, uscito il puntatore, l'asse non si muoveva più). Esc lo libera e mette
+  // in pausa; si riaggancia riprendendo o con un clic nel campo.
+  let vuoleBlocco = false;
+  let sganciatoA = -1e9;   // quando il browser ha liberato il mouse (Esc)
+  const bloccato = () => document.pointerLockElement === canvas;
+  function aggancia() {
+    if (touch || bloccato() || !canvas.requestPointerLock) return;
+    try {
+      const p = canvas.requestPointerLock();
+      if (p && p.catch) p.catch(() => { /* il browser può rifiutare: si gioca senza */ });
+    } catch (err) { /* niente */ }
+  }
+  function sgancia() {
+    if (bloccato()) document.exitPointerLock();
+  }
+  document.addEventListener('pointerlockchange', () => {
+    if (bloccato()) { vuoleBlocco = true; return; }
+    sganciatoA = performance.now();
+    // liberato con Esc durante il gioco: pausa
+    if (!pannelloAperto() && inPartita() && stato.fase !== 'pausa') pausa();
+  });
   palco.addEventListener('pointerdown', (e) => {
     if (e.target !== canvas && e.target !== palco) return;
     if (!inPartita() || stato.fase === 'pausa') return;
     if (e.pointerType === 'mouse') {
-      stato.asse.bersaglio = xLogica(e);
+      if (!bloccato()) {
+        stato.asse.bersaglio = xLogica(e);
+        aggancia();
+      }
       azione();
       return;
     }
@@ -546,7 +576,15 @@
     if (!inPartita() || stato.fase === 'pausa') return;
     if (e.pointerType === 'mouse') {
       document.body.classList.remove('mostra-cursore');
-      stato.asse.bersaglio = xLogica(e);
+      if (bloccato()) {
+        // alcuni browser mandano un salto enorme appena il mouse si aggancia
+        if (Math.abs(e.movementX) > 250) return;
+        const r = canvas.getBoundingClientRect();
+        const base = stato.asse.bersaglio ?? stato.asse.x;
+        stato.asse.bersaglio = clamp(base + e.movementX / r.width * W, 0, W);
+      } else {
+        stato.asse.bersaglio = xLogica(e);
+      }
     } else if (e.pointerId === dito.id) {
       const dx = xLogica(e) - dito.x0;
       dito.mosso = Math.max(dito.mosso, Math.abs(dx));
@@ -759,6 +797,7 @@
     if (stato.fase !== 'pausa') return;
     stato.fase = stato.pausaDa;
     nascondiPannello();
+    if (vuoleBlocco) aggancia();
     aggiornaMusica();
   }
 
@@ -2443,6 +2482,7 @@
     pannello.innerHTML = html;
     pannello.classList.add('visibile');
     document.body.classList.add('mostra-cursore');
+    sgancia();
     const primo = pannello.querySelector('[data-primo]') || pannello.querySelector('button');
     if (primo && !touch) primo.focus({ preventScroll: true });
   }
@@ -2467,7 +2507,8 @@
     }
     return `<div class="comandi">
       <p>Muovi con il <b>mouse</b> o con <kbd>←</kbd> <kbd>→</kbd> (<kbd>A</kbd> <kbd>D</kbd>).
-      <b>Clic</b>, <kbd>Spazio</kbd> o <kbd>↑</kbd> lanciano la ghianda.</p>
+      <b>Clic</b>, <kbd>Spazio</kbd> o <kbd>↑</kbd> lanciano la ghianda. Dopo il clic il
+      mouse resta agganciato al gioco: <kbd>Esc</kbd> lo libera.</p>
       <p><kbd>P</kbd> pausa · <kbd>M</kbd> suoni · <kbd>N</kbd> musica</p>
     </div>`;
   }
