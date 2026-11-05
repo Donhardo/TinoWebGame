@@ -76,14 +76,32 @@
 
   // Difficoltà: ogni voce è una curva [metri, valore], lineare tra un punto e
   // l'altro e ferma dopo l'ultimo. Fino a 700 m cresce in fretta, poi più piano
-  // fino ai 2000 m, dove si ferma (sempre battibile: provato con voli simulati).
+  // fino ai 2000 m e ancora più piano fino ai 4000 m, dove si ferma (sempre
+  // battibile: provato con voli simulati).
   const CURVE = {
-    velocita: [[0, 240], [700, 340], [2000, 380]],   // px/s in avanti con la foglia
-    varco: [[0, 245], [700, 175], [2000, 158]],      // spazio libero tra sopra e sotto
-    distanza: [[0, 560], [700, 360], [2000, 310]],   // tra una coppia e l'altra
-    ampiezza: [[0, 0], [300, 0], [740, 44], [2000, 50]], // movimento su e giù degli ostacoli
-    raduraOgni: [[0, 8], [2000, 12]],                // coppie tra una radura con la corrente e l'altra
-    fogliaOgni: [[0, 11], [2000, 18]],               // coppie tra una foglia nuova e l'altra
+    velocita: [[0, 240], [700, 340], [2000, 380], [4000, 405]],  // px/s in avanti con la foglia
+    varco: [[0, 245], [700, 175], [2000, 158], [3000, 150], [4000, 145]], // spazio libero tra sopra e sotto
+    distanza: [[0, 560], [700, 360], [2000, 310], [4000, 290]],  // tra una coppia e l'altra
+    ampiezza: [[0, 0], [300, 0], [740, 44], [2000, 50], [4000, 56]], // movimento su e giù degli ostacoli
+    raduraOgni: [[0, 8], [2000, 12], [4000, 14]],    // coppie tra una radura con la corrente e l'altra
+    fogliaOgni: [[0, 11], [2000, 18], [4000, 20]],   // coppie tra una foglia nuova e l'altra
+    // tunnel di nuvole (solo nel cielo, da TUNNEL.da)
+    tunnelOgni: [[0, 14], [1100, 14], [2000, 11], [3000, 8], [4500, 6]], // coppie normali tra un tunnel e l'altro
+    tunnelLungo: [[0, 6], [1100, 6], [2000, 9], [3000, 13], [4500, 18]], // colonne di nuvole di un tunnel
+    tunnelVarco: [[0, 192], [1100, 192], [2000, 178], [3000, 166], [4500, 158]], // varco dentro il tunnel
+  };
+
+  // Tunnel di nuvole: colonne fitte una dopo l'altra (si toccano), con il varco
+  // che sale e scende come un corridoio. La pendenza non supera salita e discesa
+  // (px/s alla velocità del tunnel), ben sotto quello che Gino riesce a fare
+  // (sale a più di 300 px/s e scende a 620), e il varco resta largo almeno il
+  // doppio dell'oscillazione dei colpi d'ala (64 px) più Gino.
+  const TUNNEL = {
+    da: 1100,                  // metri del primo tunnel
+    passo: 0.86,               // distanza tra le colonne, in larghezze di ostacolo
+    salita: 135,
+    discesa: 240,
+    svolta: 0.45,              // quanto può cambiare la pendenza da una colonna all'altra
   };
   function curva(punti, m) {
     if (m <= punti[0][0]) return punti[0][1];
@@ -118,6 +136,35 @@
     { nome: 'Il cielo', da: 600 },
   ];
 
+  // Foglie del negozio: ognuna ha un piccolo vantaggio e un piccolo svantaggio
+  // (moltiplicatori sui valori di FOGLIA). prezzo in ghiande, oppure traguardo
+  // in metri (record). urti: quanti urti chiudono il volo; calamita: raggio in px
+  // in cui le ghiande vengono verso Gino; ghiande: quanto vale una ghianda.
+  const FOGLIE = [
+    { id: 'quercia', nome: 'Quercia', prezzo: 0, piu: 'Equilibrata', meno: '' },
+    { id: 'acero', nome: 'Acero', prezzo: 150, gravita: 0.92, colpo: 0.88, piu: 'Plana più a lungo', meno: 'Colpo d\'ala più debole' },
+    { id: 'castagno', nome: 'Castagno', prezzo: 300, colpo: 1.08, gravita: 1.12, piu: 'Colpo d\'ala più forte', meno: 'Scende più in fretta' },
+    { id: 'ginkgo', nome: 'Ginkgo', prezzo: 450, calamita: 110, slancio: 0.6, piu: 'Attira le ghiande vicine', meno: 'Meno slancio all\'apertura' },
+    { id: 'pioppo', nome: 'Pioppo', prezzo: 650, slancio: 1.5, smorza: 1.5, strappata: 0.85, piu: 'Più slancio all\'apertura', meno: 'Da strappata batte più piano' },
+    { id: 'fico', nome: 'Fico', prezzo: 900, urti: 3, colpo: 0.91, gravita: 1.18, invulnerabile: 0.6, piu: 'Regge un urto in più', meno: 'Più pesante, protezione più corta' },
+    { id: 'felce', nome: 'Felce', traguardo: 1500, invulnerabile: 1.9, gravita: 1.07, piu: 'Protezione più lunga dopo un urto', meno: 'Un po\' più pesante' },
+    { id: 'oro', nome: 'Foglia d\'oro', traguardo: 2500, ghiande: 2, colpo: 0.94, piu: 'Le ghiande valgono doppio', meno: 'Colpo d\'ala più debole' },
+  ];
+  // Cappelli: solo da guardare. Posa sulla foto di Gino (381 × 470 px): x, y =
+  // centro del bordo basso del cappello, larg = larghezza, rot = rotazione.
+  const CAPPELLI = [
+    { id: 'nessuno', nome: 'Nessuno', prezzo: 0 },
+    { id: 'aviatore', nome: 'Berretto da aviatore', prezzo: 100, posa: { x: 196, y: 122, larg: 360, rot: -0.04 } },
+    { id: 'elica', nome: 'Cappellino a elica', prezzo: 200, posa: { x: 200, y: 96, larg: 330, rot: -0.06 } },
+    { id: 'paglia', nome: 'Cappello di paglia', prezzo: 350, posa: { x: 196, y: 98, larg: 410, rot: -0.1 } },
+    { id: 'bombetta', nome: 'Bombetta', prezzo: 500, posa: { x: 200, y: 90, larg: 330, rot: -0.08 } },
+    { id: 'mago', nome: 'Cappello da mago', prezzo: 750, posa: { x: 200, y: 92, larg: 350, rot: -0.12 } },
+    { id: 'esploratore', nome: 'Cappello da esploratore', traguardo: 1000, posa: { x: 200, y: 104, larg: 410, rot: -0.06 } },
+    { id: 'corona', nome: 'Corona di ghiande', traguardo: 2000, posa: { x: 200, y: 84, larg: 300, rot: -0.05 } },
+    { id: 'casco', nome: 'Casco con le alette', traguardo: 3000, posa: { x: 198, y: 118, larg: 360, rot: -0.04 } },
+  ];
+  const GINO_W = 381, GINO_H = 470; // misure della foto di Gino
+
   const ASSETS = '../../assets/';
   const immagini = {
     normale: carica('tino/tino-normale.png'),
@@ -147,6 +194,16 @@
   }
   const FONDALI = ['fondali/prato.png', 'fondali/bosco.png', 'fondali/cielo.png'].map(facoltativa);
   const ALIANTE = { intero: facoltativa('aliante.png'), strappato: facoltativa('aliante-strappato.png') };
+  // le foglie del negozio dipinte (foglie/<id>.png e <id>-strappata.png); la quercia è l'aliante
+  const PNG_FOGLIE = { quercia: ALIANTE };
+  for (const f of FOGLIE.slice(1)) {
+    PNG_FOGLIE[f.id] = { intero: facoltativa('foglie/' + f.id + '.png'), strappato: facoltativa('foglie/' + f.id + '-strappata.png') };
+  }
+  // cappelli dipinti (cappelli/<id>.png, bordo basso al centro in fondo); l'esploratore è quello di Tino
+  const PNG_CAPPELLI = {};
+  for (const c of CAPPELLI.slice(1)) {
+    PNG_CAPPELLI[c.id] = facoltativa(c.id === 'esploratore' ? ASSETS + 'tino/accessori/cappello.svg' : 'cappelli/' + c.id + '.png');
+  }
   const PARALLASSE_FONDALE = 0.15;
 
   // Ostacoli dipinti (in ostacoli/). w, h: misure del PNG; largo: larghezza in
@@ -258,10 +315,48 @@
     risultato: null,
   };
   let muto = leggi('muto', false);
+  let musicaSpenta = leggi('musica-spenta', false);
   let record = leggi('record', 0);
   let recordGhiande = leggi('record-ghiande', 0);
   let ghiandeTotali = leggi('ghiande-totali', 0);
   let lanci = leggi('lanci', 0);
+  // negozio: cosa si possiede e cosa si usa
+  let fogliePrese = leggi('foglie', ['quercia']);
+  let cappelliPresi = leggi('cappelli', ['nessuno']);
+  let fogliaScelta = leggi('foglia', 'quercia');
+  let cappelloScelto = leggi('cappello', 'nessuno');
+  const trova = (lista, id) => lista.find((x) => x.id === id) || lista[0];
+  // un pezzo è disponibile se è comprato o se il record ha raggiunto il suo traguardo
+  function posseduto(tipo, id) {
+    const lista = tipo === 'foglia' ? FOGLIE : CAPPELLI;
+    const x = trova(lista, id);
+    if (x.traguardo) return record >= x.traguardo;
+    return !x.prezzo || (tipo === 'foglia' ? fogliePrese : cappelliPresi).includes(id);
+  }
+  if (!posseduto('foglia', fogliaScelta)) fogliaScelta = 'quercia';
+  if (!posseduto('cappello', cappelloScelto)) cappelloScelto = 'nessuno';
+
+  // I valori del volo con la foglia scelta (poteri compresi)
+  function parametri(id = fogliaScelta) {
+    const f = trova(FOGLIE, id);
+    const m = (k) => (f[k] === undefined ? 1 : f[k]);
+    return {
+      foglia: f.id,
+      gravita: FOGLIA.gravita * m('gravita'),
+      planata: FOGLIA.planata * m('gravita'),
+      cadutaMax: FOGLIA.cadutaMax,
+      tetto: FOGLIA.tetto,
+      colpo: FOGLIA.colpo * m('colpo'),
+      colpoStrappata: FOGLIA.colpoStrappata * m('colpo') * m('strappata'),
+      smorza: FOGLIA.smorza * m('smorza'),
+      slancio: m('slancio'),
+      invulnerabile: f.invulnerabile || FOGLIA.invulnerabile,
+      urti: f.urti || 2,
+      calamita: f.calamita || 0,
+      ghiande: f.ghiande || 1,
+    };
+  }
+  let P = parametri();
 
   function nuovoTino() {
     const c = ALTALENA.ceppo;
@@ -273,6 +368,7 @@
       x, h: superficie(x, 1) + VOLO.raggio + 6, vx: 0, vy: 0,
       rot: 0, vrot: 0, schiaccia: 0, inclina: 0, tremaT: 0, saltoT: 0,
       foglia: 0,               // 0 chiusa, 1 integra, 2 strappata
+      urti: 0,                 // urti presi con la foglia (a P.urti il volo finisce)
       fogliaApre: 0,           // animazione di apertura 0..1
       battito: 0,              // animazione del colpo d'ala
       invulnerabile: 0,
@@ -282,11 +378,15 @@
 
   // ---------------------------------------------------------------- audio
   let audio = null;
+  function contesto() {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+    return audio;
+  }
   function suono(freq, durata = 0.08, tipo = 'square', volume = 0.06, freqFine = null, ritardo = 0) {
     if (muto || stato.test) return;
     try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
+      contesto();
       const t = audio.currentTime + ritardo;
       const osc = audio.createOscillator();
       const g = audio.createGain();
@@ -319,6 +419,160 @@
     fine: () => [523, 440, 523].forEach((f, i) => suono(f, 0.14, 'triangle', 0.05, null, i * 0.12)),
     via: () => suono(660, 0.08, 'triangle', 0.06),
   };
+
+  // ---------------------------------------------------------------- musica
+  // Musichetta in loop, tutta sintetizzata: basso saltellante, "pop" elettronici
+  // sugli accordi, melodia a onda quadra. Tre livelli: menu (calma), lancio (con
+  // la cassa), volo con la foglia (più veloce, con rullante, charleston e più pop).
+  // Si programma un po' in anticipo con un timer; tace in pausa, con la scheda
+  // nascosta, con i suoni spenti (M) o con la sola musica spenta (N o pulsante).
+  const MUSICA = {
+    bpm: [100, 108, 124],      // menu, lancio, foglia
+    volume: 0.3,
+    anticipo: 0.2,             // secondi programmati in anticipo
+  };
+  const NOTA = (n) => {
+    const m = /^([A-G])(#?)(\d)$/.exec(n);
+    return 12 * (+m[3] + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] ? 1 : 0);
+  };
+  // 8 battute da 16 sedicesimi: accordo (fondamentale e tipo) e melodia ('-' = pausa)
+  const BRANO = [
+    ['C3', 'M', 'C5 - E5 - G5 - E5 - C6 - - - G5 - - -'],
+    ['F3', 'M', 'A5 - - F5 - - A5 - C6 - A5 - G5 - F5 -'],
+    ['G3', 'M', 'G5 - B4 - D5 - G5 - F5 - E5 - D5 - - -'],
+    ['C3', 'M', 'E5 - C5 - E5 G5 - - C6 - - - - - - -'],
+    ['A2', 'm', 'A5 - - E5 - - A5 - C6 - B5 - A5 - E5 -'],
+    ['F3', 'M', 'F5 - A5 - C6 - A5 - F5 - - - A5 - C6 -'],
+    ['G3', 'M', 'B5 - - G5 - - D6 - B5 - G5 - A5 - B5 -'],
+    ['G3', '7', 'C6 - - - G5 - - - D5 - E5 - F5 - G5 -'],
+  ].map(([radice, tipo, mel]) => ({
+    radice: NOTA(radice),
+    accordo: { M: [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 10] }[tipo],
+    melodia: mel.split(' ').map((n) => (n === '-' ? null : NOTA(n))),
+  }));
+  const BASSO = { 0: 0, 3: 0, 4: 7, 8: 12, 10: 7, 11: 0, 12: 7, 14: 12 }; // sedicesimo → intervallo
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const musica = { passo: 0, prossimo: 0, suona: false, uscita: null, filtro: null, rumore: null };
+
+  function suonaMusica() {
+    return !!audio && audio.state === 'running' && !muto && !musicaSpenta && !stato.test
+      && stato.fase !== 'pausa' && !document.hidden;
+  }
+  function livelloMusica() {
+    if (stato.fase === 'foglia') return 2;
+    return inGioco() ? 1 : 0;
+  }
+  function preparaMusica() {
+    if (musica.uscita) return;
+    const a = audio;
+    musica.uscita = a.createGain();
+    musica.uscita.gain.value = 0;
+    const comp = a.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.ratio.value = 4;
+    musica.uscita.connect(comp).connect(a.destination);
+    // la melodia passa da un filtro che si apre durante il volo
+    musica.filtro = a.createBiquadFilter();
+    musica.filtro.type = 'lowpass';
+    musica.filtro.frequency.value = 1600;
+    musica.filtro.connect(musica.uscita);
+    const buf = a.createBuffer(1, a.sampleRate * 0.5, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    musica.rumore = buf;
+  }
+  // una nota: onda, frequenza (con eventuale scivolata), volume, durata
+  function notaMusica(t, tipo, f, vol, dur, verso = musica.uscita, fFine = null, tFine = 0.03) {
+    const a = audio;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.type = tipo;
+    o.frequency.setValueAtTime(f, t);
+    if (fFine) o.frequency.exponentialRampToValueAtTime(fFine, t + tFine);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(verso);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  function rumoreMusica(t, vol, dur, tipoFiltro, freq) {
+    const a = audio;
+    const s = a.createBufferSource();
+    s.buffer = musica.rumore;
+    const f = a.createBiquadFilter();
+    f.type = tipoFiltro; f.frequency.value = freq;
+    const g = a.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f).connect(g).connect(musica.uscita);
+    s.start(t, Math.random() * 0.3);
+    s.stop(t + dur + 0.02);
+  }
+  // "pop" elettronico: una sinusoide che parte alta e cade subito sulla nota
+  const pop = (t, m, vol) => notaMusica(t, 'sine', hz(m) * 2.2, vol, 0.11, musica.uscita, hz(m), 0.025);
+
+  function passoMusica(n, t, liv, durata) {
+    const battuta = BRANO[Math.floor(n / 16) % BRANO.length];
+    const i = n % 16;
+    const acc = battuta.accordo.map((x) => battuta.radice + 24 + x); // pop un paio di ottave sopra
+    // basso
+    if (BASSO[i] !== undefined) {
+      const m = battuta.radice - 12 + BASSO[i];
+      notaMusica(t, 'triangle', hz(m), 0.32, durata * 1.6);
+      notaMusica(t, 'square', hz(m), 0.05, durata * 0.9);
+    }
+    // pop sui controtempi (e su tutti i sedicesimi dispari nel volo)
+    if (i % 4 === 2) pop(t, acc[(i >> 2) % 3] + 12, 0.16);
+    if (liv === 2 && i % 2 === 1) pop(t, acc[(n >> 1) % 3] + 24, 0.07);
+    if (liv >= 1 && i === 15) pop(t, acc[2] + 24, 0.1);
+    // melodia
+    const mel = battuta.melodia[i];
+    if (mel !== null) {
+      const lunga = battuta.melodia.slice(i + 1).findIndex((x) => x !== null);
+      const dur = durata * Math.min(4, lunga < 0 ? 4 : lunga + 1) * 0.9;
+      notaMusica(t, 'square', hz(mel), liv === 0 ? 0.07 : 0.09, dur, musica.filtro);
+      notaMusica(t, 'triangle', hz(mel + 12), 0.04, dur * 0.6, musica.filtro);
+    }
+    // batteria
+    if (liv >= 1 && (i === 0 || i === 8 || (liv === 2 && i === 10))) notaMusica(t, 'sine', 150, 0.55, 0.16, musica.uscita, 45, 0.12);
+    if (liv === 0 && i === 0) notaMusica(t, 'sine', 120, 0.25, 0.12, musica.uscita, 50, 0.1);
+    if (liv === 2 && (i === 4 || i === 12)) rumoreMusica(t, 0.22, 0.12, 'bandpass', 1800);
+    if (liv >= 1 && i % 2 === 0 && (liv === 2 || i % 4 === 2)) rumoreMusica(t, liv === 2 ? 0.07 : 0.05, 0.035, 'highpass', 7000);
+  }
+
+  function aggiornaMusica() {
+    if (!audio) return;
+    const on = suonaMusica();
+    const t = audio.currentTime;
+    if (on !== musica.suona) {
+      musica.suona = on;
+      if (on) { preparaMusica(); musica.prossimo = t + 0.08; }
+      if (musica.uscita) {
+        musica.uscita.gain.cancelScheduledValues(t);
+        musica.uscita.gain.setTargetAtTime(on ? MUSICA.volume : 0, t, on ? 0.15 : 0.04);
+      }
+    }
+    if (!on) return;
+    const liv = livelloMusica();
+    musica.filtro.frequency.setTargetAtTime(liv === 2 ? 3600 : liv === 1 ? 2400 : 1500, t, 0.3);
+    if (musica.prossimo < t) musica.prossimo = t + 0.03; // il timer è rimasto indietro
+    const durata = 60 / MUSICA.bpm[liv] / 4;
+    while (musica.prossimo < t + MUSICA.anticipo) {
+      try { passoMusica(musica.passo, musica.prossimo, liv, durata); } catch (e) { musica.errore = e; }
+      musica.prossimo += durata;
+      musica.passo = (musica.passo + 1) % (16 * BRANO.length);
+    }
+  }
+  setInterval(aggiornaMusica, 50);
+  document.addEventListener('visibilitychange', aggiornaMusica);
+  // l'audio parte solo dopo il primo gesto (clic, tocco o tasto)
+  function sbloccaAudio() {
+    if (stato.test) return;
+    try { contesto(); } catch (e) { return; }
+    aggiornaMusica();
+  }
+  window.addEventListener('pointerdown', sbloccaAudio, true);
+  window.addEventListener('keydown', sbloccaAudio, true);
 
   // ---------------------------------------------------------------- schermo
   let scala = 1;
@@ -357,12 +611,14 @@
   // Un solo comando per tutto: Spazio (o Invio, freccia su), clic, tocco.
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === 'Escape' && pannello.querySelector('.negozio')) { vaiAlMenu(); return; }
     if (e.code === 'KeyP' || e.code === 'Escape') {
       if (stato.fase === 'pausa') riprendi();
       else if (inGioco()) pausa();
       return;
     }
     if (e.code === 'KeyM') { cambiaAudio(); return; }
+    if (e.code === 'KeyN') { cambiaMusica(); return; }
     if (['Space', 'Enter', 'ArrowUp', 'KeyW'].includes(e.code)) {
       if (pannelloAperto()) return; // il bottone del pannello fa da sé
       e.preventDefault();
@@ -406,11 +662,14 @@
     stato.tempo = 0;
     stato.risultato = null;
     stato.tappa = 0;
+    stato.foglia = fogliaScelta;
+    stato.cappello = cappelloScelto;
     aggiornaBarra();
   }
 
   function avvia(seme) {
     semeCasuale = seme === undefined ? null : seme | 0;
+    P = parametri();
     preparaScena();
     stato.fase = 'pronto';
     nascondiPannello();
@@ -515,7 +774,7 @@
     const d = g.x / PX_M;
     const vel = Math.hypot(g.vx, g.vy);
     const base = crociera(d);
-    let slancio = clamp(FOGLIA.slancio * vel - base, 0, FOGLIA.slancioMax);
+    let slancio = clamp(FOGLIA.slancio * vel - base, 0, FOGLIA.slancioMax) * P.slancio;
     if (Math.abs(g.vy) < FOGLIA.apice && g.h > 200) {
       slancio *= FOGLIA.bonusApice;
       mostraMessaggio('Apertura perfetta!', 1.3, '#2f6b26');
@@ -531,7 +790,7 @@
     stato.xLancio = g.x;
     stato.fase = 'foglia';
     // il primo ostacolo arriva solo dopo che Gino è planato sotto il tetto
-    const planata = Math.max(0, g.h - FOGLIA.tetto) / FOGLIA.planata * 1.15 * g.vx;
+    const planata = Math.max(0, g.h - FOGLIA.tetto) / P.planata * 1.15 * g.vx;
     stato.gen = { x: g.x + FOGLIA.primoOstacolo + planata, n: 0, finoRadura: CURVE.raduraOgni[0][1], finoFoglia: CURVE.fogliaOgni[0][1], centro: clamp(Math.min(g.h, FOGLIA.tetto), 140, FOGLIA.tetto - 140) };
     suoni.apri();
   }
@@ -542,7 +801,7 @@
       g.battito = 0.5; // la foglia fruscia ma sopra il tetto non sale
       return;
     }
-    g.vy = g.foglia === 2 ? FOGLIA.colpoStrappata : FOGLIA.colpo;
+    g.vy = g.foglia === 2 ? P.colpoStrappata : P.colpo;
     g.battito = 1;
     g.inclina = -0.35;
     suoni.battito();
@@ -581,6 +840,9 @@
     const g = stato.gino;
     const metri = stato.fase === 'mancato' ? 0 : Math.max(0, Math.floor(g.x / PX_M));
     const nuovo = metri > record;
+    const sbloccati = [...FOGLIE.map((x) => ['Foglia di ' + x.nome.toLowerCase(), x]), ...CAPPELLI.map((x) => [x.nome, x])]
+      .filter(([, x]) => x.traguardo && x.traguardo > record && x.traguardo <= metri)
+      .map(([nome, x]) => (x.id === 'oro' ? x.nome : nome));
     if (nuovo) { record = metri; scrivi('record', record); }
     if (stato.ghiande > recordGhiande) { recordGhiande = stato.ghiande; scrivi('record-ghiande', recordGhiande); }
     ghiandeTotali += stato.ghiande;
@@ -593,6 +855,7 @@
       corto: stato.forza < LANCIO.corto,
       nuovo,
       ghiande: stato.ghiande,
+      sbloccati,
     };
     stato.fase = 'fine';
     aggiornaBarra();
@@ -622,6 +885,15 @@
     scrivi('muto', muto);
     document.body.classList.toggle('muto', muto);
     if (!muto) suoni.via();
+    aggiornaMusica();
+  }
+  // spegne o riaccende solo la musica (con i suoni spenti, la riaccende insieme ai suoni)
+  function cambiaMusica() {
+    if (muto) { musicaSpenta = true; cambiaAudio(); }
+    musicaSpenta = !musicaSpenta;
+    scrivi('musica-spenta', musicaSpenta);
+    document.body.classList.toggle('senza-musica', musicaSpenta);
+    aggiornaMusica();
   }
 
   function mostraMessaggio(testo, durata, colore = '#2f6b26') {
@@ -658,6 +930,7 @@
     const gen = stato.gen;
     gen.n += 1;
     const metri = gen.x / PX_M;
+    if (gen.tunnel) { colonnaTunnel(); return; }
     // radura con la corrente d'aria e una fila di ghiande
     gen.finoRadura -= 1;
     if (gen.finoRadura <= 0) {
@@ -705,6 +978,51 @@
     }
     gen.centro = centro;
     gen.x += spazio;
+    // nel cielo, ogni tanto, comincia un tunnel di nuvole
+    if (tappa === 2 && metri >= TUNNEL.da) {
+      if (gen.finoTunnel === undefined) gen.finoTunnel = 2;
+      gen.finoTunnel -= 1;
+      if (gen.finoTunnel <= 0) {
+        gen.finoTunnel = Math.round(curva(CURVE.tunnelOgni, metri));
+        gen.tunnel = { resto: Math.round(curva(CURVE.tunnelLungo, metri)), pend: 0, primo: true };
+      }
+    }
+  }
+
+  // Una colonna del tunnel di nuvole: subito dopo la precedente, con il varco
+  // che si sposta di poco (pendenza limitata, che cambia piano).
+  function colonnaTunnel() {
+    const gen = stato.gen;
+    const tu = gen.tunnel;
+    const metri = gen.x / PX_M;
+    const forma = formaOstacolo(2);
+    const passo = forma.w * TUNNEL.passo;
+    const dt = passo / crociera(metri);
+    const varco = curva(CURVE.tunnelVarco, metri);
+    const su = TUNNEL.salita * dt, giu = TUNNEL.discesa * dt;
+    const minC = OSTACOLI.margineBasso + varco / 2;
+    const maxC = FOGLIA.tetto - OSTACOLI.margineAlto - varco / 2;
+    let pend = tu.primo ? 0 : clamp(tu.pend + tra(-1, 1) * TUNNEL.svolta * (su + giu), -giu, su);
+    // vicino ai bordi la pendenza si gira verso il centro
+    if (gen.centro + pend * 3 > maxC) pend = Math.min(pend, -giu * tra(0.2, 0.8));
+    if (gen.centro + pend * 3 < minC) pend = Math.max(pend, su * tra(0.2, 0.8));
+    const centro = clamp(gen.centro + pend, Math.max(minC, gen.centro - giu), Math.min(maxC, gen.centro + su));
+    tu.pend = centro - gen.centro;
+    const o = {
+      x: gen.x, ...forma, centro, varco, ampiezza: 0, periodo: 3, fase: 0,
+      tappa: 2, seme: Math.floor(tra(0, 1e6)), passato: false, tunnel: true, entrata: tu.primo,
+    };
+    stato.ostacoli.push(o);
+    // una scia di ghiande lungo il corridoio
+    if (gen.n % 2 === 0) stato.oggetti.push({ tipo: 'ghianda', x: o.x + o.w / 2, dh: 0, ostacolo: o });
+    tu.primo = false;
+    tu.resto -= 1;
+    gen.centro = centro;
+    gen.x += passo;
+    if (tu.resto <= 0) {
+      gen.tunnel = null;
+      gen.x += curva(CURVE.distanza, metri) * 0.6;
+    }
   }
 
   function centroOstacolo(o, tempo) {
@@ -750,7 +1068,19 @@
 
   // Le nuvole di un ostacolo del cielo: sotto il varco fino alle chiome, sopra
   // fino in cima. Ognuna è un'ellisse per gli urti; v = quale disegno, giro = specchiata.
+  // Le nuvole relative al centro del varco si calcolano una volta per ostacolo
+  // (h relativa a c = 0) e si spostano con il centro.
+  function nuvoleRel(o) {
+    const n = nuvolePronte().length;
+    if (o.nuv && o.nuvN === n) return o.nuv;
+    o.nuv = calcolaNuvole(o, 0, -60 - FOGLIA.tetto - 80, 1600);
+    o.nuvN = n;
+    return o.nuv;
+  }
   function nuvoleDi(o, c) {
+    return nuvoleRel(o).map((q) => ({ ...q, h: q.h + c }));
+  }
+  function calcolaNuvole(o, c, giu, su) {
     const disegni = nuvolePronte();
     const n = Math.max(1, disegni.length);
     const lista = [];
@@ -766,14 +1096,14 @@
     };
     // sotto: la prima nuvola tocca il bordo basso del varco
     let h = c - o.varco / 2;
-    for (let i = 0; h > -60 && i < 20; i++) {
+    for (let i = 0; h > giu && i < 20; i++) {
       const q = fai(i, false, 0);
       q.h = h - q.ry;
       lista.push(q);
       h = q.h - q.hh * (NUVOLE.passo - NUVOLE.ry);
     }
     h = c + o.varco / 2;
-    for (let i = 0; h < 1600 && i < 30; i++) {
+    for (let i = 0; h < su && i < 30; i++) {
       const q = fai(i, true, 0);
       q.h = h + q.ry;
       lista.push(q);
@@ -801,9 +1131,10 @@
     }
     if (o.forma === 'nuvole') {
       const rr = r - tol;
-      for (const q of nuvoleDi(o, c)) {
-        if (Math.abs(g.h - q.h) > q.ry + rr) continue;
-        const dx = (g.x - q.x) / (q.rx + rr), dh = (g.h - q.h) / (q.ry + rr);
+      const gh = g.h - c;
+      for (const q of nuvoleRel(o)) {
+        if (Math.abs(gh - q.h) > q.ry + rr) continue;
+        const dx = (g.x - q.x) / (q.rx + rr), dh = (gh - q.h) / (q.ry + rr);
         if (dx * dx + dh * dh < 1) return true;
       }
       return false;
@@ -921,13 +1252,13 @@
   function voloFoglia(dt) {
     const g = stato.gino;
     const metri = g.x / PX_M;
-    g.slancio *= Math.exp(-dt / FOGLIA.smorza);
+    g.slancio *= Math.exp(-dt / P.smorza);
     g.vx = crociera(metri) + g.slancio;
     if (g.h > FOGLIA.tetto) {
       // sopra il tetto la foglia plana piano verso il basso
-      g.vy = Math.max(g.vy - FOGLIA.gravita * 0.5 * dt, -FOGLIA.planata);
+      g.vy = Math.max(g.vy - P.gravita * 0.5 * dt, -P.planata);
     } else {
-      g.vy = Math.max(g.vy - FOGLIA.gravita * dt, -FOGLIA.cadutaMax);
+      g.vy = Math.max(g.vy - P.gravita * dt, -P.cadutaMax);
     }
     // correnti d'aria
     for (const c of stato.correnti) {
@@ -943,6 +1274,10 @@
 
     // ostacoli davanti
     while (stato.gen && stato.gen.x < g.x + larg * 1.2) generaProssimo();
+    for (const o of stato.ostacoli) {
+      if (o.x > g.x + 420) break;
+      if (o.entrata && !o.annunciato) { o.annunciato = true; mostraMessaggio('Tunnel di nuvole!', 1.4, '#1f4f6b'); suoni.tappa(); }
+    }
 
     // tappe
     const tp = tappaDi(metri);
@@ -953,26 +1288,36 @@
     }
 
     // oggetti
+    const cal = P.calamita;
     for (const ob of stato.oggetti) {
       if (ob.preso) continue;
-      const dx = ob.x - g.x;
-      if (dx > 40) break;
+      let dx = ob.x - g.x;
+      if (dx > 40 + cal) break;
       if (dx < -40) continue;
-      const dh = hOggetto(ob, stato.tempo) - g.h;
+      let oh = hOggetto(ob, stato.tempo);
+      if (cal && ob.tipo === 'ghianda' && dx * dx + (oh - g.h) * (oh - g.h) < cal * cal) {
+        // la foglia di ginkgo attira le ghiande vicine
+        if (ob.ostacolo) { ob.h = oh; ob.ostacolo = null; }
+        const k = Math.min(1, dt * 7);
+        ob.x += (g.x - ob.x) * k; ob.h += (g.h - ob.h) * k;
+        oh = ob.h; dx = ob.x - g.x;
+      }
+      const dh = oh - g.h;
       if (dx * dx + dh * dh < 34 * 34) {
         ob.preso = true;
         if (ob.tipo === 'ghianda') {
-          stato.ghiande += 1;
+          stato.ghiande += P.ghiande;
           suoni.ghianda();
           scintille(ob.x, g.h + dh, '#f2c14e');
-        } else if (g.foglia === 2) {
-          g.foglia = 1;
-          mostraMessaggio('Foglia nuova!', 1.1, '#2f6b26');
+        } else if (g.urti > 0) {
+          g.urti -= 1;
+          if (g.urti === 0) g.foglia = 1;
+          mostraMessaggio(g.urti ? 'Foglia rattoppata!' : 'Foglia nuova!', 1.1, '#2f6b26');
           suoni.foglia();
           scintille(ob.x, g.h + dh, '#7cc45c');
         } else {
-          stato.ghiande += 3;
-          mostraMessaggio('+3 ghiande', 0.9, '#a0522d');
+          stato.ghiande += 3 * P.ghiande;
+          mostraMessaggio('+' + 3 * P.ghiande + ' ghiande', 0.9, '#a0522d');
           suoni.foglia();
           scintille(ob.x, g.h + dh, '#f2c14e');
         }
@@ -984,13 +1329,14 @@
       for (const o of stato.ostacoli) {
         if (o.x > g.x + 60) break;
         if (urtaOstacolo(o, g, stato.tempo)) {
-          if (g.foglia === 1) {
+          g.urti += 1;
+          if (g.urti < P.urti) {
             g.foglia = 2;
-            g.invulnerabile = FOGLIA.invulnerabile;
+            g.invulnerabile = P.invulnerabile;
             g.slancio = 0;
             g.tremaT = 0.5;
             g.vy = Math.min(g.vy, 0) * 0.5;
-            mostraMessaggio('Foglia strappata!', 1.2, '#a0522d');
+            mostraMessaggio(g.urti > 1 ? 'Resiste ancora!' : 'Foglia strappata!', 1.2, '#a0522d');
             suoni.strappo();
             for (let i = 0; i < 4; i++) aggiungiParticella({ tipo: 'fogliolina', x: g.x, h: g.h + 24, vx: tra(-100, 60), vy: tra(-50, 150), vita: 1.4, rot: tra(0, 6), vrot: tra(-6, 6) });
           } else {
@@ -1368,8 +1714,8 @@
         disegnaSprite(coppia.basso, x + o.w / 2, yBasso, yTerra);
         disegnaSprite(coppia.alto, x + o.w / 2, yAlto, yTerra);
       } else if (o.forma === 'nuvole') {
-        for (const q of nuvoleDi(o, c)) {
-          const y = sy(q.h);
+        for (const q of nuvoleRel(o)) {
+          const y = sy(q.h + c);
           if (y < -q.hh || y > alt + q.hh || !q.im) continue;
           ctx.save();
           ctx.translate(sx(q.x), y);
@@ -1553,54 +1899,272 @@
     }
   }
 
-  // la foglia-aliante dipinta: (x, y) è il punto del manubrio; false se il disegno non c'è
-  function disegnaAliante(x, y, k, rot, strappata) {
-    const im = strappata && ALIANTE.strappato.ok ? ALIANTE.strappato : ALIANTE.intero;
-    if (!im.ok) return false;
+  // L'immagine della foglia-aliante: il PNG dipinto se c'è, altrimenti il disegno
+  // provvisorio fatto nel codice. Il manubrio è il centro del bordo basso.
+  function immagineFoglia(id, strappata) {
+    const png = PNG_FOGLIE[id] || ALIANTE;
+    if (strappata && png.strappato.ok) return { im: png.strappato, w: png.strappato.naturalWidth, h: png.strappato.naturalHeight };
+    if (png.intero.ok) return { im: png.intero, w: png.intero.naturalWidth, h: png.intero.naturalHeight, seppia: strappata };
+    const c = fogliaCodice(id, strappata);
+    return { im: c, w: c.width, h: c.height };
+  }
+  // la foglia-aliante: (x, y) è il punto del manubrio
+  function disegnaAliante(x, y, k, rot, strappata, id = 'quercia') {
+    const f = immagineFoglia(id, strappata);
     const w = 150 * k;
-    const h = w * im.naturalHeight / im.naturalWidth;
+    const h = w * f.h / f.w;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rot);
-    if (strappata && im === ALIANTE.intero) ctx.filter = 'sepia(0.6) saturate(0.7)';
-    ctx.drawImage(im, -w / 2, -h, w, h);
+    if (f.seppia) ctx.filter = 'sepia(0.6) saturate(0.7)';
+    ctx.drawImage(f.im, -w / 2, -h, w, h);
     ctx.restore();
     return true;
   }
 
-  // la foglia: k scala, rot rotazione, strappata = con un morso mancante
-  function disegnaFoglia(x, y, k, rot, strappata) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.scale(k, k);
-    ctx.fillStyle = strappata ? '#a7b84a' : '#5aa845';
-    ctx.strokeStyle = strappata ? '#6b7a2a' : '#2f6b26';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(-58, 4);
-    ctx.bezierCurveTo(-40, -30, 40, -30, 58, 4);
-    if (strappata) {
-      ctx.lineTo(40, 4); ctx.lineTo(30, -8); ctx.lineTo(18, 6);
+  // ---------------------------------------------------------------- disegni provvisori
+  // Foglie e cappelli disegnati nel codice, finché non ci sono i PNG dipinti.
+  // Si disegnano una volta su una tela a parte (in alta risoluzione) e poi si riusano.
+  const STILI_FOGLIA = {
+    quercia: { col: '#8cc152', scuro: '#4f7f2c', bordo: '#5b4a2a', lobi: 5, fondo: 0.07, punte: false },
+    acero: { col: '#e8743b', scuro: '#b2471f', bordo: '#6b3318', lobi: 3, fondo: 0.12, punte: true, cima: true },
+    castagno: { col: '#6fae3c', scuro: '#3f7424', bordo: '#3e4a22', lobi: 16, fondo: 0.03, punte: true, lunga: true },
+    ginkgo: { col: '#e2c94a', scuro: '#b19a2a', bordo: '#6e5a1c', ventaglio: true },
+    pioppo: { col: '#a9cf8a', scuro: '#6f9a58', bordo: '#4a5a3a', lobi: 1, fondo: 0.03, tonda: true },
+    fico: { col: '#3f8f3c', scuro: '#25602a', bordo: '#234020', lobi: 3, fondo: 0.15, larga: true },
+    felce: { col: '#5fb85a', scuro: '#2f7a34', bordo: '#2d4a24', felce: true },
+    oro: { col: '#f2c94c', scuro: '#c8962a', bordo: '#7a5414', lobi: 5, fondo: 0.07, oro: true },
+  };
+  const cacheDisegni = {};
+  function fogliaCodice(id, strappata) {
+    const chiave = 'f:' + id + (strappata ? ':s' : '');
+    if (cacheDisegni[chiave]) return cacheDisegni[chiave];
+    const W = 360, H = Math.round(W * 0.47);
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H + 8;
+    const k = c.getContext('2d');
+    const st = STILI_FOGLIA[id] || STILI_FOGLIA.quercia;
+    // coordinate (u, v): u da -0.5 a 0.5, v da 0 (manubrio, in basso) a 1 (in alto)
+    const X = (u) => W / 2 + u * W, Y = (v) => H + 4 - v * H;
+    const tinta = strappata ? (a) => mescolaColore(a, '#b59a5a', 0.45) : (a) => a;
+    k.lineJoin = 'round'; k.lineCap = 'round';
+    // manubrio di rametti: due gambe, la traversa e il triangolo
+    k.strokeStyle = '#6b4423'; k.lineWidth = 6;
+    k.beginPath();
+    k.moveTo(X(-0.1), Y(0.58)); k.lineTo(X(-0.08), Y(0.38));
+    k.moveTo(X(0.1), Y(0.6)); k.lineTo(X(0.08), Y(0.38));
+    k.moveTo(X(-0.12), Y(0.38)); k.lineTo(X(0.12), Y(0.38));
+    k.moveTo(X(0), Y(0.38)); k.lineTo(X(0), Y(0.32));
+    k.moveTo(X(0), Y(0.32)); k.lineTo(X(-0.075), Y(0.03)); k.lineTo(X(0.075), Y(0.03)); k.closePath();
+    k.stroke();
+    k.fillStyle = '#6aa83a';
+    for (const [u, v] of [[-0.08, 0.38], [0.08, 0.38], [0, 0.32], [-0.07, 0.04], [0.07, 0.04]]) { k.beginPath(); k.arc(X(u), Y(v), 4.5, 0, Math.PI * 2); k.fill(); }
+    // la foglia
+    k.save();
+    const gr = k.createLinearGradient(0, Y(1), 0, Y(0.5));
+    gr.addColorStop(0, tinta(st.col)); gr.addColorStop(1, tinta(st.scuro));
+    k.fillStyle = gr;
+    k.strokeStyle = st.bordo; k.lineWidth = 4;
+    k.beginPath();
+    if (st.ventaglio) {
+      // ginkgo: un ventaglio con la tacca in mezzo
+      k.moveTo(X(-0.47), Y(0.66));
+      k.bezierCurveTo(X(-0.4), Y(1.05), X(0.4), Y(1.05), X(0.47), Y(0.66));
+      k.quadraticCurveTo(X(0.25), Y(0.48), X(0.04), Y(0.56));
+      k.lineTo(X(0), Y(0.66)); k.lineTo(X(-0.04), Y(0.56));
+      k.quadraticCurveTo(X(-0.25), Y(0.48), X(-0.47), Y(0.66));
+    } else if (st.felce) {
+      k.restore(); k.save();
+      // felce: un rachide con tante foglioline
+      k.strokeStyle = st.bordo; k.lineWidth = 5;
+      k.beginPath(); k.moveTo(X(-0.48), Y(0.6)); k.quadraticCurveTo(X(0), Y(0.95), X(0.49), Y(0.9)); k.stroke();
+      for (let i = 0; i < 14; i++) {
+        const t = 0.04 + i * 0.068;
+        const bx = (1 - t) * (1 - t) * -0.48 + 2 * (1 - t) * t * 0 + t * t * 0.49;
+        const by = (1 - t) * (1 - t) * 0.6 + 2 * (1 - t) * t * 0.95 + t * t * 0.9;
+        const lung = 0.12 * Math.sin(Math.PI * (0.25 + t * 0.75)) + 0.03;
+        for (const lato of [1, -1]) {
+          k.save();
+          k.translate(X(bx), Y(by));
+          k.rotate(-0.35 - lato * 1.1 + t * 0.3);
+          k.fillStyle = tinta(lato > 0 ? st.col : st.scuro);
+          k.beginPath(); k.ellipse(lung * W * 0.5, 0, lung * W * 0.5, 9, 0, 0, Math.PI * 2);
+          k.fill(); k.lineWidth = 2.5; k.stroke();
+          k.restore();
+        }
+      }
+      k.restore();
+      return rifinisci();
+    } else {
+      const alta = st.tonda ? 1.06 : st.lunga ? 0.94 : 1;
+      const coda = st.tonda ? 0.7 : 0.62;
+      k.moveTo(X(-0.47), Y(coda));
+      if (st.cima) {
+        // acero: punte anche sopra
+        const pts = [[-0.3, 0.96], [-0.18, 0.88], [-0.02, 1.02], [0.12, 0.9], [0.3, 1.0], [0.4, 0.92]];
+        let px = -0.47, py = coda;
+        for (const [u, v] of pts) { k.quadraticCurveTo(X((px + u) / 2 - 0.02), Y((py + v) / 2 + 0.04), X(u), Y(v)); px = u; py = v; }
+        k.lineTo(X(0.47), Y(0.95));
+      } else {
+        k.bezierCurveTo(X(-0.3), Y(0.95 * alta), X(0.15), Y(1.02 * alta), X(0.47), Y(0.95));
+      }
+      k.lineTo(X(0.5), Y(0.99)); k.lineTo(X(0.47), Y(0.93));
+      // bordo basso, a lobi, dalla punta alla coda
+      const n = st.lobi, dep = st.fondo;
+      const base = (t) => [0.46 - t * 0.93, 0.88 - t * (0.88 - coda) - (st.larga ? 0.26 : 0.2) * Math.sin(Math.PI * t)];
+      for (let i = 0; i < n; i++) {
+        const [u0, v0] = base(i / n), [u1, v1] = base((i + 1) / n);
+        const [um, vm] = base((i + 0.5) / n);
+        if (i === 0) k.lineTo(X(u0), Y(v0));
+        if (st.punte) { k.lineTo(X(um), Y(vm - dep)); k.lineTo(X(u1), Y(v1)); }
+        else k.quadraticCurveTo(X(um), Y(vm - dep * 2), X(u1), Y(v1));
+      }
     }
-    ctx.bezierCurveTo(30, 12, -30, 12, -58, 4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    k.closePath();
+    k.fill(); k.stroke();
     // nervature
-    ctx.beginPath();
-    ctx.moveTo(-56, 4); ctx.quadraticCurveTo(0, -10, 54, 2);
-    for (let i = -3; i <= 3; i++) {
-      if (i === 0) continue;
-      ctx.moveTo(i * 13, -4 + Math.abs(i));
-      ctx.lineTo(i * 13 + (i > 0 ? 10 : -10), -16 + Math.abs(i) * 2);
+    k.strokeStyle = mescolaColore(st.scuro, '#000000', 0.25); k.lineWidth = 2.5;
+    k.beginPath();
+    if (st.ventaglio) {
+      for (let i = -4; i <= 4; i++) { k.moveTo(X(0), Y(0.62)); k.lineTo(X(i * 0.1), Y(0.95 - Math.abs(i) * 0.06)); }
+    } else {
+      k.moveTo(X(-0.45), Y(0.64)); k.quadraticCurveTo(X(0), Y(0.86), X(0.46), Y(0.93));
+      for (let i = -3; i <= 3; i++) {
+        const u = i * 0.12, v = 0.78 + i * 0.03;
+        k.moveTo(X(u), Y(v)); k.lineTo(X(u + 0.07), Y(v + 0.12));
+        k.moveTo(X(u), Y(v)); k.lineTo(X(u + 0.06), Y(v - 0.1));
+      }
     }
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
-    // picciolo
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(0, 30); ctx.stroke();
-    ctx.restore();
+    k.stroke();
+    k.restore();
+    return rifinisci();
+
+    function rifinisci() {
+      if (st.oro && !strappata) {
+        k.fillStyle = '#fff7c2';
+        for (const [u, v, r] of [[-0.2, 0.9, 7], [0.15, 0.95, 5], [0.32, 0.8, 6], [-0.35, 0.72, 4]]) stella(k, X(u), Y(v), r);
+      }
+      if (strappata) {
+        // morsi mancanti
+        k.globalCompositeOperation = 'destination-out';
+        for (const [u, v, r] of [[0.3, 0.62, 34], [-0.28, 0.98, 26], [0.06, 1.0, 16]]) { k.beginPath(); k.arc(X(u), Y(v), r, 0, Math.PI * 2); k.fill(); }
+        k.globalCompositeOperation = 'source-over';
+      }
+      cacheDisegni[chiave] = c;
+      return c;
+    }
+  }
+  function stella(k, x, y, r) {
+    k.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
+      k.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    k.closePath(); k.fill();
+  }
+
+  // Cappelli provvisori: tela 200 × 200, il centro del bordo basso è in (100, 160)
+  function cappelloCodice(id) {
+    const chiave = 'c:' + id;
+    if (cacheDisegni[chiave]) return cacheDisegni[chiave];
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 200;
+    const k = c.getContext('2d');
+    k.lineJoin = 'round'; k.lineCap = 'round'; k.lineWidth = 4;
+    const tratto = (riempi, bordo) => { k.fillStyle = riempi; k.strokeStyle = bordo; k.fill(); k.stroke(); };
+    const ellisse = (x, y, rx, ry) => { k.beginPath(); k.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); };
+    switch (id) {
+      case 'aviatore': {
+        k.beginPath(); k.moveTo(28, 160); k.bezierCurveTo(28, 60, 172, 60, 172, 160); k.closePath(); tratto('#8a5a2b', '#4a2e14');
+        for (const x of [40, 160]) { k.beginPath(); k.moveTo(x - 13, 136); k.lineTo(x + 13, 136); k.lineTo(x + 11, 182); k.quadraticCurveTo(x, 196, x - 11, 182); k.closePath(); tratto('#7a4c22', '#4a2e14'); }
+        k.beginPath(); k.moveTo(30, 132); k.lineTo(170, 132); k.lineWidth = 10; k.strokeStyle = '#3a2a1a'; k.stroke(); k.lineWidth = 4;
+        for (const x of [72, 128]) { ellisse(x, 128, 24, 21); tratto('#bfe6f5', '#6b6b6b'); ellisse(x - 7, 121, 7, 5); k.fillStyle = '#fff'; k.fill(); }
+        break;
+      }
+      case 'elica': {
+        k.beginPath(); k.moveTo(30, 160); k.bezierCurveTo(30, 72, 170, 72, 170, 160); k.closePath(); k.save(); k.clip();
+        ['#e74c3c', '#f1c40f', '#3498db', '#2ecc71'].forEach((col, i) => { k.fillStyle = col; k.fillRect(30 + i * 35, 60, 35, 110); });
+        k.restore(); k.beginPath(); k.moveTo(30, 160); k.bezierCurveTo(30, 72, 170, 72, 170, 160); k.closePath(); k.strokeStyle = '#333'; k.stroke();
+        k.beginPath(); k.moveTo(100, 94); k.lineTo(100, 58); k.strokeStyle = '#555'; k.lineWidth = 6; k.stroke(); k.lineWidth = 4;
+        ellisse(70, 54, 30, 8); tratto('#e74c3c', '#7a1f14'); ellisse(130, 54, 30, 8); tratto('#3498db', '#1d4f75');
+        ellisse(100, 55, 7, 7); tratto('#f1c40f', '#7a5a14');
+        break;
+      }
+      case 'paglia': {
+        ellisse(100, 152, 92, 20); tratto('#f2d27a', '#a07a2a');
+        k.beginPath(); k.moveTo(48, 150); k.bezierCurveTo(48, 80, 152, 80, 152, 150); k.closePath(); tratto('#f5dc8a', '#a07a2a');
+        k.beginPath(); k.moveTo(49, 132); k.bezierCurveTo(70, 140, 130, 140, 151, 132); k.lineTo(151, 146); k.bezierCurveTo(130, 154, 70, 154, 49, 146); k.closePath(); tratto('#d9443a', '#8a2a20');
+        for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5; ellisse(64 + Math.cos(a) * 11, 132 + Math.sin(a) * 11, 9, 9); tratto('#ffffff', '#c9a0c0'); }
+        ellisse(64, 132, 6, 6); tratto('#f1c40f', '#a07a14');
+        break;
+      }
+      case 'bombetta': {
+        ellisse(100, 154, 78, 13); tratto('#2b2b2b', '#111');
+        k.beginPath(); k.moveTo(46, 152); k.bezierCurveTo(42, 60, 158, 60, 154, 152); k.closePath(); tratto('#333', '#111');
+        k.fillStyle = '#7a1f2a'; k.fillRect(47, 132, 106, 14);
+        ellisse(78, 96, 14, 8); k.fillStyle = 'rgba(255,255,255,0.18)'; k.fill();
+        break;
+      }
+      case 'mago': {
+        k.beginPath(); k.moveTo(38, 154); k.quadraticCurveTo(80, 70, 120, 6); k.quadraticCurveTo(128, 70, 162, 154); k.closePath(); tratto('#3b4cc0', '#1f2766');
+        ellisse(100, 156, 84, 14); tratto('#2f3d9e', '#1f2766');
+        k.fillStyle = '#f7d54a';
+        stella(k, 94, 110, 12); stella(k, 120, 72, 9); stella(k, 76, 140, 7); stella(k, 132, 128, 8);
+        break;
+      }
+      case 'corona': {
+        k.beginPath(); k.moveTo(32, 160); k.lineTo(32, 104);
+        for (let i = 0; i < 4; i++) { k.lineTo(49 + i * 34, 128); k.lineTo(66 + i * 34, 96); }
+        k.lineTo(168, 104); k.lineTo(168, 160); k.closePath(); tratto('#f2c14e', '#9a6a14');
+        for (let i = 0; i < 5; i++) {
+          const x = 32 + i * 34;
+          ellisse(x, 92, 11, 14); tratto('#c98a3a', '#6b4418');
+          k.beginPath(); k.ellipse(x, 80, 13, 7, 0, Math.PI, Math.PI * 2); k.closePath(); tratto('#7a4e22', '#4a2e14');
+        }
+        for (const x of [66, 134]) { ellisse(x, 142, 8, 8); tratto('#e74c3c', '#8a2a20'); }
+        ellisse(100, 142, 9, 9); tratto('#3498db', '#1d4f75');
+        break;
+      }
+      case 'casco': {
+        k.beginPath(); k.moveTo(34, 160); k.bezierCurveTo(34, 56, 166, 56, 166, 160); k.closePath(); tratto('#cfd6dc', '#5d6870');
+        k.fillStyle = '#e74c3c'; k.fillRect(94, 72, 12, 86); k.strokeRect(94, 72, 12, 86);
+        for (const lato of [-1, 1]) {
+          // un'aletta di tre piume
+          for (let i = 2; i >= 0; i--) {
+            k.save();
+            k.translate(100 + lato * 56, 112);
+            k.rotate(lato * (0.3 + i * 0.3));
+            k.beginPath(); k.ellipse(0, -22 - i * 3, 10, 26 - i * 4, 0, 0, Math.PI * 2);
+            tratto(i ? '#eef3f7' : '#ffffff', '#8aa0b0');
+            k.restore();
+          }
+        }
+        ellisse(72, 98, 14, 9); k.fillStyle = 'rgba(255,255,255,0.6)'; k.fill();
+        break;
+      }
+      default: break;
+    }
+    cacheDisegni[chiave] = c;
+    return c;
+  }
+  // Un cappello sulla foto di Gino: k è il contesto, (gx, gy) l'angolo in alto a
+  // sinistra della foto, scala = px della foto → px dello schermo.
+  function disegnaCappello(k, id, gx, gy, scala) {
+    const cap = trova(CAPPELLI, id);
+    if (!cap.posa) return;
+    const png = PNG_CAPPELLI[id];
+    const q = cap.posa;
+    let im, w, h, ax, ay;
+    if (png && png.ok) {
+      im = png; w = q.larg * scala; h = w * png.naturalHeight / png.naturalWidth; ax = w / 2; ay = h;
+    } else {
+      im = cappelloCodice(id); w = q.larg * scala; h = w; ax = w / 2; ay = w * 0.8;
+    }
+    k.save();
+    k.translate(gx + q.x * scala, gy + q.y * scala);
+    k.rotate(q.rot);
+    k.drawImage(im, -ax, -ay, w, h);
+    k.restore();
   }
 
   function disegnaTino() {
@@ -1649,9 +2213,7 @@
       ctx.save();
       ctx.rotate(g.inclina * 0.6);
       const k = (0.4 + 0.6 * apre) * (1 - battito * 0.1);
-      if (!disegnaAliante(0, -altezza / 2 + 6 + battito * 5, k, Math.sin(stato.tempo * 5) * 0.04, g.foglia === 2)) {
-        disegnaFoglia(0, -altezza * 0.55 - 14 + battito * 6, (0.3 + 0.45 * apre) * (1 - battito * 0.12), Math.sin(stato.tempo * 5) * 0.05, g.foglia === 2);
-      }
+      disegnaAliante(0, -altezza / 2 + 6 + battito * 5, k, Math.sin(stato.tempo * 5) * 0.04, g.foglia === 2, stato.foglia);
       ctx.restore();
     }
     const rot = g.foglia ? g.inclina : g.rot;
@@ -1662,6 +2224,8 @@
     ctx.shadowBlur = 6;
     ctx.shadowOffsetY = 3;
     ctx.drawImage(im, -w / 2, -altezza / 2 - 4, w, altezza);
+    ctx.shadowColor = 'transparent';
+    if (stato.cappello && stato.cappello !== 'nessuno') disegnaCappello(ctx, stato.cappello, -w / 2, -altezza / 2 - 4, altezza / im.naturalHeight);
     ctx.restore();
   }
 
@@ -1794,7 +2358,7 @@
         <li><b>Foglia:</b> ${az} mentre Gino vola per aprire la foglia: in cima al volo è meglio.</li>
         <li><b>Colpi d'ala:</b> ogni ${touch ? 'tocco' : 'colpo'} lo fa salire. Il primo urto strappa la foglia, il secondo chiude il volo. Le foglie nuove la riparano, le correnti d'aria lo spingono su.</li>
       </ol>
-      ${touch ? '' : '<p><kbd>P</kbd> pausa · <kbd>M</kbd> suoni</p>'}
+      ${touch ? '' : '<p><kbd>P</kbd> pausa · <kbd>M</kbd> tutti i suoni · <kbd>N</kbd> solo la musica</p>'}
     </div>`;
   }
 
@@ -1805,8 +2369,10 @@
       <h1>Gino Volante</h1>
       <p>Tino lancia Gino con l'altalena e Gino vola più lontano che può, poi apre la foglia e continua a colpi d'ala sopra il prato, nel bosco e fino in cielo!</p>
       ${rec}
+      <p class="in-uso">Foglia: <b>${trova(FOGLIE, fogliaScelta).nome}</b> · cappello: <b>${trova(CAPPELLI, cappelloScelto).nome.toLowerCase()}</b></p>
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Gioca</button>
+        <button class="bottone secondario" data-azione="negozio"><img src="ghianda.svg" alt="" class="ico-ghianda"> Negozio · ${ghiandeTotali}</button>
       </div>
       ${testoComandi()}
     </div>`;
@@ -1857,12 +2423,113 @@
       <div class="risultato">${r.metri} m</div>
       <p class="dettagli">${dettagli}${gh}</p>
       ${testo ? `<p>${testo}</p>` : ''}
-      <p class="record">Record: ${record} m · ghiande raccolte in tutto: ${ghiandeTotali}</p>
+      ${r.sbloccati.length ? `<p class="sbloccato">Sbloccato: <b>${r.sbloccati.join(', ')}</b>! Lo trovi nel negozio.</p>` : ''}
+      <p class="record">Record: ${record} m · ghiande da spendere: ${ghiandeTotali}</p>
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Lancia ancora</button>
+        <button class="bottone secondario" data-azione="negozio">Negozio</button>
         <button class="bottone secondario" data-azione="menu">Menu</button>
       </div>
     </div>`;
+  }
+
+  // ---------------------------------------------------------------- negozio
+  // Due schede: foglie (con i poteri) e cappelli (solo da guardare). Si compra
+  // con le ghiande raccolte; i pezzi speciali si sbloccano col record.
+  let schedaNegozio = 'foglie';
+  const nomeFoglia = (f) => (f.id === 'oro' ? f.nome : 'Foglia di ' + f.nome.toLowerCase());
+  function pannelloNegozio() {
+    const foglie = schedaNegozio === 'foglie';
+    const lista = foglie ? FOGLIE : CAPPELLI;
+    const tipo = foglie ? 'foglia' : 'cappello';
+    const scelto = foglie ? fogliaScelta : cappelloScelto;
+    const voci = lista.map((x) => {
+      const mio = posseduto(tipo, x.id);
+      let bottone;
+      if (x.id === scelto) bottone = '<span class="in-uso-etichetta">In uso</span>';
+      else if (mio) bottone = `<button class="bottone piccolo" data-azione="usa" data-id="${x.id}">Usa</button>`;
+      else if (x.traguardo) bottone = `<span class="traguardo">Record di ${x.traguardo} m</span>`;
+      else bottone = `<button class="bottone piccolo" data-azione="compra" data-id="${x.id}" ${ghiandeTotali < x.prezzo ? 'disabled' : ''}><img src="ghianda.svg" alt="ghiande" class="ico-ghianda"> ${x.prezzo}</button>`;
+      const potere = foglie
+        ? `<span class="potere"><span class="piu">${x.piu}</span>${x.meno ? `<span class="meno">${x.meno}</span>` : ''}</span>`
+        : '';
+      return `<li class="pezzo${x.id === scelto ? ' scelto' : ''}${mio ? '' : ' chiuso'}">
+        <canvas data-anteprima="${tipo}:${x.id}" width="120" height="${foglie ? 64 : 84}"></canvas>
+        <span class="nome">${foglie ? nomeFoglia(x) : x.nome}</span>
+        ${potere}
+        ${bottone}
+      </li>`;
+    }).join('');
+    return `<div class="riquadro negozio">
+      <h2>Negozio</h2>
+      <canvas class="anteprima-gino" data-anteprima="gino" width="220" height="150"></canvas>
+      <p class="borsa"><img src="ghianda.svg" alt="" class="ico-ghianda"> <b>${ghiandeTotali}</b> ghiande da spendere · record ${record} m</p>
+      <div class="schede" role="tablist">
+        <button role="tab" class="scheda${foglie ? ' attiva' : ''}" aria-selected="${foglie}" data-azione="scheda" data-scheda="foglie">Foglie</button>
+        <button role="tab" class="scheda${foglie ? '' : ' attiva'}" aria-selected="${!foglie}" data-azione="scheda" data-scheda="cappelli">Cappelli</button>
+      </div>
+      <p class="nota">${foglie ? 'Ogni foglia ha un potere: un vantaggio e un piccolo svantaggio.' : 'I cappelli sono solo da guardare: Gino li porta in volo.'}</p>
+      <ul class="merce">${voci}</ul>
+      <div class="scelte">
+        <button class="bottone" data-azione="gioca" data-primo>Gioca</button>
+        <button class="bottone secondario" data-azione="menu">Menu</button>
+      </div>
+    </div>`;
+  }
+  function mostraNegozio(fuoco) {
+    const scroll = pannello.querySelector('.merce') ? pannello.scrollTop : 0;
+    mostraPannello(pannelloNegozio());
+    pannello.scrollTop = scroll;
+    if (fuoco && !touch) { const b = pannello.querySelector(fuoco); if (b) b.focus({ preventScroll: true }); }
+    disegnaAnteprime();
+  }
+  function compra(id) {
+    const foglie = schedaNegozio === 'foglie';
+    const x = trova(foglie ? FOGLIE : CAPPELLI, id);
+    if (x.traguardo || posseduto(foglie ? 'foglia' : 'cappello', id) || ghiandeTotali < x.prezzo) return false;
+    ghiandeTotali -= x.prezzo;
+    scrivi('ghiande-totali', ghiandeTotali);
+    if (foglie) { fogliePrese.push(id); scrivi('foglie', fogliePrese); } else { cappelliPresi.push(id); scrivi('cappelli', cappelliPresi); }
+    usa(id);
+    suoni.record();
+    return true;
+  }
+  function usa(id) {
+    if (schedaNegozio === 'foglie') { fogliaScelta = id; scrivi('foglia', id); } else { cappelloScelto = id; scrivi('cappello', id); }
+    stato.foglia = fogliaScelta;
+    stato.cappello = cappelloScelto;
+  }
+  // le anteprime: le foglie, Gino con il cappello, e Gino con foglia e cappello in cima
+  function disegnaAnteprime() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    for (const c of pannello.querySelectorAll('canvas[data-anteprima]')) {
+      const W = +c.getAttribute('width'), H = +c.getAttribute('height');
+      c.style.width = W + 'px'; c.style.height = H + 'px';
+      c.width = W * dpr; c.height = H * dpr;
+      const k = c.getContext('2d');
+      k.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const [tipo, id] = c.dataset.anteprima.split(':');
+      const gino = immagini.gino;
+      const ginoOk = gino.complete && gino.naturalWidth;
+      const conGino = (x, y, alto, cap) => {
+        if (!ginoOk) return;
+        const sc = alto / gino.naturalHeight;
+        k.drawImage(gino, x - gino.naturalWidth * sc / 2, y, gino.naturalWidth * sc, alto);
+        if (cap && cap !== 'nessuno') disegnaCappello(k, cap, x - gino.naturalWidth * sc / 2, y, sc);
+      };
+      if (tipo === 'foglia') {
+        const f = immagineFoglia(id, false);
+        const w = Math.min(W - 8, (H - 4) * f.w / f.h);
+        k.drawImage(f.im, (W - w) / 2, H - 2 - w * f.h / f.w, w, w * f.h / f.w);
+      } else if (tipo === 'cappello') {
+        conGino(W / 2, H * 0.26, H * 0.72, id);
+      } else {
+        const f = immagineFoglia(fogliaScelta, false);
+        const w = 170, h = w * f.h / f.w;
+        k.drawImage(f.im, (W - w) / 2, 4, w, h);
+        conGino(W / 2, 4 + h - 14, H - h + 6, cappelloScelto);
+      }
+    }
   }
 
   pannello.addEventListener('click', (e) => {
@@ -1872,6 +2539,10 @@
       case 'gioca': avvia(); break;
       case 'riprendi': riprendi(); break;
       case 'menu': vaiAlMenu(); break;
+      case 'negozio': preparaScena(); stato.fase = 'menu'; mostraNegozio(); break;
+      case 'scheda': schedaNegozio = btn.dataset.scheda; mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
+      case 'usa': usa(btn.dataset.id); mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
+      case 'compra': if (compra(btn.dataset.id)) mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
       default: break;
     }
   });
@@ -1882,9 +2553,11 @@
     else pausa();
   });
   $('#btn-audio').addEventListener('click', (e) => { e.currentTarget.blur(); cambiaAudio(); });
+  $('#btn-musica').addEventListener('click', (e) => { e.currentTarget.blur(); cambiaMusica(); });
 
   // ---------------------------------------------------------------- avvio
   document.body.classList.toggle('muto', muto);
+  document.body.classList.toggle('senza-musica', musicaSpenta);
   ridimensiona();
   vaiAlMenu();
 
@@ -1900,7 +2573,11 @@
 
   // utile per le prove automatiche
   window.ginoVolante = {
-    stato, avvia, premi, aggiorna, finisci, superficie, centroOstacolo, urtaOstacolo, nuvoleDi, sagoma, crociera,
+    stato, avvia, premi, aggiorna, musica, parametri, FOGLIE, CAPPELLI, compra, posseduto, disegnaCappello, immagineFoglia,
+    // nelle prove: sceglie la foglia o il cappello senza comprarli
+    provaFoglia: (id) => { fogliaScelta = id; stato.foglia = id; P = parametri(); },
+    provaCappello: (id) => { cappelloScelto = id; stato.cappello = id; },
+    regalaGhiande: (n) => { ghiandeTotali += n; scrivi('ghiande-totali', ghiandeTotali); }, finisci, superficie, centroOstacolo, urtaOstacolo, nuvoleDi, sagoma, crociera,
     ALTALENA, TINO, LANCIO, VOLO, FOGLIA, OSTACOLI, CURVE, curva, CORRENTE, PX_M,
   };
 })();
