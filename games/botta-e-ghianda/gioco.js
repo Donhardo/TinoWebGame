@@ -1303,6 +1303,16 @@
     ctx.closePath();
     ctx.fill();
     ctx.shadowColor = 'transparent';
+    // contorno chiaro, perché si veda bene sul prato
+    ctx.strokeStyle = 'rgba(255, 246, 220, 0.9)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.86, -r * 0.15);
+    ctx.bezierCurveTo(-r * 0.9, r * 0.7, -r * 0.3, r * 1.1, 0, r * 1.2);
+    ctx.bezierCurveTo(r * 0.3, r * 1.1, r * 0.9, r * 0.7, r * 0.86, -r * 0.15);
+    ctx.moveTo(r, -r * 0.2);
+    ctx.ellipse(0, -r * 0.2, r, r * 0.62, 0, 0, Math.PI, true);
+    ctx.stroke();
     // riflesso
     ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
     ctx.beginPath();

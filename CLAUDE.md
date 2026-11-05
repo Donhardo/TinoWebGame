@@ -92,10 +92,13 @@ logica, su canvas), `ghianda.svg` (usata nell'anteprima della home).
   tempo; a barra piena il colpo successivo infuoca la ghianda, che scoppia
   ("POP!") e diventa un pop corn veloce e ondeggiante. Chi lo respinge lo
   spegne. Contro il computer la barra di Gino si carica più piano all'inizio.
-- **Sfondo**: `fondale.png` dipinto con Gemini (prato visto dall'alto, 16:9, con
-  radici, sassi, trifogli, ghiande e funghi ai bordi, centro calmo e un sentierino
-  di terra a metà campo; ruota col campo in verticale, per questo è zenitale).
-  Ritagliato a 16:9 (1365 × 768) e ridotto a 256 colori. Se manca, resta il prato
+- **Sfondo**: `fondale.png` dipinto con Gemini (prato visto dall'alto, 16:9, erba
+  verde brillante, cornice sottile di trifogli e fiorellini bianchi, gialli e lilla,
+  un sentierino di terra a metà campo; ruota col campo in verticale, per questo è
+  zenitale). Un primo fondale con radici, sassi e ghiande ai bordi aveva troppo poco
+  contrasto con i personaggi e la ghianda. Ritagliato a 16:9 (1365 × 768), a colori
+  pieni: a 256 colori i fiorellini perdevano il colore o l'erba veniva a chiazze.
+  La ghianda ha un contorno chiaro per staccarsi dal prato. Se manca, resta il prato
   con fiorellini disegnato nel codice (`preparaPrato`). Sul sentierino una fila di
   formiche che scappano quando passa la ghianda.
 - **Tino** non si specchia: la foto originale guarda già a destra, verso Gino.
