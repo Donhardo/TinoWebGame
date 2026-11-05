@@ -520,7 +520,8 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   gioco è largo 150 px.
 - **Ostacoli dipinti** (Gemini, sfondo magenta tolto come per l'aliante), in
   `ostacoli/`: `girasole.png` + `ramo.png` (prato), `tronco.png` + `muschio.png`
-  (bosco), `nuvola.png` (+ `nuvola2.png`, `nuvola3.png` se ci sono) per il cielo.
+  (bosco), `nuvola.png`, `nuvola2.png` (più chiara) e `nuvola3.png` (scura, col fulmine)
+  per il cielo, mescolate nei mucchi.
   Tabella `SPRITE` in `gioco.js`: per ogni disegno la parte bella (in cima per girasole
   e tronco, in fondo per ramo e muschio) si disegna intera e sotto (o sopra) si ripete
   una striscia di fusto (`strisciaFusto`: una riga presa a metà della parte liscia,
