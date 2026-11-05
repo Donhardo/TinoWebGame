@@ -438,6 +438,121 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   `simulaTiro`, `cercaTiro`, `pianificaIA`); con `stato.test = true` il gioco
   non avanza da solo e si possono simulare partite intere chiamando `aggiorna`.
 
+### Gino Volante (`games/gino-volante/`)
+Lancio a distanza a tempismo che diventa un volo a colpi d'ala (meccaniche da
+classici del genere): Tino lancia Gino con un'altalena a bilico, Gino vola e poi
+apre una foglia. File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su
+canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home), disegni
+dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png`.
+- **Decisioni prese**: titolo "Gino Volante"; Tino lancia Gino per gioco (niente
+  agenti della Tari); altalena a bilico; la foglia dura finché non urta ma si
+  sgualcisce (due urti); ambientazione che va dal prato al bosco fino al cielo;
+  un solo comando per tutto (Spazio, Invio o ↑, clic, tocco). Si gioca anche con il
+  telefono in verticale (si vede meno avanti e più cielo).
+- **Mondo**: x verso destra (0 = perno dell'altalena), h verso l'alto (0 = terreno),
+  20 px = 1 m. Schermo logico alto 540 (largo 760-1400 secondo lo schermo; in
+  verticale largo 560 e alto fino a 1100). La telecamera segue Gino di lato e sale
+  se lui va in alto.
+- **Fase 1, il lancio** (tabelle `ALTALENA`, `TINO`, `LANCIO`): Tino saltella sul
+  ceppo; il primo tocco lo fa saltare (più in alto se è in cima al saltello, e allora
+  piomba con più forza). Il secondo tocco lo fa piombare dritto giù: sopra la punta
+  dell'asse (x da -120 a -94) è "Perfetto!" (forza 0,8-1,05, angolo 40°); più verso
+  il perno la forza cala e l'angolo sale fino a 66°; troppo presto manca l'asse
+  (Tino ko, 0 m); se non preme atterra vicino al perno (lancio corto, ~35 m).
+  Senza foglia un lancio va da ~35 a ~225 m (rimbalzi e scivolata compresi).
+- **Fase 2, il volo libero** (tabella `VOLO`): parabola con un po' d'attrito; Gino
+  ruota, si schiaccia ai rimbalzi, poi scivola sull'erba e saltella quando si ferma.
+- **Fase 3, la foglia** (tabelle `FOGLIA`, `OSTACOLI`, `CORRENTE`): si apre una sola
+  volta, prima di toccare terra. Lo slancio iniziale viene dalla velocità di Gino
+  all'apertura e si consuma piano; aprendola in cima al volo (velocità verticale
+  sotto 150) lo slancio è +30% ("Apertura perfetta!") e più in alto si parte, più a
+  lungo si plana. Sopra il "tetto" (h 460) la foglia non sale più e plana; il primo
+  ostacolo arriva solo dopo la planata. Ogni tocco dà una spinta verso l'alto, la
+  gravità tira giù. Il primo urto strappa la foglia (1,3 s di invulnerabilità, colpi
+  d'ala un po' più deboli), il secondo chiude il volo; toccare terra chiude il volo.
+- **Ostacoli**: coppie sopra/sotto con un varco, sempre raggiungibile dal varco prima
+  (salita chiesta al massimo 150 px/s, discesa 300). La difficoltà è nella tabella
+  `CURVE` (curve a punti [metri, valore], lineari tra un punto e l'altro): fino a 700 m
+  cresce in fretta, poi più piano fino ai 2000 m, dove si ferma. Varco 245 → 175 → 158
+  px, distanza tra le coppie 560 → 360 → 310 px, velocità 240 → 340 → 380 px/s, ostacoli
+  che si muovono su e giù dai 300 m (44 px a 740 m, 50 a 2000); radure con la corrente
+  ogni 8 coppie all'inizio e ogni 12 a 2000 m, foglie nuove ogni 11 coppie all'inizio e
+  ogni 18 a 2000 m. Tappe: prato
+  (0 m: fiori alti e rami), bosco (250 m: tronchi tagliati e rami col muschio), cielo
+  (600 m: nuvoloni temporaleschi); colori e sfondi sfumano da una tappa all'altra.
+- **Aiuti e premi**: ghiande nei varchi e tra le coppie; ogni 8 coppie una radura con
+  una corrente d'aria che spinge in alto (fin sotto il tetto) e una fila di ghiande;
+  ogni 11 coppie una foglia nuova che ripara quella strappata (se è integra, +3
+  ghiande).
+- **Punteggio**: distanza totale in metri (lancio + foglia); `localStorage`
+  `gino-volante:record`, `record-ghiande` (più ghiande in un volo), `ghiande-totali`,
+  `lanci`, `muto`.
+- **Espressioni**: Tino arrabbiato (concentrato) mentre salta e se il lancio è corto,
+  normale e saltellante se il lancio è buono, ko se manca l'asse. Gino ruota in volo,
+  si schiaccia ai rimbalzi, si inclina ai colpi d'ala, trema negli urti, saltella
+  quando si ferma.
+- **Difficoltà tarata** con voli simulati (giocatori simulati che mirano al varco
+  con errore, ritardo e colpi persi, 30 voli ciascuno): con gli ostacoli dipinti bravo
+  ~2250 m di media, medio ~1350 m, principiante ~580 m (prima, con i rettangoli, ~1800,
+  ~1000, ~600). Per dimostrare che è sempre battibile
+  c'è un giocatore che pianifica (prova le sequenze di colpi d'ala per 1,2 s avanti, con
+  un piccolo margine, correnti d'aria comprese, e mira al centro del varco quando
+  entrambe le mosse sono sicure): 16 voli su 16 fino a 3000 m senza strappi. Il
+  copione semplice che mira solo al varco invece cade ogni tanto oltre i 1900 m. Le
+  persone vere reagiscono peggio dei copioni, quindi si arriva meno lontano.
+- **Disegni dipinti** (fatti con Gemini, ci sono già; se un file mancasse resterebbe
+  la grafica disegnata nel codice): `fondali/prato.png`, `fondali/bosco.png`,
+  `fondali/cielo.png` (uno per tappa, 16:9, es. 1600 × 900) e `aliante.png`,
+  `aliante-strappato.png` (la foglia-aliante vista di lato, sfondo trasparente, con il
+  manubrio al centro del bordo inferiore: è il punto a cui si tiene Gino). Se un file
+  manca resta la grafica disegnata nel codice. I fondali si disegnano alti 1,2 volte lo
+  schermo, con il fondo 24 px sotto l'erba: la parte alta (~20%) si vede solo quando la
+  telecamera sale, e sopra il disegno si riempie col colore della sua riga in alto. Si
+  affiancano uno dritto e uno specchiato (così i bordi combaciano) e scorrono a 0,15
+  della telecamera; tra le tappe sfumano. Prompt per Gemini: stile come i fondali di
+  Tino Bum (cartone con contorni morbidi), sfondo lontano senza primo piano, orizzonte
+  nel terzo basso, centro sgombro (lì passano ostacoli e Gino), cielo semplice in alto;
+  per l'aliante sfondo magenta pieno da togliere poi (rendere trasparente, ritagliare,
+  ottimizzare come gli altri PNG).
+  Gemini li ha dati in WebP da 1024 px: prato e cielo avevano ai lati una striscia
+  ripetuta (tagliata: x 82-940 e 130-893), il bosco una fascia di cielo piatto con una
+  riga dura in cima (tagliata: da y 108); palette a 256 colori. Aliante: magenta tolto
+  calcolando la trasparenza da quanto è magenta il pixel (e ripulendo i bordi),
+  ritagliato, allargato perché il manubrio stia al centro, 512 px di larghezza; in
+  gioco è largo 150 px.
+- **Ostacoli dipinti** (Gemini, sfondo magenta tolto come per l'aliante), in
+  `ostacoli/`: `girasole.png` + `ramo.png` (prato), `tronco.png` + `muschio.png`
+  (bosco), `nuvola.png`, `nuvola2.png` (più chiara) e `nuvola3.png` (scura, col fulmine)
+  per il cielo, mescolate nei mucchi.
+  Tabella `SPRITE` in `gioco.js`: per ogni disegno la parte bella (in cima per girasole
+  e tronco, in fondo per ramo e muschio) si disegna intera e sotto (o sopra) si ripete
+  una striscia di fusto (`strisciaFusto`: una riga presa a metà della parte liscia,
+  copiata 64 volte su una tela a parte) fino a terra o in cima allo schermo, così
+  l'ostacolo è alto quanto serve. Stirare una riga sola presa al confine della parte
+  bella la faceva venire mezza trasparente sui telefoni (schermi densi). Gli urti
+  seguono la sagoma: 14 fasce ricavate dai pixel non trasparenti della parte bella più
+  il fusto (`sagoma`). Il cielo non ha colonne: ogni ostacolo è un mucchio di nuvole
+  sciolte (tabella `NUVOLE`), sfalsate a destra e a sinistra e di misure diverse, dal
+  varco fino alle chiome e dal varco fino in cima; ogni nuvola è un'ellisse per gli urti
+  e sono abbastanza vicine da non lasciare buchi. Se i disegni mancano, ostacoli
+  disegnati nel codice con urti a rettangolo (`formaOstacolo`). Con le sagome il
+  pianificatore arriva ancora sempre a 3000 m (16 su 16, senza strappi); i fusti sottili
+  perdonano un po' di più: bravo ~2250 m, medio ~1350 m, principiante ~580 m.
+- **Prove automatiche**: `window.ginoVolante` (`stato`, `avvia(seme)`, `premi`,
+  `aggiorna`, `centroOstacolo`, `urtaOstacolo`, tabelle); con `stato.test = true` il
+  gioco non avanza da solo e non apre pannelli. I copioni non sono nel repository.
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
+  `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
+  `foglia.svg`, i disegni dipinti (`fondali/`, `ostacoli/`, `aliante*.png`) e
+  `assets/tino/`, `assets/gino/`; si
+  pubblica con `files` e `root`.
+- **Stato**: completo, con grafica dipinta (fondali, aliante, ostacoli). Possibili
+  seguiti, non ancora decisi: fondali più grandi (quelli di Gemini sono da 1024 px, un
+  po' sfocati sul telefono in verticale), cappelli o foglie diverse da comprare con le
+  ghiande, una musica di sottofondo, altre tappe oltre il cielo, restringere un po' i
+  varchi lontani se risulta troppo facile.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)

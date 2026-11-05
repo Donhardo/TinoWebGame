@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Gino Volante · I giochi di Tino</title>
+  <meta name="description" content="Tino lancia Gino con l'altalena e Gino vola con una foglia: quanti metri riesci a fare?">
+  <link rel="icon" href="../../assets/gino/gino.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/sito.css">
+  <link rel="stylesheet" href="stile.css">
+</head>
+<body>
+  <header class="barra">
+    <a class="barra-home" href="../../index.html" aria-label="Torna ai giochi">&larr; <span>Giochi</span></a>
+    <div class="tabellone" aria-live="off">
+      <b id="metri">0</b><span class="unita">m</span>
+      <span id="record" class="record-barra"></span>
+    </div>
+    <div class="barra-destra">
+      <span class="ghiande-barra" title="Ghiande raccolte in questo volo"><img src="ghianda.svg" alt="Ghiande"><b id="ghiande">0</b></span>
+      <button id="btn-pausa" class="barra-btn" type="button" aria-label="Pausa" title="Pausa (P)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      </button>
+      <button id="btn-audio" class="barra-btn" type="button" aria-label="Suoni" title="Suoni (M)">
+        <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="palco" class="palco">
+    <canvas id="campo" aria-label="Campo di gioco"></canvas>
+    <div id="pannello" class="pannello" role="dialog" aria-modal="true"></div>
+  </main>
+
+  <script src="gioco.js"></script>
+</body>
+</html>
