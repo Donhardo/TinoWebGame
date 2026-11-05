@@ -65,15 +65,56 @@
     ferito: caricaImg('tino/tino-ferito.png'),
     ko: caricaImg('tino/tino-ko.png'),
     gino: caricaImg('gino/gino.png'),
+    retino: caricaImg('agenti-tari/agente-retino.svg'),
+    timbro: caricaImg('agenti-tari/agente-timbro.svg'),
+    capo: caricaImg('agenti-tari/ispettore-capo.svg'),
   };
   // fondale dipinto (se non si carica, si usa quello disegnato nel codice)
   const FONDALE = new Image();
   FONDALE.src = 'fondali/prato.png';
   const fondaleDipinto = () => FONDALE.complete && FONDALE.naturalWidth > 0;
+  // gli agenti hanno la scritta TARI: non si specchiano
   const PERSONAGGI = {
     tino: { nome: 'Tino', colore: '#ffd59a', altezza: 58 },
     gino: { nome: 'Gino', colore: '#c9e6ff', altezza: 46 },
+    retino: { nome: 'Agente col retino', turno: "Tocca all'agente col retino!", colore: '#c4d6ff', altezza: 76, agente: true },
+    timbro: { nome: 'Agente col timbro', turno: "Tocca all'agente col timbro!", colore: '#c8eaa8', altezza: 76, agente: true },
+    capo: { nome: 'Ispettore capo', turno: "Tocca all'ispettore capo!", colore: '#e6e6e6', altezza: 80, agente: true },
   };
+
+  // campagna contro gli agenti della Tari: a ogni tappa si sblocca la successiva
+  const CAMPAGNA = [
+    {
+      nome: 'Il primo agente', liv: 2,
+      testo: "Un agente della Tari col retino è sbarcato sull'isola. Rimandalo a casa!",
+      nemici: [{ chi: 'retino', mezzo: 'catapulta' }],
+    },
+    {
+      nome: 'Bolle e bollette', liv: 3,
+      testo: "L'agente col timbro ha portato il soffiabolle: occhio al vento!",
+      nemici: [{ chi: 'timbro', mezzo: 'bolle' }],
+    },
+    {
+      nome: 'Gino dà una mano', liv: 4, alleato: { mezzo: 'catapulta', liv: 5 },
+      testo: 'Gli agenti adesso sono due, ma Gino si mette in squadra con Tino.',
+      nemici: [{ chi: 'retino', mezzo: 'fionda' }, { chi: 'timbro', mezzo: 'cannone' }],
+    },
+    {
+      nome: 'Sotto i piedi', liv: 5,
+      testo: "Un agente con la talpa trivella scava gallerie sotto l'isola.",
+      nemici: [{ chi: 'timbro', mezzo: 'talpa' }],
+    },
+    {
+      nome: 'La squadra della Tari', liv: 5, alleato: { mezzo: 'mortaio', liv: 6 },
+      testo: 'Tre agenti tutti insieme! Tino e Gino contro la squadra della Tari.',
+      nemici: [{ chi: 'retino', mezzo: 'mortaio' }, { chi: 'timbro', mezzo: 'catapulta' }, { chi: 'retino', mezzo: 'bolle' }],
+    },
+    {
+      nome: "L'ispettore capo", liv: 6, alleato: { mezzo: 'cannone', liv: 6 },
+      testo: "Arriva l'ispettore capo in persona, con il mortaio e un agente di scorta.",
+      nemici: [{ chi: 'capo', mezzo: 'mortaio', vita: 1600 }, { chi: 'timbro', mezzo: 'talpa' }],
+    },
+  ];
 
   // ---------------------------------------------------------------- DOM
   const $ = (s) => document.querySelector(s);
@@ -197,6 +238,8 @@
     vincitore: null,
   };
   let record = leggi('record', 1);
+  let tappaCampagna = leggi('campagna', 1);
+  let campagnaFinita = leggi('campagna-finita', false);
 
   function nuovoGiocatore(o) {
     const M = MEZZI[o.mezzo];
@@ -206,7 +249,7 @@
       x: 0, y: 0, vx: 0, vy: 0, aTerra: true, verso: 1, inclinazione: 0,
       angolo: Math.round((M.angoli[0] + M.angoli[1]) / 2), potenza: 0, carica: false,
       ultimaPotenza: null, ultimoAngolo: null,
-      vita: VITA, vitaMostrata: VITA, ritardo: 0, speciale: 0, colpo: 0,
+      vita: o.vita || VITA, vitaMax: o.vita || VITA, vitaMostrata: o.vita || VITA, ritardo: 0, speciale: 0, colpo: 0,
       energia: M.energia, mosso: 0, passi: 0, morto: false, annegato: false,
       colpitoT: 0, feritoT: 0, festaT: 0, tremaT: 0, caduta: 0,
       ultimoTurno: 0, ia: null, memoria: { bersaglio: null, x: 0, colpi: 0 },
@@ -480,16 +523,36 @@
     for (;;) {
       stato.terreno = TB.terreno.nuovoTerreno(seme + tentativi * 7919, scelte.tipo);
       stato.giocatori = [];
-      const liv = scelte.liv || (modo === 'demo' ? 6 : livello);
+      const tappa = modo === 'campagna' ? CAMPAGNA[livello - 1] : null;
+      const liv = scelte.liv || (modo === 'demo' ? 6 : tappa ? tappa.liv : livello);
       const mezzoCpu = () => { const k = Object.keys(MEZZI); return k[Math.floor(Math.random() * k.length)]; };
       stato.giocatori.push(nuovoGiocatore({
         id: 0, personaggio: 'tino', squadra: 0, mezzo: scelte.mezzo0 || mezzoCpu(), cpu: modo === 'demo' || !!scelte.cpu0, liv: scelte.liv0 || liv,
         oggetti: scelte.oggetti0 || oggettiACaso(),
       }));
-      stato.giocatori.push(nuovoGiocatore({
-        id: 1, personaggio: 'gino', squadra: 1, mezzo: scelte.mezzo1 || mezzoCpu(), cpu: modo !== 'due', liv,
-        oggetti: scelte.oggetti1 || oggettiACaso(),
-      }));
+      if (tappa) {
+        if (tappa.alleato) {
+          stato.giocatori.push(nuovoGiocatore({
+            id: 1, personaggio: 'gino', squadra: 0, mezzo: tappa.alleato.mezzo, cpu: true, liv: tappa.alleato.liv, oggetti: oggettiACaso(),
+          }));
+        }
+        const conta = {};
+        for (const n of tappa.nemici) conta[n.chi] = (conta[n.chi] || 0) + 1;
+        const visti = {};
+        for (const n of tappa.nemici) {
+          visti[n.chi] = (visti[n.chi] || 0) + 1;
+          const nome = PERSONAGGI[n.chi].nome + (conta[n.chi] > 1 ? ' ' + visti[n.chi] : '');
+          stato.giocatori.push(nuovoGiocatore({
+            id: stato.giocatori.length, personaggio: n.chi, nome, squadra: 1, mezzo: scelte.mezzoNemico || n.mezzo,
+            cpu: true, liv, vita: n.vita, oggetti: oggettiACaso(),
+          }));
+        }
+      } else {
+        stato.giocatori.push(nuovoGiocatore({
+          id: 1, personaggio: 'gino', squadra: 1, mezzo: scelte.mezzo1 || mezzoCpu(), cpu: modo !== 'due', liv,
+          oggetti: scelte.oggetti1 || oggettiACaso(),
+        }));
+      }
       if (piazzaGiocatori() && mappaGiocabile()) break;
       if (++tentativi > 12) break;
     }
@@ -528,13 +591,27 @@
     const sinistra = cand.filter((c) => c.x < W * 0.38);
     const destra = cand.filter((c) => c.x > W * 0.62);
     if (!sinistra.length || !destra.length) return false;
-    const a = sinistra[Math.floor(Math.random() * sinistra.length)];
-    const b = destra[Math.floor(Math.random() * destra.length)];
-    const [p0, p1] = Math.random() < 0.5 ? [a, b] : [b, a];
-    const [g0, g1] = stato.giocatori;
-    Object.assign(g0, { x: p0.x, y: p0.y, verso: p0.x < p1.x ? 1 : -1 });
-    Object.assign(g1, { x: p1.x, y: p1.y, verso: p1.x < p0.x ? 1 : -1 });
-    for (const g of stato.giocatori) g.inclinazione = inclinazioneSuolo(g.x, g.y);
+    // ogni squadra da una parte; i compagni ad almeno 120 pixel l'uno dall'altro
+    const lati = Math.random() < 0.5 ? [sinistra, destra] : [destra, sinistra];
+    for (const sq of [0, 1]) {
+      const presi = [];
+      for (const g of stato.giocatori.filter((h) => h.squadra === sq)) {
+        let p = null;
+        for (let k = 0; k < 60 && !p; k++) {
+          const c = lati[sq][Math.floor(Math.random() * lati[sq].length)];
+          if (presi.every((q) => Math.abs(q.x - c.x) >= 120)) p = c;
+        }
+        if (!p) return false;
+        presi.push(p);
+        Object.assign(g, { x: p.x, y: p.y });
+      }
+    }
+    for (const g of stato.giocatori) {
+      const nemici = stato.giocatori.filter((h) => h.squadra !== g.squadra);
+      const mx = nemici.reduce((a, h) => a + h.x, 0) / nemici.length;
+      g.verso = mx >= g.x ? 1 : -1;
+      g.inclinazione = inclinazioneSuolo(g.x, g.y);
+    }
     return true;
   }
 
@@ -567,13 +644,13 @@
     g.magica = false;
     if (stato.numeroTurno > 2) g.speciale = Math.min(1, g.speciale + TURNO.speciale);
     if (g.colpo === 2 && g.speciale < 1) g.colpo = 0;
-    const vm = ventoMassimo(stato.modo === 'due' ? 8 : stato.livello);
+    const vm = ventoMassimo(stato.modo === 'due' ? 8 : stato.modo === 'campagna' ? CAMPAGNA[stato.livello - 1].liv : stato.livello);
     stato.vento = Math.round((Math.random() * 2 - 1) * vm);
     stato.tempoTurno = TURNO.tempo;
     stato.fase = 'mira';
     stato.zoomUtente = 1;
     g.ia = g.cpu ? { fase: 'pensa', t: IA.pensa * (0.7 + Math.random() * 0.6), piano: null } : null;
-    mostraMessaggio('Tocca a ' + g.nome + '!', 1.3);
+    mostraMessaggio(PERSONAGGI[g.personaggio].turno || 'Tocca a ' + g.nome + '!', 1.3);
     suoni.turno();
     aggiornaPlancia(true);
   }
@@ -609,7 +686,7 @@
     }
     o.usato = true;
     if (o.tipo === 'cerotto') {
-      const c = Math.min(O.cura, VITA - g.vita);
+      const c = Math.min(O.cura, g.vitaMax - g.vita);
       g.vita += c;
       aggiungiParticella({ tipo: 'numero', x: g.x, y: g.y - 70, vy: -50, vita: 1.3, durata: 1.3, testo: '+' + c, colore: '#6cd04a' });
       g.festaT = 0.8;
@@ -672,9 +749,19 @@
     stato.attesa = 0;
     const vincitore = stato.giocatori.find((g) => !g.morto) || null;
     stato.vincitore = vincitore;
-    if (vincitore) vincitore.festaT = 99;
+    for (const g of stato.giocatori) if (!g.morto) g.festaT = 99;
     if (stato.modo === 'demo') return true;
     const vinceUmano = vincitore && !vincitore.cpu;
+    if (stato.modo === 'campagna') {
+      if (vincitore && vincitore.squadra === 0) {
+        tappaCampagna = Math.max(tappaCampagna, Math.min(CAMPAGNA.length, stato.livello + 1));
+        if (stato.livello === CAMPAGNA.length) campagnaFinita = true;
+        scrivi('campagna', tappaCampagna);
+        scrivi('campagna-finita', campagnaFinita);
+        suoni.vittoria();
+      } else suoni.sconfitta();
+      return true;
+    }
     if (stato.modo === 'cpu') {
       if (vinceUmano) {
         record = Math.max(record, stato.livello + 1);
@@ -1813,10 +1900,10 @@
   };
 
   function immagineDi(g) {
-    if (g.personaggio === 'gino') return IMG.gino;
+    if (g.personaggio !== 'tino') return IMG[g.personaggio];
     if (g.morto) return IMG.ko;
     if (g.feritoT > 0) return IMG.ferito;
-    if (g.colpitoT > 0 || g.vita < VITA * 0.3) return IMG.arrabbiato;
+    if (g.colpitoT > 0 || g.vita < g.vitaMax * 0.3) return IMG.arrabbiato;
     if (stato.fase === 'mira' && stato.attivo === g && nemiciDi(g).some((h) => h.vita <= 250)) return IMG.arrabbiato;
     return IMG.normale;
   }
@@ -1838,7 +1925,7 @@
     }
     if (g.tremaT > 0) dx += Math.sin(t * 70) * 4 * (g.tremaT / 0.6);
     if (g.carica) { sy *= 1 - g.potenza * 0.08; sx *= 1 + g.potenza * 0.05; }
-    if (g.morto && g.personaggio === 'gino') {
+    if (g.morto && g.personaggio !== 'tino') {
       const e = 1 - Math.pow(1 - g.caduta, 3);
       rot = e * Math.PI / 2;
       dy += e * 10;
@@ -1846,7 +1933,7 @@
     ctx.save();
     ctx.translate(x + dx, y + dy);
     ctx.rotate(rot);
-    ctx.scale(sx * (g.verso > 0 ? -1 : 1), sy);
+    ctx.scale(sx * (g.verso > 0 && !P.agente ? -1 : 1), sy);
     ctx.drawImage(img, -w / 2, -h, w, h);
     ctx.restore();
   }
@@ -1934,7 +2021,7 @@
 
   function disegnaEtichetta(g) {
     if (g.annegato) return;
-    const x = g.x, y = g.y - 96;
+    const x = g.x, y = g.y - 96 - Math.max(0, PERSONAGGI[g.personaggio].altezza - 60);
     const attivo = stato.attivo === g && stato.fase === 'mira';
     ctx.save();
     ctx.font = '600 15px Fredoka, sans-serif';
@@ -1949,7 +2036,7 @@
     ctx.beginPath();
     ctx.roundRect(x - w / 2 - 2, y - 4, w + 4, 10, 5);
     ctx.fill();
-    const v = clamp(g.vitaMostrata / VITA, 0, 1);
+    const v = clamp(g.vitaMostrata / g.vitaMax, 0, 1);
     ctx.fillStyle = v > 0.5 ? '#6cd04a' : v > 0.25 ? '#f2c14e' : '#e8553f';
     ctx.beginPath();
     ctx.roundRect(x - w / 2, y - 2, w * v, 6, 3);
@@ -2286,8 +2373,22 @@
   function disegnaHUD() {
     if (stato.modo === 'demo' && pannelloAperto()) return;
     const gs = stato.giocatori;
-    if (gs[0]) schedaGiocatore(gs[0], 10, 10, false);
-    if (gs[1]) schedaGiocatore(gs[1], VW - 230, 10, true);
+    if (gs.length <= 2) {
+      if (gs[0]) schedaGiocatore(gs[0], 10, 10, false);
+      if (gs[1]) schedaGiocatore(gs[1], VW - 230, 10, true);
+    } else {
+      // squadre: schede più piccole, una sotto l'altra
+      const k = 0.74;
+      for (const sq of [0, 1]) {
+        gs.filter((g) => g.squadra === sq).forEach((g, i) => {
+          ctx.save();
+          ctx.translate(sq ? VW - 10 - 220 * k : 10, 8 + i * 46);
+          ctx.scale(k, k);
+          schedaGiocatore(g, 0, 0, sq === 1);
+          ctx.restore();
+        });
+      }
+    }
     disegnaVento(VW / 2, 34);
   }
 
@@ -2311,7 +2412,11 @@
     ctx.fill();
     ctx.clip();
     const img = immagineDi(g);
-    if (img.complete && img.naturalWidth) {
+    if (img.complete && img.naturalWidth && PERSONAGGI[g.personaggio].agente) {
+      // degli agenti si vede la testa
+      const ih = 104, iw = ih * img.naturalWidth / img.naturalHeight;
+      ctx.drawImage(img, px - iw * 0.42, py - 27, iw, ih);
+    } else if (img.complete && img.naturalWidth) {
       const s = 50 / Math.max(img.naturalWidth, img.naturalHeight);
       const iw = img.naturalWidth * s, ih = img.naturalHeight * s;
       ctx.drawImage(img, px - iw / 2, py - ih / 2 + 6, iw, ih);
@@ -2321,14 +2426,14 @@
     ctx.font = '600 16px Fredoka, sans-serif';
     ctx.textAlign = destra ? 'right' : 'left';
     const tx = destra ? x + w - 58 : x + 58;
-    ctx.fillText(g.nome + (g.cpu && stato.modo !== 'demo' ? ' (computer)' : ''), tx, y + 20);
+    ctx.fillText(g.nome + (g.cpu && stato.modo !== 'demo' && !PERSONAGGI[g.personaggio].agente ? ' (computer)' : ''), tx, y + 20);
     // vita
     const bw = w - 70, bx = destra ? x + 12 : x + 58;
     ctx.fillStyle = '#e3d6c0';
     ctx.beginPath();
     ctx.roundRect(bx, y + 27, bw, 10, 5);
     ctx.fill();
-    const v = clamp(g.vitaMostrata / VITA, 0, 1);
+    const v = clamp(g.vitaMostrata / g.vitaMax, 0, 1);
     ctx.fillStyle = v > 0.5 ? '#5cbf3c' : v > 0.25 ? '#f2b33e' : '#e8553f';
     ctx.beginPath();
     ctx.roundRect(destra ? bx + bw * (1 - v) : bx, y + 27, bw * v, 10, 5);
@@ -2433,7 +2538,11 @@
     pannello.innerHTML = '';
   }
 
+  const FILE_AGENTI = { retino: 'agente-retino', timbro: 'agente-timbro', capo: 'ispettore-capo' };
   const ritratto = (nome, classe = '') => {
+    if (FILE_AGENTI[nome]) {
+      return `<img src="${BASE}agenti-tari/${FILE_AGENTI[nome]}.svg" alt="${PERSONAGGI[nome].nome}" class="${classe}">`;
+    }
     const src = nome === 'gino' ? BASE + 'gino/gino.png' : BASE + 'tino/tino-' + nome + '.png';
     return `<img src="${src}" alt="${nome === 'gino' ? 'Gino' : 'Tino'}" class="${classe}">`;
   };
@@ -2463,9 +2572,32 @@
       <div class="scelte">
         <button class="bottone" data-azione="cpu" data-primo>Sfida Gino</button>
         ${rec}
+        <button class="bottone" data-azione="campagna">Campagna contro la Tari</button>
         <button class="bottone secondario" data-azione="due">Due giocatori</button>
       </div>
       ${testoComandi()}
+    </div>`;
+  }
+
+  const LUCCHETTO = '<svg viewBox="0 0 24 24" width="16" height="16" aria-label="chiusa"><rect x="5" y="10" width="14" height="11" rx="2" fill="#fff"/><path d="M8 10 V7 a4 4 0 0 1 8 0 V10" fill="none" stroke="#fff" stroke-width="2.5"/></svg>';
+  function pannelloCampagna() {
+    const tappe = CAMPAGNA.map((t, i) => {
+      const n = i + 1;
+      const chiusa = n > tappaCampagna;
+      const fatta = n < tappaCampagna || (campagnaFinita && n === CAMPAGNA.length);
+      const facce = (t.alleato ? ritratto('gino', 'faccia') : '') + t.nemici.map((q) => ritratto(q.chi, 'faccia agente')).join('');
+      return `<button class="tappa${chiusa ? ' chiusa' : ''}${fatta ? ' fatta' : ''}" data-tappa="${n}"${chiusa ? ' disabled' : ''}${n === tappaCampagna ? ' data-primo' : ''}>
+        <span class="numero">${chiusa ? LUCCHETTO : n}</span>
+        <span class="testo"><b>${t.nome}</b><span>${chiusa ? 'Supera la tappa prima per sbloccarla.' : t.testo}</span></span>
+        <span class="facce">${facce}</span>
+      </button>`;
+    }).join('');
+    return `<div class="riquadro largo">
+      <div class="ritratti">${ritratto('arrabbiato', 'specchia')}<span class="vs">contro</span>${ritratto('retino')}${ritratto('capo')}</div>
+      <h2>Campagna contro la Tari</h2>
+      <p>Gli agenti della Tari invadono le isole: Tino (e a volte Gino) li rispedisce in ufficio a colpi di ghiande.</p>
+      <div class="tappe">${tappe}</div>
+      <div class="scelte"><button class="bottone secondario" data-azione="menu">Indietro</button></div>
     </div>`;
   }
 
@@ -2487,11 +2619,13 @@
         </span>
         <span class="lista-colpi">${m.colpi.map((c) => c.speciale ? `<em>${c.nome}</em>` : c.nome).join(' · ')}</span>
       </button>`).join('');
-    const titolo = scelta.modo === 'cpu' ? `Livello ${scelta.livello}: scegli il mezzo di Tino` : `${nome}, scegli il tuo mezzo`;
+    const titolo = scelta.modo === 'cpu' ? `Livello ${scelta.livello}: scegli il mezzo di Tino`
+      : scelta.modo === 'campagna' ? `Tappa ${scelta.livello}: scegli il mezzo di Tino` : `${nome}, scegli il tuo mezzo`;
+    const indietro = scelta.modo === 'campagna' ? 'campagna' : 'menu';
     return `<div class="riquadro largo">
       <h2>${titolo}</h2>
       <div class="mezzi">${schede}</div>
-      <div class="scelte"><button class="bottone secondario" data-azione="menu">Indietro</button></div>
+      <div class="scelte"><button class="bottone secondario" data-azione="${indietro}">Indietro</button></div>
     </div>`;
   }
 
@@ -2516,7 +2650,7 @@
 
   function disegnaAnteprima(cv) {
     const c = cv.getContext('2d');
-    const finto = { personaggio: cv.dataset.chi, verso: 1, festaT: 0, tremaT: 0, carica: false, morto: false, feritoT: 0, colpitoT: 0, vita: VITA, mezzo: cv.dataset.mezzo, caduta: 0 };
+    const finto = { personaggio: cv.dataset.chi, verso: 1, festaT: 0, tremaT: 0, carica: false, morto: false, feritoT: 0, colpitoT: 0, vita: VITA, vitaMax: VITA, mezzo: cv.dataset.mezzo, caduta: 0 };
     const disegnaSu = () => {
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.clearRect(0, 0, cv.width, cv.height);
@@ -2546,6 +2680,32 @@
   function pannelloFine() {
     const v = stato.vincitore;
     const n = stato.livello;
+    if (stato.modo === 'campagna') {
+      const agenti = [...new Set(CAMPAGNA[n - 1].nemici.map((q) => q.chi))];
+      if (v && v.squadra === 0) {
+        const ultima = n === CAMPAGNA.length;
+        return `<div class="riquadro">
+          <div class="ritratti">${ritratto('normale', 'salta specchia')}${agenti.map((a) => ritratto(a, 'caduto')).join('')}</div>
+          <h2>${ultima ? 'La Tari è sconfitta!' : `Tappa ${n} superata!`}</h2>
+          <p>${ultima ? "L'ispettore capo torna in ufficio a compilare moduli: le isole sono di nuovo libere. Grazie, Tino!"
+            : 'Gli agenti battono in ritirata, ma la Tari non si arrende: alla prossima tappa saranno più agguerriti.'}</p>
+          <div class="scelte">
+            ${ultima ? '' : `<button class="bottone" data-azione="prossimo" data-primo>Tappa ${n + 1}</button>`}
+            <button class="bottone${ultima ? '' : ' secondario'}" data-azione="campagna"${ultima ? ' data-primo' : ''}>Tappe</button>
+            <button class="bottone secondario" data-azione="menu">Menu</button>
+          </div>
+        </div>`;
+      }
+      return `<div class="riquadro">
+        <div class="ritratti">${ritratto('ko')}${agenti.map((a) => ritratto(a, 'salta')).join('')}</div>
+        <h2>Hanno vinto gli agenti!</h2>
+        <p>Tino non si arrende: un'altra isola, un'altra sfida.</p>
+        <div class="scelte">
+          <button class="bottone" data-azione="riprova" data-primo>Riprova la tappa ${n}</button>
+          <button class="bottone secondario" data-azione="campagna">Tappe</button>
+        </div>
+      </div>`;
+    }
     if (stato.modo === 'cpu') {
       if (v && !v.cpu) {
         return `<div class="riquadro">
@@ -2588,6 +2748,8 @@
   }
 
   pannello.addEventListener('click', (e) => {
+    const tp = e.target.closest('[data-tappa]');
+    if (tp && !tp.disabled) { suoni.clic(); apriScelta('campagna', Number(tp.dataset.tappa)); return; }
     const m = e.target.closest('[data-mezzo-scelto]');
     if (m && scelta) {
       scelta.mezzi[scelta.chi] = m.dataset.mezzoScelto;
@@ -2631,8 +2793,9 @@
       case 'cpu': apriScelta('cpu', 1); break;
       case 'continua': apriScelta('cpu', record); break;
       case 'due': apriScelta('due', 1); break;
-      case 'prossimo': apriScelta('cpu', stato.livello + 1); break;
-      case 'riprova': iniziaPartita('cpu', stato.livello, {
+      case 'prossimo': apriScelta(stato.modo, stato.livello + 1); break;
+      case 'campagna': mostraPannello(pannelloCampagna()); break;
+      case 'riprova': iniziaPartita(stato.modo, stato.livello, {
         mezzo0: ultimeScelte ? ultimeScelte.mezzi[0] : null, oggetti0: ultimeScelte ? ultimeScelte.oggetti[0] : null,
       }); break;
       case 'riprendi': riprendi(); break;

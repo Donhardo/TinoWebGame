@@ -29,6 +29,7 @@ e poi si visita http://localhost:8000.
   si libera Gino con la Ghianda d'Oro).
   I livelli si modificano in `games/ghianda-d-oro/livelli.js`.
 - **Tino Bum!** (`games/tino-bum/`): artiglieria a turni tra isole generate a
-  caso. Si sceglie il mezzo (catapulta, fionda gigante, mortaio di zucca), si
-  prende la mira e si tiene conto del vento. Contro Gino (livelli sempre più
-  difficili) o in due sullo stesso dispositivo.
+  caso. Si sceglie il mezzo (sei: catapulta, fionda gigante, mortaio di zucca,
+  cannone a tappi, talpa trivella, soffiabolle) e due oggetti, si prende la mira
+  e si tiene conto del vento. Contro Gino (livelli sempre più difficili), in due
+  sullo stesso dispositivo o nella campagna contro gli agenti della Tari.
