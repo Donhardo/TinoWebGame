@@ -23,6 +23,14 @@
  *   rimbalzi        quante volte rimbalza prima di esplodere
  *   esplodeRimbalzo { raggio, danno } piccola esplosione a ogni rimbalzo
  *   divide          { quando: 'apice' | 'discesa', n, apertura, colpo }
+ *   calo            { da, a, min } il danno cala con la strada percorsa: pieno
+ *                   fino a `da` pixel, poi scende fino a `min` (frazione) ad `a`
+ *   trivella        { lunghezza, raggio, vel } toccato il terreno continua
+ *                   dritto scavando una galleria, poi esplode
+ *   galleria        { lunghezza, raggio, vel } come la trivella, ma va in
+ *                   orizzontale ed esplode appena è sotto un nemico
+ *   bolla           la bolla cattura chi è vicino al punto in cui scoppia, lo
+ *                   solleva (e il vento lo sposta) e poi lo lascia cadere
  */
 (() => {
   'use strict';
@@ -35,6 +43,11 @@
   const spicchio = {
     nome: 'Spicchio', raggio: 40, danno: 140, vento: 0.7, gravita: 1, ritardo: 0,
     disegno: 'spicchio', dimensione: 7,
+  };
+
+  const bollicina = {
+    nome: 'Bollicina', raggio: 22, danno: 80, vento: 2, gravita: 0.5, ritardo: 0,
+    disegno: 'bolla', dimensione: 6,
   };
 
   TB.MEZZI = {
@@ -67,11 +80,11 @@
       stelle: { potenza: 2, gittata: 5, vento: 5, movimento: 5 },
       colpi: [
         {
-          nome: 'Sasso', raggio: 32, danno: 215, vento: 0.35, gravita: 1, ritardo: 90,
+          nome: 'Sasso', raggio: 32, danno: 235, vento: 0.35, gravita: 1, ritardo: 90,
           disegno: 'sasso', dimensione: 7,
         },
         {
-          nome: 'Rimbalzino', raggio: 36, danno: 225, vento: 0.35, gravita: 1, ritardo: 110,
+          nome: 'Rimbalzino', raggio: 36, danno: 240, vento: 0.35, gravita: 1, ritardo: 110,
           disegno: 'sasso', dimensione: 7, rimbalzi: 2,
         },
         {
@@ -99,6 +112,68 @@
           nome: 'Zucca a spicchi', speciale: true, raggio: 44, danno: 160, vento: 0.7, gravita: 1,
           ritardo: 185, disegno: 'zucca', dimensione: 12,
           divide: { quando: 'discesa', n: 5, apertura: 70, colpo: spicchio },
+        },
+      ],
+    },
+    cannone: {
+      nome: 'Cannone a tappi',
+      descrizione: 'Tappi di sughero velocissimi: fanno male da vicino, poco da lontano.',
+      velMax: 1000, angoli: [-8, 65], energia: 160, peso: 1,
+      stelle: { potenza: 5, gittata: 2, vento: 4, movimento: 3 },
+      colpi: [
+        {
+          nome: 'Tappo', raggio: 30, danno: 300, vento: 0.5, gravita: 1, ritardo: 100,
+          disegno: 'tappo', dimensione: 7, calo: { da: 450, a: 1400, min: 0.5 },
+        },
+        {
+          nome: 'Tappone', raggio: 46, danno: 330, vento: 0.5, gravita: 1.15, ritardo: 120,
+          disegno: 'tappo', dimensione: 10, calo: { da: 350, a: 1100, min: 0.4 },
+        },
+        {
+          nome: 'Raffica di tappi', speciale: true, raggio: 26, danno: 150, vento: 0.5, gravita: 1,
+          ritardo: 170, disegno: 'tappo', dimensione: 6, calo: { da: 450, a: 1400, min: 0.5 },
+          lancio: { n: 5, apertura: 2.2, potenze: [0.96, 1.02, 1, 0.98, 1.04] },
+        },
+      ],
+    },
+    talpa: {
+      nome: 'Talpa trivella',
+      descrizione: 'Le sue punte entrano nel terreno e scoppiano sotto i piedi.',
+      velMax: 880, angoli: [10, 82], energia: 130, peso: 1.05,
+      stelle: { potenza: 3, gittata: 3, vento: 3, movimento: 2 },
+      colpi: [
+        {
+          nome: 'Trivella', raggio: 40, danno: 235, vento: 0.9, gravita: 1, ritardo: 105,
+          disegno: 'trivella', dimensione: 8, trivella: { lunghezza: 70, raggio: 9, vel: 260 },
+        },
+        {
+          nome: 'Scavafosse', raggio: 74, danno: 150, vento: 0.9, gravita: 1, ritardo: 120,
+          disegno: 'trivella', dimensione: 10, trivella: { lunghezza: 40, raggio: 12, vel: 220 },
+        },
+        {
+          nome: 'Galleria', speciale: true, raggio: 64, danno: 230, vento: 0.9, gravita: 1, ritardo: 175,
+          disegno: 'trivella', dimensione: 10, galleria: { lunghezza: 560, raggio: 16, vel: 320 },
+        },
+      ],
+    },
+    bolle: {
+      nome: 'Soffiabolle',
+      descrizione: 'Bolle leggere che volano piano: il vento le porta lontano.',
+      velMax: 700, angoli: [0, 88], energia: 175, peso: 0.95,
+      stelle: { potenza: 2, gittata: 4, vento: 1, movimento: 4 },
+      colpi: [
+        {
+          nome: 'Bolla', raggio: 38, danno: 180, vento: 2, gravita: 0.5, ritardo: 95,
+          disegno: 'bolla', dimensione: 9,
+        },
+        {
+          nome: 'Bollicine', raggio: 30, danno: 95, vento: 2, gravita: 0.5, ritardo: 110,
+          disegno: 'bolla', dimensione: 9,
+          divide: { quando: 'apice', n: 4, apertura: 40, colpo: bollicina },
+        },
+        {
+          nome: 'Bollona', speciale: true, raggio: 34, danno: 90, vento: 1.6, gravita: 0.5, ritardo: 160,
+          disegno: 'bollona', dimensione: 14, bolla: { presa: 70, salita: 130, tempo: 2 },
         },
       ],
     },

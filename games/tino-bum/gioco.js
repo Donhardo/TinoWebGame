@@ -38,6 +38,8 @@
     ritardoPasso: 0.12,    // ritardo per ogni pixel percorso
   };
   const VITA = 1000;
+  // bollona: spinta del vento (px/s per punto) e danno della caduta
+  const BOLLA = { vento: 13, vSicura: 300, danno: 0.6, stima: 120 };
   // IA: errore su alzo (gradi) e potenza, che cala col livello; a ogni tiro
   // contro lo stesso bersaglio fermo l'errore si riduce (aggiusta la mira)
   const IA = {
@@ -157,6 +159,10 @@
     turno: () => { suono(660, 0.08, 'triangle', 0.06); suono(880, 0.12, 'triangle', 0.06, null, 0.09); },
     divide: () => suono(1200, 0.08, 'square', 0.04, 500),
     clic: () => suono(900, 0.03, 'square', 0.025),
+    trivella: () => { rumore(0.3, 0.07, 900, 200); suono(140, 0.25, 'sawtooth', 0.03, 90); },
+    bolla: () => suono(500, 0.25, 'sine', 0.06, 1100),
+    scoppio: () => { suono(1400, 0.05, 'square', 0.05, 300); rumore(0.08, 0.08, 4000, 1500); },
+    oggetto: () => { suono(784, 0.1, 'triangle', 0.06); suono(1175, 0.16, 'triangle', 0.06, null, 0.08); },
     vittoria: () => [523, 659, 784, 1046].forEach((f, i) => suono(f, 0.18, 'triangle', 0.08, null, i * 0.12)),
     sconfitta: () => [392, 330, 262, 196].forEach((f, i) => suono(f, 0.22, 'sawtooth', 0.045, null, i * 0.15)),
   };
@@ -258,7 +264,7 @@
       lista.push({
         x: o.x, y: o.y, vx: Math.cos(a) * v * verso, vy: -Math.sin(a) * v,
         colpo, prop: g, t: 0, rimbalzi: colpo.rimbalzi || 0, apice: o.y,
-        diviso: false, morto: false, rot: 0, scia: [],
+        diviso: false, morto: false, rot: 0, scia: [], percorso: 0,
       });
     }
     return lista;
@@ -275,10 +281,82 @@
     return l ? { x: sx / l, y: sy / l } : { x: 0, y: -1 };
   }
 
+  function roccia(x, y) {
+    x = x | 0; y = y | 0;
+    if (x < 0 || x >= W || y < 0 || y >= H) return false;
+    return stato.terreno.mat[y * W + x] === 2;
+  }
+  // danno del colpo, che per i tappi cala con la strada percorsa
+  function dannoColpo(c, p) {
+    const k = c.calo;
+    if (!k) return c.danno;
+    const f = clamp((p.percorso - k.da) / (k.a - k.da), 0, 1);
+    return Math.round(c.danno * (1 - f * (1 - k.min)));
+  }
+  function esplosione(p, x, y, diretto) {
+    const c = p.colpo;
+    return { tipo: 'esplosione', x, y, raggio: c.raggio, danno: dannoColpo(c, p), diretto, p, bolla: c.bolla || null };
+  }
+  function toccaGiocatore(p, x, y, amb) {
+    const c = p.colpo;
+    for (const g of amb.giocatori) {
+      if (g.morto || g.annegato || (g === p.prop && p.t < 0.35)) continue;
+      if (dist(x, y, g.x, g.y - FISICA.corpoY) < FISICA.corpoR + c.dimensione * 0.6) return g;
+    }
+    return null;
+  }
+
+  // trivella e galleria: dentro il terreno vanno dritte, scavando un po' più
+  // indietro (così il buco appena fatto non confonde il controllo del terreno
+  // davanti: la simulazione dell'IA, che non scava, dà lo stesso risultato)
+  function passoScavo(p, dt, amb) {
+    const s = p.scava;
+    const T = p.colpo.trivella || p.colpo.galleria;
+    const tratto = Math.min(s.resto, T.vel * dt);
+    const n = Math.max(1, Math.ceil(tratto / 3));
+    const l = tratto / n;
+    for (let i = 0; i < n; i++) {
+      const x = p.x + s.dx * l, y = p.y + s.dy * l;
+      if (y >= ACQUA) { p.morto = true; amb.evento({ tipo: 'acqua', x, y: ACQUA, p }); return; }
+      if (x < 0 || x >= W) { p.morto = true; amb.evento({ tipo: 'fuori', x, y, p }); return; }
+      const diretto = toccaGiocatore(p, x, y, amb);
+      if (diretto || roccia(x, y)) { p.morto = true; amb.evento(esplosione(p, p.x, p.y, diretto)); return; }
+      if (p.colpo.galleria) {
+        for (const h of amb.giocatori) {
+          if (h.morto || h.annegato || h.squadra === p.prop.squadra) continue;
+          if (Math.abs(x - h.x) < 8 && h.y < y && y - h.y < 200) {
+            p.morto = true;
+            amb.evento(esplosione(p, x, y, null));
+            return;
+          }
+        }
+      }
+      p.x = x; p.y = y;
+      s.resto -= l;
+      p.percorso += l;
+      s.fatto += l;
+      s.aria = solido(x, y) ? 0 : s.aria + l;
+      if (s.fatto - s.scavato >= 5 && s.fatto > T.raggio + 4) {
+        s.scavato = s.fatto;
+        amb.evento({ tipo: 'scavo', x: x - s.dx * (T.raggio + 4), y: y - s.dy * (T.raggio + 4), raggio: T.raggio, p });
+      }
+      if (s.aria > 12) {
+        // uscita dall'altra parte: riprende il volo
+        p.scava = null;
+        p.vx = s.dx * T.vel * 0.85;
+        p.vy = s.dy * T.vel * 0.85;
+        amb.evento({ tipo: 'sbuca', x, y, p });
+        return;
+      }
+    }
+    if (s.resto <= 0) { p.morto = true; amb.evento(esplosione(p, p.x, p.y, null)); }
+  }
+
   // un passo di fisica per un proiettile; amb raccoglie eventi e figli
   function passoProiettile(p, dt, amb) {
     const c = p.colpo;
     p.t += dt;
+    if (p.scava) { passoScavo(p, dt, amb); return; }
     p.vx += amb.vento * FISICA.vento * c.vento * dt;
     p.vy += FISICA.gravita * c.gravita * dt;
     const x0 = p.x, y0 = p.y;
@@ -289,12 +367,20 @@
       const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n;
       if (y >= ACQUA) { p.morto = true; amb.evento({ tipo: 'acqua', x, y: ACQUA, p }); return; }
       if (x < -300 || x > W + 300) { p.morto = true; amb.evento({ tipo: 'fuori', x, y, p }); return; }
-      let diretto = null;
-      for (const g of amb.giocatori) {
-        if (g.morto || (g === p.prop && p.t < 0.35)) continue;
-        if (dist(x, y, g.x, g.y - FISICA.corpoY) < FISICA.corpoR + c.dimensione * 0.6) { diretto = g; break; }
-      }
+      const diretto = toccaGiocatore(p, x, y, amb);
       const terra = !diretto && solido(x, y);
+      if (terra && (c.trivella || c.galleria) && !p.scavato && !roccia(x, y)) {
+        // la punta entra nel terreno
+        const T = c.trivella || c.galleria;
+        const v = Math.hypot(p.vx, p.vy) || 1;
+        const dx = c.galleria ? Math.sign(p.vx) || 1 : p.vx / v;
+        const dy = c.galleria ? 0 : p.vy / v;
+        p.scavato = true;
+        p.scava = { resto: T.lunghezza, dx, dy, fatto: 0, scavato: 0, aria: 0 };
+        p.x = x; p.y = y;
+        amb.evento({ tipo: 'entra', x, y, p });
+        return;
+      }
       if (diretto || terra) {
         if (terra && p.rimbalzi > 0) {
           const nr = normale(x, y);
@@ -313,9 +399,10 @@
           return;
         }
         p.morto = true;
-        amb.evento({ tipo: 'esplosione', x, y, raggio: c.raggio, danno: c.danno, diretto, p });
+        amb.evento(esplosione(p, x, y, diretto));
         return;
       }
+      p.percorso += Math.hypot(x - px, y - py);
       px = x; py = y;
     }
     p.x = x1;
@@ -331,7 +418,7 @@
           amb.aggiungi({
             x: p.x, y: p.y, vx: p.vx + f * d.apertura * 4, vy: d.quando === 'apice' ? p.vy : p.vy * 0.85 - 40,
             colpo: d.colpo, prop: p.prop, t: 1, rimbalzi: 0, apice: p.y, diviso: true, morto: false,
-            rot: Math.random() * 6, scia: [],
+            rot: (k * 2.3) % 6, scia: [], percorso: p.percorso,
           });
         }
         amb.evento({ tipo: 'divide', x: p.x, y: p.y, p });
@@ -383,7 +470,7 @@
       stato.terreno = TB.terreno.nuovoTerreno(seme + tentativi * 7919, scelte.tipo);
       stato.giocatori = [];
       const liv = scelte.liv || (modo === 'demo' ? 6 : livello);
-      const mezzoCpu = () => Object.keys(MEZZI)[Math.floor(Math.random() * 3)];
+      const mezzoCpu = () => { const k = Object.keys(MEZZI); return k[Math.floor(Math.random() * k.length)]; };
       stato.giocatori.push(nuovoGiocatore({
         id: 0, personaggio: 'tino', squadra: 0, mezzo: scelte.mezzo0 || mezzoCpu(), cpu: modo === 'demo' || !!scelte.cpu0, liv: scelte.liv0 || liv,
       }));
@@ -582,6 +669,24 @@
 
   function passoGiocatore(g, dt) {
     if (g.annegato) return;
+    if (g.bolla) {
+      // dentro la bollona: sale e il vento la porta
+      const b = g.bolla;
+      b.t -= dt;
+      const nx = clamp(g.x + stato.vento * BOLLA.vento * dt, 16, W - 16);
+      if (!corpoBloccato(nx, g.y)) g.x = nx;
+      if (!solido(g.x, g.y - 60) && g.y > -200) g.y -= b.salita * dt;
+      else b.t = Math.min(b.t, 0);
+      if (b.t <= 0) {
+        g.bolla = null;
+        g.daBolla = true;
+        g.vy = 0;
+        g.vx = 0;
+        spruzzi(g.x, g.y - 30, 10);
+        suoni.scoppio();
+      }
+      return;
+    }
     if (g.aTerra) {
       if (appoggiato(g.x, g.y)) return;
       g.aTerra = false;
@@ -608,6 +713,12 @@
         if (appoggiato(g.x, g.y)) {
           g.aTerra = true;
           if (g.vy > 300 && !g.morto) polvere(g.x, g.y, 6);
+          if (g.daBolla) {
+            // caduta dalla bollona
+            g.daBolla = false;
+            const d = Math.round(Math.max(0, g.vy - BOLLA.vSicura) * BOLLA.danno);
+            if (d > 0 && !g.morto) colpisci(g, d, g.bollaDi);
+          }
           g.vy = 0;
           g.vx = 0;
           g.inclinazione = inclinazioneSuolo(g.x, g.y);
@@ -657,9 +768,12 @@
     else if (e.tipo === 'fuori') mostraMessaggio('Fuori!', 0.9);
     else if (e.tipo === 'rimbalzo') { suoni.rimbalzo(); polvere(e.x, e.y, 3); }
     else if (e.tipo === 'divide') { suoni.divide(); fumo(e.x, e.y, 10, 4); }
+    else if (e.tipo === 'scavo') TB.terreno.scava(stato.terreno, e.x, e.y, e.raggio);
+    else if (e.tipo === 'entra' || e.tipo === 'sbuca') { suoni.trivella(); zolle(e.x, e.y, 14); }
   }
 
   function esplodi(e) {
+    if (e.p && e.p.colpo.teletrasporto) { teletrasporta(e.p.prop, e.x, e.y); return; }
     TB.terreno.scava(stato.terreno, e.x, e.y, e.raggio);
     const k = clamp(e.raggio / 60, 0.4, 1.5);
     suoni.bum(k);
@@ -682,7 +796,15 @@
         g.aTerra = false;
       }
       if (d > 0 && !g.morto) colpisci(g, d, autore);
+      if (e.bolla && !g.morto && dist(e.x, e.y, g.x, g.y - FISICA.corpoY) < e.bolla.presa) {
+        g.bolla = { t: e.bolla.tempo, salita: e.bolla.salita };
+        g.bollaDi = autore;
+        g.aTerra = false;
+        g.vx = 0;
+        g.vy = 0;
+      }
     }
+    if (e.bolla) suoni.bolla();
   }
 
   function colpisci(g, d, autore) {
@@ -875,6 +997,15 @@
       if (!tot) continue;
       if (h.squadra !== g.squadra) v += Math.min(tot, h.vita) + (tot >= h.vita ? 500 : 0);
       else v -= tot * 1.6;
+    }
+    for (const e of eventi) {
+      if (!e.bolla) continue;
+      for (const h of stato.giocatori) {
+        if (h.morto) continue;
+        const q = h === g ? { x, y } : h;
+        if (dist(e.x, e.y, q.x, q.y - FISICA.corpoY) >= e.bolla.presa) continue;
+        v += h.squadra !== g.squadra ? BOLLA.stima : -BOLLA.stima * 1.6;
+      }
     }
     if (v === 0 && eventi.length) {
       // nessun danno: meglio cadere vicino a un nemico
@@ -1435,9 +1566,112 @@
       ctx.lineWidth = 5;
       ctx.strokeStyle = '#3f7d2c';
       ctx.stroke();
+    } else if (tipo === 'cannone') {
+      // affusto di legno con la canna di latta e un tappo in bocca
+      ctx.save();
+      ctx.translate(8, -30);
+      ctx.rotate(-a);
+      const k = 1 - tiro * 0.15;
+      rett(-14, -9, 46 * k, 18, 6, '#5d87a8');
+      rett(32 * k - 2, -11, 8, 22, 3, '#3f6584');
+      if (tiro < 0.95) {
+        ctx.beginPath();
+        ctx.rect(36 * k, -6, 8, 12);
+        ctx.fillStyle = '#d9a86a';
+        ctx.fill();
+        bordo(2);
+        ctx.stroke();
+      }
+      ctx.restore();
+      rett(-30, -20, 50, 12, 5, '#b9814a');
+      ruota(-18, -9, 10);
+      ruota(10, -9, 10);
+    } else if (tipo === 'talpa') {
+      // carrello cingolato con la punta a spirale sul braccio
+      rett(-30, -14, 60, 12, 6, '#5a5f6b');
+      for (let i = -24; i <= 24; i += 12) ruota(i, -8, 5);
+      rett(-26, -36, 44, 24, 8, '#c98a3c');
+      ctx.save();
+      ctx.translate(12, -30);
+      ctx.rotate(-a);
+      rett(0, -5, 20, 10, 3, '#7a4a22');
+      ctx.translate(22, 0);
+      ctx.beginPath();
+      ctx.moveTo(30, 0);
+      ctx.lineTo(0, -11);
+      ctx.lineTo(0, 11);
+      ctx.closePath();
+      ctx.fillStyle = '#b9c2cc';
+      ctx.fill();
+      bordo();
+      ctx.stroke();
+      const giro = (stato.tempo * (tiro > 0 ? 6 : 1.5)) % 1;
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const q = (i + giro) / 3;
+        ctx.moveTo(q * 30, -11 * (1 - q));
+        ctx.lineTo(q * 30 + 5, 11 * (1 - q - 0.17));
+      }
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    } else if (tipo === 'bolle') {
+      // tinozza di sapone con il cerchio per soffiare le bolle
+      rett(-28, -20, 52, 11, 5, '#c98a3c');
+      ruota(-17, -8, 8);
+      ruota(13, -8, 8);
+      ctx.beginPath();
+      ctx.moveTo(-14, -42);
+      ctx.lineTo(16, -42);
+      ctx.lineTo(12, -20);
+      ctx.lineTo(-10, -20);
+      ctx.closePath();
+      ctx.fillStyle = '#7fc4e8';
+      ctx.fill();
+      bordo();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(1, -42, 15, 4, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#e8f7ff';
+      ctx.fill();
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(4, -44);
+      ctx.rotate(-a);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(26, 0);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#3a2210';
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#e8553f';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(36, 0, 10, 12 + tiro * 3, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(200, 235, 255, 0.5)';
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#e8553f';
+      ctx.stroke();
+      ctx.restore();
+      // bollicine che salgono
+      for (let i = 0; i < 3; i++) {
+        const t = (stato.tempo * 0.5 + i / 3) % 1;
+        ctx.beginPath();
+        ctx.arc(-6 + i * 8 + Math.sin(t * 9 + i) * 3, -46 - t * 26, 2 + i, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(220, 240, 255, ${0.8 * (1 - t)})`;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(79, 163, 217, ${1 - t})`;
+        ctx.stroke();
+      }
     }
   }
-  const SEDILE = { catapulta: { x: -16, y: -22 }, fionda: { x: -12, y: -20 }, mortaio: { x: -24, y: -18 } };
+  const SEDILE = {
+    catapulta: { x: -16, y: -22 }, fionda: { x: -12, y: -20 }, mortaio: { x: -24, y: -18 },
+    cannone: { x: -20, y: -20 }, talpa: { x: -18, y: -26 }, bolle: { x: -16, y: -20 },
+  };
 
   function immagineDi(g) {
     if (g.personaggio === 'gino') return IMG.gino;
@@ -1502,6 +1736,22 @@
     disegnaPersonaggioLocale(g, S);
     disegnaMezzo(g.mezzo, aLocale, g.carica ? g.potenza : 0);
     ctx.restore();
+    if (g.bolla) {
+      const r = 58 + Math.sin(stato.tempo * 5) * 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(g.x, g.y - 30, r, r * 0.95, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(220, 200, 255, 0.28)';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(155, 111, 214, 0.9)';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(g.x - r * 0.4, g.y - 30 - r * 0.45, r * 0.16, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fill();
+      ctx.restore();
+    }
   }
   function disegnaPersonaggioLocale(g, S) {
     // si disegna nel sistema già specchiato: annulliamo la specchiatura per l'immagine
@@ -1616,7 +1866,9 @@
       ctx.fill();
     }
     ctx.restore();
-    disegnaOggetto(c.disegno, p.x, p.y, c.dimensione, p.rot);
+    let rot = p.rot;
+    if (c.disegno === 'trivella') rot = p.scava ? Math.atan2(p.scava.dy, p.scava.dx) : Math.atan2(p.vy, p.vx);
+    disegnaOggetto(c.disegno, p.x, p.y, c.dimensione, rot);
   }
 
   function disegnaOggetto(tipo, x, y, r, rot) {
@@ -1652,6 +1904,55 @@
       ctx.beginPath();
       ctx.arc(-r * 0.3, -r * 0.35, r * 0.25, 0, Math.PI * 2);
       ctx.fillStyle = '#c4cad3';
+      ctx.fill();
+    } else if (tipo === 'tappo') {
+      // tappo di sughero visto di lato
+      ctx.beginPath();
+      ctx.moveTo(-r * 1.1, -r * 0.75);
+      ctx.lineTo(r * 1.1, -r * 0.95);
+      ctx.lineTo(r * 1.1, r * 0.95);
+      ctx.lineTo(-r * 1.1, r * 0.75);
+      ctx.closePath();
+      ctx.fillStyle = '#d9a86a';
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#9a6232';
+      for (const [a, b] of [[-0.5, -0.3], [0.3, 0.35], [0.6, -0.4], [-0.2, 0.4]]) {
+        ctx.beginPath();
+        ctx.arc(a * r, b * r, r * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (tipo === 'trivella') {
+      // punta a spirale, rivolta in avanti (+x)
+      ctx.beginPath();
+      ctx.moveTo(r * 1.6, 0);
+      ctx.lineTo(-r * 0.6, -r * 0.8);
+      ctx.lineTo(-r * 0.6, r * 0.8);
+      ctx.closePath();
+      ctx.fillStyle = '#b9c2cc';
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const k = i / 3;
+        ctx.moveTo(-r * 0.6 + k * r * 2.2, -r * 0.8 * (1 - k));
+        ctx.lineTo(-r * 0.6 + (k + 0.2) * r * 2.2, r * 0.8 * (1 - k - 0.2));
+      }
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      rett(-r * 1.3, -r * 0.55, r * 0.75, r * 1.1, 2, '#e07a1c');
+    } else if (tipo === 'bolla' || tipo === 'bollona') {
+      ctx.rotate(-rot);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = tipo === 'bollona' ? 'rgba(220, 200, 255, 0.45)' : 'rgba(200, 235, 255, 0.45)';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = tipo === 'bollona' ? '#9b6fd6' : '#4fa3d9';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(-r * 0.35, -r * 0.35, r * 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.fill();
     } else if (tipo === 'zucca' || tipo === 'spicchio') {
       ctx.beginPath();
