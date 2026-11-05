@@ -1400,7 +1400,7 @@
   function disegnaAliante(x, y, k, rot, strappata) {
     const im = strappata && ALIANTE.strappato.ok ? ALIANTE.strappato : ALIANTE.intero;
     if (!im.ok) return false;
-    const w = 130 * k;
+    const w = 150 * k;
     const h = w * im.naturalHeight / im.naturalWidth;
     ctx.save();
     ctx.translate(x, y);

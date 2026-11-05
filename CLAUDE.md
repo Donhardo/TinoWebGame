@@ -498,7 +498,8 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   entrambe le mosse sono sicure): 16 voli su 16 fino a 3000 m senza strappi. Il
   copione semplice che mira solo al varco invece cade ogni tanto oltre i 1900 m. Le
   persone vere reagiscono peggio dei copioni, quindi si arriva meno lontano.
-- **Disegni dipinti (facoltativi)**: `fondali/prato.png`, `fondali/bosco.png`,
+- **Disegni dipinti** (fatti con Gemini, ci sono già; se un file mancasse resterebbe
+  la grafica disegnata nel codice): `fondali/prato.png`, `fondali/bosco.png`,
   `fondali/cielo.png` (uno per tappa, 16:9, es. 1600 × 900) e `aliante.png`,
   `aliante-strappato.png` (la foglia-aliante vista di lato, sfondo trasparente, con il
   manubrio al centro del bordo inferiore: è il punto a cui si tiene Gino). Se un file
@@ -511,6 +512,12 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   nel terzo basso, centro sgombro (lì passano ostacoli e Gino), cielo semplice in alto;
   per l'aliante sfondo magenta pieno da togliere poi (rendere trasparente, ritagliare,
   ottimizzare come gli altri PNG).
+  Gemini li ha dati in WebP da 1024 px: prato e cielo avevano ai lati una striscia
+  ripetuta (tagliata: x 82-940 e 130-893), il bosco una fascia di cielo piatto con una
+  riga dura in cima (tagliata: da y 108); palette a 256 colori. Aliante: magenta tolto
+  calcolando la trasparenza da quanto è magenta il pixel (e ripulendo i bordi),
+  ritagliato, allargato perché il manubrio stia al centro, 512 px di larghezza; in
+  gioco è largo 150 px. Gli ostacoli sono ancora disegnati nel codice.
 - **Prove automatiche**: `window.ginoVolante` (`stato`, `avvia(seme)`, `premi`,
   `aggiorna`, `centroOstacolo`, `urtaOstacolo`, tabelle); con `stato.test = true` il
   gioco non avanza da solo e non apre pannelli. I copioni non sono nel repository.
