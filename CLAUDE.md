@@ -329,7 +329,9 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   palette a 256 colori, ~450 KB). Si disegna un po' più grande dello schermo e
   scorre piano con la camera. Se l'immagine non c'è, resta il fondale disegnato
   nel codice (`nuovoFondale`: montagne, colline con alberi, nuvole, sole).
-  Da fare per la tappa 3: spiaggia, bosco d'autunno, uffici della Tari.
+  Già salvati, da agganciare nella tappa 3: `spiaggia.png`, `autunno.png`,
+  `uffici.png` (interno chiuso, senza cielo, con le scritte TARI; in basso una
+  fascia scura: negli uffici al posto dell'acqua andrà un'altra cosa).
 - **Partenze**: punti in piano lontani tra loro (un terzo sinistro e un terzo
   destro); la mappa si scarta se l'IA non trova un tiro che colpisce da
   entrambe le parti senza vento.
