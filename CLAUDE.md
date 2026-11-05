@@ -525,7 +525,7 @@ dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png` (pi�
     alla foto di Gino con la `posa` (centro del bordo basso, larghezza e rotazione in
     pixel della foto 381 × 470), come gli accessori di Tino nell'avventura; seguono
     rotazione e schiacciamento di Gino.
-  - Grafica: per ora disegni provvisori nel codice (`fogliaCodice`, `cappelloCodice`,
+  - Grafica: disegni nel codice (`fogliaCodice`, `cappelloCodice`,
     disegnati una volta su una tela a parte). Quando ci sono, il gioco usa i PNG
     dipinti `foglie/<id>.png`, `foglie/<id>-strappata.png` (la quercia è l'aliante) e
     `cappelli/<id>.png` (bordo basso del cappello in fondo, al centro); i prompt per
@@ -624,9 +624,9 @@ dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png` (pi�
   (`leggi('ghiande-totali', 5000)`) e i traguardi sono aperti (`if (x.traguardo)
   return true;` in `posseduto`).
 - **Stato**: completo, con grafica dipinta (fondali, aliante, ostacoli), musica,
-  negozio e tunnel di nuvole. Mancano i disegni dipinti delle foglie e dei cappelli del
-  negozio (prompt per Gemini già passati; per ora disegni provvisori nel codice).
-  Possibili seguiti, non ancora decisi: fondali più grandi (quelli di Gemini sono da
+  negozio e tunnel di nuvole. Foglie e cappelli del negozio restano disegnati nel
+  codice (decisione presa: vanno bene così; i PNG dipinti sarebbero comunque usati se
+  aggiunti). Possibili seguiti, non ancora decisi: fondali più grandi (quelli di Gemini sono da
   1024 px, un po' sfocati sul telefono in verticale), altre tappe oltre il cielo.
 
 ## Per il prossimo gioco
