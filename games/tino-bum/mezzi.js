@@ -58,11 +58,11 @@
       stelle: { potenza: 3, gittata: 3, vento: 3, movimento: 3 },
       colpi: [
         {
-          nome: 'Ghianda', raggio: 44, danno: 240, vento: 1, gravita: 1, ritardo: 100,
+          nome: 'Ghianda', raggio: 44, danno: 200, vento: 1, gravita: 1, ritardo: 100,
           disegno: 'ghianda', dimensione: 8,
         },
         {
-          nome: 'Tre ghiande', raggio: 28, danno: 105, vento: 1, gravita: 1, ritardo: 115,
+          nome: 'Tre ghiande', raggio: 28, danno: 95, vento: 1, gravita: 1, ritardo: 115,
           disegno: 'ghianda', dimensione: 6,
           lancio: { n: 3, apertura: 4, potenze: [1, 0.97, 1.03] },
         },
@@ -77,10 +77,11 @@
       nome: 'Fionda gigante',
       descrizione: 'Tiri tesi e veloci, il vento quasi non la sposta. Leggera da spostare.',
       velMax: 1060, angoli: [-10, 70], energia: 190, peso: 0.9,
+      erroreIA: 0.4,  // il computer sbaglia meno della metà: con i tiri tesi ogni grado conta molto
       stelle: { potenza: 2, gittata: 5, vento: 5, movimento: 5 },
       colpi: [
         {
-          nome: 'Sasso', raggio: 32, danno: 235, vento: 0.35, gravita: 1, ritardo: 90,
+          nome: 'Sasso', raggio: 38, danno: 235, vento: 0.35, gravita: 1, ritardo: 90,
           disegno: 'sasso', dimensione: 7,
         },
         {

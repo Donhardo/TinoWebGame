@@ -440,3 +440,19 @@ kbd {
 @media (max-width: 560px) {
   .tappe { grid-template-columns: 1fr; }
 }
+
+/* ---------- Scelta dell'ambientazione (due giocatori) ---------- */
+.ambienti { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 8px; }
+.ambienti span { font-weight: 600; color: var(--marrone); margin-right: 4px; }
+.ambiente {
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 2px solid #d9c3a0;
+  background: #fffaf0;
+  color: var(--marrone);
+  cursor: pointer;
+}
+.ambiente:hover, .ambiente:focus-visible { border-color: #e8a514; outline: none; }
+.ambiente.scelto { border-color: #e8a514; background: #fff3cf; box-shadow: 0 0 0 2px rgba(232, 165, 20, 0.35); }

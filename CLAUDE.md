@@ -303,7 +303,7 @@ Artiglieria a turni (meccaniche da classico dei carri armati a turni): ogni
 giocatore guida un mezzo su una mappa di isole generata a caso, sceglie alzo e
 potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 (tabelle `MEZZI` con i colpi e `OGGETTI`), `terreno.js` (generazione, crateri, fondali),
-`gioco.js` (turni, fisica, IA, disegno, pannelli).
+`suoni.js` (tutti i suoni), `gioco.js` (turni, fisica, IA, disegno, pannelli).
 - **Decisioni prese**: titolo "Tino Bum!"; mezzi ricchi con caratteristiche
   proprie; IA brava ma battibile; mappe con isole e ostacoli generate a caso;
   fondali in stile cartone (per ora disegnati nel codice: se non bastano, si
@@ -313,7 +313,7 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 - **Tappe**: 1 motore (fatta: terreno, turni, vento, 3 mezzi, IA, due
   giocatori); 2 contenuti (fatta: cannone a tappi, talpa trivella, soffiabolle;
   oggetti; campagna contro gli agenti con l'ispettore capo); 3 rifinitura
-  (ambientazioni: prato, spiaggia, uffici della Tari…; fondali; suoni; taratura).
+  (fatta: ambientazioni, suoni, ritaratura dei mezzi).
 - **Mondo**: 1600 × 900 pixel, acqua da y = 846 (chi ci cade perde). Schermo
   logico 960 × 540; la camera inquadra i giocatori (e i colpi in volo), zoom con
   rotella o + −. Gravità 500, vento fino a ±10 (13 px/s² per punto).
@@ -324,13 +324,39 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   radici); `scava` toglie i pixel e ripassa il bordo del cratere.
 - **Fondali**: dipinti con Gemini (prompt di stile comune + uno per ambientazione:
   sfondo lontano senza primo piano, orizzonte nel terzo basso, centro sgombro,
-  fondo che sfuma nell'acqua), in `games/tino-bum/fondali/` (`prato.png`, 1600 × 900,
-  palette a 256 colori, ~450 KB). Si disegna un po' più grande dello schermo e
-  scorre piano con la camera. Se l'immagine non c'è, resta il fondale disegnato
-  nel codice (`nuovoFondale`: montagne, colline con alberi, nuvole, sole).
-  Già salvati, da agganciare nella tappa 3: `spiaggia.png`, `autunno.png`,
-  `uffici.png` (interno chiuso, senza cielo, con le scritte TARI; in basso una
-  fascia scura: negli uffici al posto dell'acqua andrà un'altra cosa).
+  fondo che sfuma nell'acqua), in `games/tino-bum/fondali/` (`prato.png`,
+  `spiaggia.png`, `autunno.png`, `uffici.png`, 1600 × 900, palette a 256 colori).
+  Si disegna un po' più grande dello schermo e scorre piano con la camera. Se
+  l'immagine non c'è, resta il fondale disegnato nel codice (`nuovoFondale`).
+- **Ambientazioni** (tabella `AMBIENTI` in `gioco.js`, colori del terreno in
+  `PALETTE` in `terreno.js`): prato (erba), spiaggia (sabbia, mare turchese),
+  bosco in autunno (foglie arancioni, lago; foglie che volano col vento), uffici
+  della Tari (moquette sopra pile di fogli, roccia di metallo, post-it al posto dei
+  sassolini; al posto dell'acqua una vasca d'inchiostro viola dei timbri; fogli che
+  volano col vento; un velo scuro sul fondale, che è molto pieno). Foglie e fogli
+  sono solo decorazione, ma fanno vedere il vento. Contro Gino l'ambientazione
+  cambia a ogni livello (prato, spiaggia, autunno, uffici, poi da capo); in due si
+  sceglie nella schermata dei mezzi ("Dove:", ricordata in `localStorage`, o a
+  caso); campagna: tappe 1 e 4 prato, 2 spiaggia, 3 autunno, 5 e 6 uffici.
+- **Suoni** (`suoni.js`, `TB.audio`): tutti sintetizzati con Web Audio, nessun
+  file; passano da un compressore. Effetti brevi in `TB.audio.effetti` (in
+  `gioco.js` si chiamano con `suoni.nome(...)`, che controlla se si può suonare:
+  non muto, non nella partita dimostrativa del menu, non nelle prove): tiro
+  diverso per ogni mezzo (e per la ghianda magica), esplosione a tre strati
+  (botta, schiocco, rombo, più le zolle che ricadono) secondo la grandezza,
+  spruzzo nell'acqua o "blop" nell'inchiostro, voce di chi è colpito (più acuta
+  per Gino, più bassa per gli agenti e il capo), fischio che scende al KO, tonfo
+  quando un mezzo atterra, campanello del turno (più piano per il computer), tic
+  tac negli ultimi 5 s dei turni umani, "tempo scaduto", speciale pronto, un
+  suono per ogni oggetto, parata dell'ombrello, musichette di vittoria e
+  sconfitta. Suoni continui in `TB.audio.continui`, aggiornati a ogni fotogramma
+  da `aggiornaAudio`: vento (a raffiche, più forte e acuto col vento), carica
+  della potenza (sale di tono), motore del mezzo mentre si sposta, fischio del
+  colpo in volo (sale mentre sale, scende mentre cade; le bolle ondeggiano),
+  trivella sotto terra; rumori di fondo dell'ambientazione (uccellini nel prato,
+  onde e gabbiani sulla spiaggia, foglie nel bosco, macchine da scrivere,
+  telefono e timbri negli uffici). In pausa, nel menu e con la scheda nascosta
+  tace tutto. M o il pulsante in alto tolgono i suoni (`localStorage` `muto`).
 - **Partenze**: punti in piano lontani tra loro (un terzo sinistro e un terzo
   destro); la mappa si scarta se l'IA non trova un tiro che colpisce da
   entrambe le parti senza vento.
@@ -357,9 +383,13 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   pieno fino a 350-450 px di strada, poi cala fino al 40-50%), talpa trivella
   (trivella, scavafosse, speciale galleria), soffiabolle (bolle con vento ×2 e
   gravità dimezzata, bollicine che si dividono, speciale bollona). Girone di
-  partite simulate al livello 5 (10 per coppia): la fionda resta il mezzo più
-  debole in mano al computer (i suoi tiri tesi soffrono l'errore sull'alzo),
-  soffiabolle e catapulta i più forti. Disegnati nel codice (`disegnaMezzo`), con il personaggio seduto
+  partite simulate al livello 5 (10 per coppia, 50 partite per mezzo, ±14%):
+  prima della ritaratura la fionda vinceva il 18% (i suoi tiri tesi soffrono
+  l'errore sull'alzo) e la catapulta il 74%. Ritaratura: `erroreIA: 0.4` per la
+  fionda (moltiplica l'errore del computer, solo per quel mezzo), sasso con
+  raggio 38 (era 32), ghianda della catapulta 200 di danno (era 240) e tre
+  ghiande 95 (era 105). Dopo: catapulta 50%, fionda 48%, mortaio 58%, cannone
+  52%, talpa 42%, soffiabolle 50%. Disegnati nel codice (`disegnaMezzo`), con il personaggio seduto
   dietro (`SEDILE`).
 - **IA** (tabella `IA`): prova davvero i tiri con la stessa fisica del gioco
   (`simulaTiro`, `cercaTiro`: tutti gli alzi e le potenze, poi affina), sceglie
@@ -385,25 +415,25 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   (`vitaMax`). Si vince se resta in piedi qualcuno della squadra di Tino.
   Livelli degli agenti 2, 3, 5, 4, 3, 6; nella tappa 5 i tre agenti hanno 550 di vita
   (con 1000 tirano troppo spesso e la tappa era quasi impossibile), l'ispettore capo
-  1550. Tarata con Tino al computer (livello 6): vince ~58%, ~67%, ~60%, ~70%, ~59%,
-  ~55% delle partite (12-32 partite per tappa, quindi ±15%).
+  1550. Tarata con Tino al computer (livello 6, mezzo a turno tra tutti): dopo la
+  ritaratura dei mezzi vince ~72%, ~67%, ~72%, ~78%, ~50%, ~56% delle partite
+  (18 partite per tappa, quindi ±15%; prima era ~58%, ~67%, ~60%, ~70%, ~59%, ~55%).
 - **Espressioni**: Tino arrabbiato quando è colpito, con poca vita o quando il
   nemico è quasi KO; ferito sui colpi da 180 in su; ko quando perde. Gino trema
   quando è colpito, saltella quando colpisce, cade ruotato quando perde.
 - **Provarlo su Claude**: come per l'avventura, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
-  `css/sito.css`, `stile.css`, `mezzi.js`, `terreno.js`, `gioco.js` (con
+  `css/sito.css`, `stile.css`, `mezzi.js`, `terreno.js`, `suoni.js`, `gioco.js` (con
   `BASE = 'assets/'` e `tappaCampagna = Math.max(6, ...)` per sbloccare tutte le
   tappe), `fondali/` e `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica
   con `files` e `root`. Le partite simulate (computer contro computer a vari
   livelli, con `stato.test = true`) si fanno girare con Playwright; i copioni
   non sono nel repository.
-- **Prossimo passo: tappa 3** (rifinitura): ambientazioni con i fondali già
-  salvati (spiaggia, autunno, uffici della Tari: negli uffici al posto dell'acqua
-  serve un'altra cosa), suoni, ritaratura generale (es. la fionda in mano al
-  computer).
+- **Stato**: le tre tappe sono fatte. Possibili seguiti, non ancora decisi: una
+  musica di sottofondo, fondali di riserva disegnati nel codice per ogni
+  ambientazione, altre tappe della campagna.
 - **Prove automatiche**: `window.tinoBum` (`stato`, `iniziaPartita(modo,
-  livello, { cpu0, liv, liv0, mezzo0, mezzo1, oggetti0, oggetti1, seme, tipo })`
+  livello, { ambiente, cpu0, liv, liv0, mezzo0, mezzo1, oggetti0, oggetti1, seme, tipo })`
   (modo `cpu`, `due`, `campagna` con il numero della tappa, `demo`), `usaOggetto`, `aggiorna`,
   `simulaTiro`, `cercaTiro`, `pianificaIA`); con `stato.test = true` il gioco
   non avanza da solo e si possono simulare partite intere chiamando `aggiorna`.

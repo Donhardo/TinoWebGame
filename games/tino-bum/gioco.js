@@ -69,10 +69,39 @@
     timbro: caricaImg('agenti-tari/agente-timbro.svg'),
     capo: caricaImg('agenti-tari/ispettore-capo.svg'),
   };
-  // fondale dipinto (se non si carica, si usa quello disegnato nel codice)
-  const FONDALE = new Image();
-  FONDALE.src = 'fondali/prato.png';
-  const fondaleDipinto = () => FONDALE.complete && FONDALE.naturalWidth > 0;
+  // ambientazioni: fondale dipinto, liquido in fondo al mondo (chi ci cade perde)
+  // e cose che volano col vento; i colori del terreno sono in terreno.js
+  const AMBIENTI = {
+    prato: {
+      nome: 'Prato', fondale: 'fondali/prato.png',
+      liquido: { in: 'in acqua', dietro: '#5bb2e8', bordo: '#2c6fa8', davanti: 'rgba(38, 120, 196, 0.72)', schiuma: 'rgba(255, 255, 255, 0.85)', goccia: '#d6f0ff' },
+    },
+    spiaggia: {
+      nome: 'Spiaggia', fondale: 'fondali/spiaggia.png',
+      liquido: { in: 'in mare', dietro: '#4fd0d6', bordo: '#1d8a99', davanti: 'rgba(24, 158, 178, 0.7)', schiuma: 'rgba(255, 255, 255, 0.9)', goccia: '#dffbff' },
+    },
+    autunno: {
+      nome: 'Bosco in autunno', fondale: 'fondali/autunno.png',
+      liquido: { in: 'nel lago', dietro: '#86b6d6', bordo: '#3d6a90', davanti: 'rgba(58, 104, 160, 0.72)', schiuma: 'rgba(255, 236, 214, 0.85)', goccia: '#e6f2fb' },
+      volano: { cosa: 'foglia', quante: 26, colori: ['#ef8a2c', '#d9541e', '#f6b73c', '#b8432a'] },
+    },
+    uffici: {
+      nome: 'Uffici della Tari', fondale: 'fondali/uffici.png',
+      velo: 'rgba(28, 48, 44, 0.32)',  // il fondale è pieno di cose: si spinge indietro
+      // al posto dell'acqua: una vasca d'inchiostro dei timbri
+      liquido: { suono: 'inchiostro', in: "nell'inchiostro", dietro: '#5d4396', bordo: '#2a1a4a', davanti: 'rgba(50, 28, 96, 0.8)', schiuma: 'rgba(196, 176, 255, 0.75)', goccia: '#9b7ee0' },
+      volano: { cosa: 'foglio', quante: 12, colori: ['#ffffff', '#f4efe2', '#f6d36a'] },
+    },
+  };
+  const NOMI_AMBIENTI = Object.keys(AMBIENTI);
+  // fondali dipinti (se non si caricano, si usa quello disegnato nel codice)
+  const FONDALI = {};
+  const fondale = (k) => {
+    if (!FONDALI[k]) { FONDALI[k] = new Image(); FONDALI[k].src = AMBIENTI[k].fondale; }
+    return FONDALI[k];
+  };
+  const fondaleDipinto = () => { const f = fondale(stato.ambiente); return f.complete && f.naturalWidth > 0; };
+  const liquido = () => AMBIENTI[stato.ambiente].liquido;
   // gli agenti hanno la scritta TARI: non si specchiano
   const PERSONAGGI = {
     tino: { nome: 'Tino', colore: '#ffd59a', altezza: 58 },
@@ -85,27 +114,27 @@
   // campagna contro gli agenti della Tari: a ogni tappa si sblocca la successiva
   const CAMPAGNA = [
     {
-      nome: 'Il primo agente', liv: 2,
+      nome: 'Il primo agente', ambiente: 'prato', liv: 2,
       testo: "Un agente della Tari col retino è sbarcato sull'isola. Rimandalo a casa!",
       nemici: [{ chi: 'retino', mezzo: 'catapulta' }],
     },
     {
-      nome: 'Bolle e bollette', liv: 3,
+      nome: 'Bolle e bollette', ambiente: 'spiaggia', liv: 3,
       testo: "L'agente col timbro ha portato il soffiabolle: occhio al vento!",
       nemici: [{ chi: 'timbro', mezzo: 'bolle' }],
     },
     {
-      nome: 'Gino dà una mano', liv: 5, alleato: { mezzo: 'catapulta', liv: 5 },
+      nome: 'Gino dà una mano', ambiente: 'autunno', liv: 5, alleato: { mezzo: 'catapulta', liv: 5 },
       testo: 'Gli agenti adesso sono due, ma Gino si mette in squadra con Tino.',
       nemici: [{ chi: 'retino', mezzo: 'fionda' }, { chi: 'timbro', mezzo: 'cannone' }],
     },
     {
-      nome: 'Sotto i piedi', liv: 4,
+      nome: 'Sotto i piedi', ambiente: 'prato', liv: 4,
       testo: "Un agente con la talpa trivella scava gallerie sotto l'isola.",
       nemici: [{ chi: 'timbro', mezzo: 'talpa' }],
     },
     {
-      nome: 'La squadra della Tari', liv: 3, alleato: { mezzo: 'mortaio', liv: 7 },
+      nome: 'La squadra della Tari', ambiente: 'uffici', liv: 3, alleato: { mezzo: 'mortaio', liv: 7 },
       testo: 'Tre agenti tutti insieme! Sono meno robusti, ma tirano spesso: Tino e Gino contro la squadra della Tari.',
       nemici: [
         { chi: 'retino', mezzo: 'mortaio', vita: 550 }, { chi: 'timbro', mezzo: 'catapulta', vita: 550 },
@@ -113,7 +142,7 @@
       ],
     },
     {
-      nome: "L'ispettore capo", liv: 6, alleato: { mezzo: 'cannone', liv: 6 },
+      nome: "L'ispettore capo", ambiente: 'uffici', liv: 6, alleato: { mezzo: 'cannone', liv: 6 },
       testo: "Arriva l'ispettore capo in persona, con il mortaio e un agente di scorta.",
       nemici: [{ chi: 'capo', mezzo: 'mortaio', vita: 1550 }, { chi: 'timbro', mezzo: 'talpa' }],
     },
@@ -150,70 +179,41 @@
   }
 
   // ---------------------------------------------------------------- audio
-  let audio = null;
+  // i suoni sono in suoni.js; qui si decide quando si può suonare
   let muto = leggi('muto', false);
-  function contesto() {
-    if (muto || stato.modo === 'demo') return null;
-    try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
-      return audio;
-    } catch (e) { return null; }
+  const audioPermesso = () => !muto && stato.modo !== 'demo' && !stato.test;
+  const suoni = new Proxy(TB.audio.effetti, {
+    get: (E, k) => (...args) => { TB.audio.permetti(audioPermesso()); if (E[k]) E[k](...args); },
+  });
+  // suoni continui: vento, carica, motore, fischio dei colpi, rumori di fondo
+  const ascolto = { mosso: -1, chi: null, motoreT: 0, secondi: 99 };
+  function aggiornaAudio(dt) {
+    if (stato.test) return;
+    TB.audio.permetti(audioPermesso());
+    const g = stato.attivo;
+    const gioca = stato.fase === 'mira' || stato.fase === 'volo' || stato.fase === 'assesta' || stato.fase === 'fine';
+    // il motore si sente mentre il mezzo si sposta (anche quello del computer)
+    if (g && g === ascolto.chi && g.mosso !== ascolto.mosso && stato.fase === 'mira') ascolto.motoreT = 0.12;
+    ascolto.chi = g;
+    ascolto.mosso = g ? g.mosso : -1;
+    ascolto.motoreT = Math.max(0, ascolto.motoreT - dt);
+    // tic tac negli ultimi 5 secondi del turno
+    if (g && !g.cpu && stato.fase === 'mira') {
+      const sec = Math.ceil(stato.tempoTurno);
+      if (sec !== ascolto.secondi && sec <= 5 && sec > 0) suoni.tic(sec);
+      ascolto.secondi = sec;
+    } else ascolto.secondi = 99;
+    const p = stato.proiettili.find((q) => !q.morto);
+    TB.audio.continui({
+      attivo: gioca,
+      vento: stato.vento,
+      ambiente: stato.ambiente,
+      carica: g && g.carica && stato.fase === 'mira' ? g.potenza : null,
+      motore: ascolto.motoreT > 0 && g ? g.mezzo : null,
+      volo: p ? { vy: p.vy, bolla: /^bolla/.test(p.colpo.disegno || '') } : null,
+      scavo: !!(p && p.scava),
+    }, dt);
   }
-  function suono(freq, durata = 0.1, tipo = 'square', volume = 0.06, freqFine = null, ritardo = 0) {
-    const a = contesto();
-    if (!a) return;
-    const t = a.currentTime + ritardo;
-    const o = a.createOscillator();
-    const g = a.createGain();
-    o.type = tipo;
-    o.frequency.setValueAtTime(freq, t);
-    if (freqFine) o.frequency.exponentialRampToValueAtTime(freqFine, t + durata);
-    g.gain.setValueAtTime(volume, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + durata);
-    o.connect(g).connect(a.destination);
-    o.start(t);
-    o.stop(t + durata + 0.02);
-  }
-  let bufferRumore = null;
-  function rumore(durata, volume, filtro, filtroFine) {
-    const a = contesto();
-    if (!a) return;
-    if (!bufferRumore) {
-      bufferRumore = a.createBuffer(1, a.sampleRate, a.sampleRate);
-      const d = bufferRumore.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    }
-    const t = a.currentTime;
-    const s = a.createBufferSource();
-    s.buffer = bufferRumore;
-    const f = a.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.setValueAtTime(filtro, t);
-    f.frequency.exponentialRampToValueAtTime(filtroFine, t + durata);
-    const g = a.createGain();
-    g.gain.setValueAtTime(volume, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + durata);
-    s.connect(f).connect(g).connect(a.destination);
-    s.start(t);
-    s.stop(t + durata + 0.05);
-  }
-  const suoni = {
-    tiro: (p) => { suono(180 + p * 220, 0.18, 'triangle', 0.07, 600 + p * 500); rumore(0.15, 0.08, 2500, 400); },
-    bum: (k) => { rumore(0.5 + k * 0.4, 0.22 + k * 0.1, 1800, 80); suono(90, 0.35, 'sine', 0.12, 40); },
-    rimbalzo: () => suono(300, 0.12, 'triangle', 0.07, 700),
-    splash: () => { rumore(0.45, 0.12, 3000, 300); suono(500, 0.2, 'sine', 0.04, 150); },
-    ahi: () => suono(700, 0.15, 'square', 0.035, 380),
-    turno: () => { suono(660, 0.08, 'triangle', 0.06); suono(880, 0.12, 'triangle', 0.06, null, 0.09); },
-    divide: () => suono(1200, 0.08, 'square', 0.04, 500),
-    clic: () => suono(900, 0.03, 'square', 0.025),
-    trivella: () => { rumore(0.3, 0.07, 900, 200); suono(140, 0.25, 'sawtooth', 0.03, 90); },
-    bolla: () => suono(500, 0.25, 'sine', 0.06, 1100),
-    scoppio: () => { suono(1400, 0.05, 'square', 0.05, 300); rumore(0.08, 0.08, 4000, 1500); },
-    oggetto: () => { suono(784, 0.1, 'triangle', 0.06); suono(1175, 0.16, 'triangle', 0.06, null, 0.08); },
-    vittoria: () => [523, 659, 784, 1046].forEach((f, i) => suono(f, 0.18, 'triangle', 0.08, null, i * 0.12)),
-    sconfitta: () => [392, 330, 262, 196].forEach((f, i) => suono(f, 0.22, 'sawtooth', 0.045, null, i * 0.15)),
-  };
 
   // ---------------------------------------------------------------- stato
   const stato = {
@@ -223,6 +223,8 @@
     livello: 1,
     terreno: null,
     fondale: null,
+    ambiente: 'prato',
+    volano: [],
     giocatori: [],
     attivo: null,
     vento: 0,
@@ -522,9 +524,11 @@
     stato.modo = modo;
     stato.livello = livello;
     const seme = scelte.seme || (Math.random() * 1e9) | 0;
+    stato.ambiente = scegliAmbiente(modo, livello, scelte.ambiente);
+    fondale(stato.ambiente);
     let tentativi = 0;
     for (;;) {
-      stato.terreno = TB.terreno.nuovoTerreno(seme + tentativi * 7919, scelte.tipo);
+      stato.terreno = TB.terreno.nuovoTerreno(seme + tentativi * 7919, scelte.tipo, stato.ambiente);
       stato.giocatori = [];
       const tappa = modo === 'campagna' ? CAMPAGNA[livello - 1] : null;
       const liv = scelte.liv || (modo === 'demo' ? 6 : tappa ? tappa.liv : livello);
@@ -560,6 +564,7 @@
       if (++tentativi > 12) break;
     }
     stato.fondale = TB.terreno.nuovoFondale(seme);
+    stato.volano = [];
     stato.proiettili = [];
     stato.particelle = [];
     stato.messaggio = null;
@@ -570,6 +575,15 @@
     inquadra(true);
     if (modo !== 'demo') nascondiPannello();
     iniziaTurno();
+  }
+
+  // campagna: quello della tappa; contro Gino cambia a ogni livello; altrimenti
+  // quello scelto nel menu o a caso
+  function scegliAmbiente(modo, livello, scelto) {
+    if (AMBIENTI[scelto]) return scelto;
+    if (modo === 'campagna') return CAMPAGNA[livello - 1].ambiente;
+    if (modo === 'cpu') return NOMI_AMBIENTI[(livello - 1) % NOMI_AMBIENTI.length];
+    return NOMI_AMBIENTI[Math.floor(Math.random() * NOMI_AMBIENTI.length)];
   }
 
   // sceglie i punti di partenza: lontani tra loro, in piano, sopra l'acqua
@@ -654,7 +668,9 @@
     stato.zoomUtente = 1;
     g.ia = g.cpu ? { fase: 'pensa', t: IA.pensa * (0.7 + Math.random() * 0.6), piano: null } : null;
     mostraMessaggio(PERSONAGGI[g.personaggio].turno || 'Tocca a ' + g.nome + '!', 1.3);
-    suoni.turno();
+    suoni.turno(!g.cpu);
+    // il colpo speciale è appena diventato pronto
+    if (g.speciale >= 1 && !g.specialePronto) { g.specialePronto = true; if (!g.cpu) suoni.speciale(); }
     aggiornaPlancia(true);
   }
 
@@ -669,7 +685,7 @@
     if (g.colpo === 2 && g.speciale < 1) g.colpo = 0;
     g.ia = g.cpu ? { fase: 'pensa', t: IA.pensa * 0.6, piano: null } : null;
     mostraMessaggio('Secondo tiro!', 1.1);
-    suoni.turno();
+    suoni.turno(!g.cpu);
     aggiornaPlancia(true);
   }
 
@@ -683,7 +699,7 @@
     if (o.tipo === 'teletrasporto') {
       // si consuma solo quando si tira
       g.magica = true;
-      suoni.clic();
+      suoni.oggetto('teletrasporto');
       aggiornaPlancia(true);
       return true;
     }
@@ -703,7 +719,7 @@
     }
     stellineSu(g);
     mostraMessaggio(O.nome + '!', 1);
-    suoni.oggetto();
+    suoni.oggetto(o.tipo);
     aggiornaPlancia(true);
     return true;
   }
@@ -727,12 +743,12 @@
     g.tiri = (g.tiri || 0) + 1;
     g.tiroAndato = false;
     g.ritardo += colpo.ritardo * M.peso + g.mosso * TURNO.ritardoPasso;
-    if (colpo.speciale) { g.speciale = 0; g.colpo = 0; }
+    if (colpo.speciale) { g.speciale = 0; g.colpo = 0; g.specialePronto = false; }
     g.carica = false;
     g.potenza = 0;
     stato.fase = 'volo';
     stato.attesa = 0;
-    suoni.tiro(potenza);
+    suoni.tiro(g.mezzo, potenza, colpo);
     aggiornaPlancia(true);
   }
 
@@ -741,6 +757,7 @@
     g.carica = false;
     g.potenza = 0;
     mostraMessaggio('Tempo scaduto!', 1);
+    suoni.scaduto();
     stato.fase = 'assesta';
     stato.attesa = 0;
   }
@@ -778,10 +795,12 @@
   // ---------------------------------------------------------------- aggiornamento
   function aggiorna(dt) {
     stato.tempo += dt;
+    aggiornaAudio(dt);
     if (stato.fase === 'pausa') return;
     aggiornaMessaggio(dt);
     for (const g of stato.giocatori) aggiornaAnimazioni(g, dt);
     aggiornaParticelle(dt);
+    if (!stato.test) aggiornaVolano(dt);
     stato.scossa = Math.max(0, stato.scossa - dt * 2.5);
 
     stato.accumulo += dt;
@@ -877,7 +896,7 @@
       while (dy > 0) {
         if (appoggiato(g.x, g.y)) {
           g.aTerra = true;
-          if (g.vy > 300 && !g.morto) polvere(g.x, g.y, 6);
+          if (g.vy > 300 && !g.morto) { polvere(g.x, g.y, 6); suoni.atterra(); }
           if (g.daBolla) {
             // caduta dalla bollona
             g.daBolla = false;
@@ -909,10 +928,10 @@
     g.annegato = true;
     g.aTerra = true;
     spruzzi(g.x, ACQUA, 26);
-    suoni.splash();
+    suoni.splash(liquido().suono, true);
     if (!g.morto) {
       g.vita = 0;
-      mostraMessaggio(g.nome + ' è finito in acqua!', 1.6);
+      mostraMessaggio(g.nome + ' è finito ' + liquido().in + '!', 1.6);
       muore(g);
     }
   }
@@ -923,7 +942,7 @@
     g.vita = 0;
     g.caduta = 0.001;
     g.carica = false;
-    suoni.sconfitta();
+    suoni.ko(g.personaggio);
   }
 
   // ---------------------------------------------------------------- esplosioni
@@ -931,8 +950,8 @@
     if (e.tipo === 'esplosione') esplodi(e);
     else if (e.tipo === 'acqua') {
       spruzzi(e.x, ACQUA, 12);
-      suoni.splash();
-      if (e.p.colpo.teletrasporto) mostraMessaggio('La ghianda magica è in acqua!', 1.2);
+      suoni.splash(liquido().suono, false);
+      if (e.p.colpo.teletrasporto) mostraMessaggio('La ghianda magica è finita ' + liquido().in + '!', 1.2);
     } else if (e.tipo === 'fuori') mostraMessaggio('Fuori!', 0.9);
     else if (e.tipo === 'rimbalzo') { suoni.rimbalzo(); polvere(e.x, e.y, 3); }
     else if (e.tipo === 'divide') { suoni.divide(); fumo(e.x, e.y, 10, 4); }
@@ -988,7 +1007,7 @@
       g.aTerra = false;
       g.inclinazione = 0;
       stellineSu(g);
-      suoni.oggetto();
+      suoni.magica();
       mostraMessaggio('Teletrasporto!', 1);
       return;
     }
@@ -1005,14 +1024,14 @@
   }
 
   function colpisci(g, d, autore) {
-    if (g.ombrello) { d = Math.round(d / 2); g.ombrelloUsato = true; }
+    if (g.ombrello) { d = Math.round(d / 2); g.ombrelloUsato = true; suoni.parata(); }
     g.vita = Math.max(0, g.vita - d);
     g.colpitoT = 1.5;
     g.tremaT = 0.6;
     if (d >= 180) g.feritoT = 1.5;
     g.speciale = Math.min(1, g.speciale + d / 1000 * TURNO.specialeDanno);
     aggiungiParticella({ tipo: 'numero', x: g.x, y: g.y - 70, vy: -50, vita: 1.3, durata: 1.3, testo: '-' + d });
-    suoni.ahi();
+    suoni.ahi(g.personaggio, d);
     if (autore && autore !== g && autore.squadra !== g.squadra) {
       autore.festaT = 1.2;
       if (!autore.tiroAndato) { autore.tiroAndato = true; autore.aSegno = (autore.aSegno || 0) + 1; }
@@ -1256,8 +1275,10 @@
     const [b, c, min] = IA.scalaMinima;
     const s = Math.max(Math.max(min, b - c * (g.liv - 1)), Math.pow(IA.aggiusta, m.colpi));
     const M = MEZZI[g.mezzo];
-    piano.angolo = clamp(Math.round(piano.angolo + gauss() * scalaErrore(g.liv, IA.erroreAngolo) * s), M.angoli[0], M.angoli[1]);
-    piano.potenza = clamp(piano.potenza + gauss() * scalaErrore(g.liv, IA.errorePotenza) * s, 0.05, 1);
+    // i mezzi dai tiri tesi soffrono di più lo stesso errore: ne hanno uno più piccolo
+    const k = M.erroreIA || 1;
+    piano.angolo = clamp(Math.round(piano.angolo + gauss() * scalaErrore(g.liv, IA.erroreAngolo) * s * k), M.angoli[0], M.angoli[1]);
+    piano.potenza = clamp(piano.potenza + gauss() * scalaErrore(g.liv, IA.errorePotenza) * s * k, 0.05, 1);
   }
 
   function guidaIA(g, dt) {
@@ -1384,7 +1405,7 @@
 
   canvas.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.buttons) miraVerso(e); });
   canvas.addEventListener('pointerdown', (e) => {
-    contesto();
+    TB.audio.sblocca();
     miraVerso(e);
     if (e.pointerType === 'mouse' && e.button === 0 && turnoUmano()) mouseGiu = true;
   });
@@ -1402,7 +1423,7 @@
     if (TASTI_GIOCO.includes(e.code) && !pannelloAperto()) e.preventDefault();
     if (e.repeat && tasti.has(e.code)) return;
     tasti.add(e.code);
-    contesto();
+    TB.audio.sblocca();
     const g = turnoUmano();
     if (e.code === 'KeyP' || e.code === 'Escape') {
       if (stato.fase === 'pausa') riprendi();
@@ -1417,7 +1438,10 @@
   });
   window.addEventListener('keyup', (e) => tasti.delete(e.code));
   window.addEventListener('blur', () => { tasti.clear(); tieni.clear(); mouseGiu = false; if (inPartita()) pausa(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && inPartita()) pausa(); });
+  document.addEventListener('visibilitychange', () => {
+    TB.audio.sospendi(document.hidden);
+    if (document.hidden && inPartita()) pausa();
+  });
 
   function scegliColpo(g, i) {
     if (g.carica) return;
@@ -1431,7 +1455,7 @@
   // pulsanti della plancia (si tengono premuti)
   plancia.addEventListener('pointerdown', (e) => {
     const b = e.target.closest('[data-tieni]');
-    contesto();
+    TB.audio.sblocca();
     if (b) {
       e.preventDefault();
       tieni.add(b.dataset.tieni);
@@ -1550,6 +1574,7 @@
     if (stato.terreno.grotte.length) ctx.drawImage(stato.terreno.telaFondo, 0, 0);
     ctx.drawImage(stato.terreno.telaTerra, 0, 0);
     ctx.drawImage(stato.terreno.telaRoccia, 0, 0);
+    disegnaVolano();
     for (const g of stato.giocatori) disegnaGiocatore(g);
     if (stato.fase === 'mira' && stato.attivo) disegnaMira(stato.attivo);
     for (const p of stato.proiettili) disegnaProiettile(p);
@@ -1571,7 +1596,9 @@
       const vw = VW / cam.z;
       const fx = W > vw ? clamp(cam.x / (W - vw), 0, 1) : 0.5;
       const fy = clamp((cam.y + 260) / (260 + H - VH / cam.z + 1), 0, 1);
-      ctx.drawImage(FONDALE, -(w - VW) * fx, -(h - VH) * fy, w, h);
+      ctx.drawImage(fondale(stato.ambiente), -(w - VW) * fx, -(h - VH) * fy, w, h);
+      const velo = AMBIENTI[stato.ambiente].velo;
+      if (velo) { ctx.fillStyle = velo; ctx.fillRect(0, 0, VW, VH); }
       return;
     }
     const gr = ctx.createLinearGradient(0, 0, 0, VH);
@@ -1634,6 +1661,71 @@
     ctx.restore();
   }
 
+  // foglie (autunno) e fogli (uffici) che passano spinti dal vento: aiutano a
+  // capire da che parte tira; solo decorazione, non toccano niente
+  function aggiornaVolano(dt) {
+    const V = AMBIENTI[stato.ambiente].volano;
+    if (!V || !stato.terreno) return;
+    const cam = stato.camera;
+    const vw = VW / cam.z, vh = VH / cam.z;
+    const spinta = stato.vento * 9;
+    // a inizio partita sono già sparse per lo schermo, poi entrano dal lato da
+    // cui tira il vento (o dall'alto, se è quasi fermo)
+    const sparse = !stato.volano.length;
+    while (stato.volano.length < V.quante) {
+      const lato = Math.abs(stato.vento) < 1.5 ? 0 : stato.vento > 0 ? -1 : 1;
+      const daLato = !sparse && lato && Math.random() < 0.7;
+      stato.volano.push({
+        x: daLato ? (lato < 0 ? cam.x - 30 : cam.x + vw + 30) : cam.x + Math.random() * vw,
+        y: daLato ? cam.y + Math.random() * vh * 0.8 : sparse ? cam.y + Math.random() * vh * 0.9 : cam.y - 30 - Math.random() * vh * 0.3,
+        vx: 0, vy: 0, a: Math.random() * 6.3, va: (Math.random() - 0.5) * 6,
+        fase: Math.random() * 6.3, s: 0.7 + Math.random() * 0.6,
+        colore: V.colori[Math.floor(Math.random() * V.colori.length)],
+      });
+    }
+    const caduta = V.cosa === 'foglio' ? 28 : 40;
+    for (const q of stato.volano) {
+      q.fase += dt * 2.2;
+      q.vx += (spinta + Math.sin(q.fase) * 30 - q.vx) * Math.min(1, dt * 1.5);
+      q.vy = caduta + Math.cos(q.fase * 1.3) * 18;
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.a += q.va * dt;
+      q.fuori = q.y > ACQUA + 10 || q.x < cam.x - 80 || q.x > cam.x + vw + 80 || q.y > cam.y + vh + 60;
+    }
+    stato.volano = stato.volano.filter((q) => !q.fuori);
+  }
+  function disegnaVolano() {
+    const V = AMBIENTI[stato.ambiente].volano;
+    if (!V) return;
+    for (const q of stato.volano) {
+      ctx.save();
+      ctx.translate(q.x, q.y);
+      ctx.rotate(q.a);
+      // si girano su sé stesse: schiacciate in larghezza
+      ctx.scale(q.s * (0.35 + Math.abs(Math.sin(q.fase)) * 0.65), q.s);
+      ctx.beginPath();
+      if (V.cosa === 'foglio') ctx.rect(-8, -10, 16, 20);
+      else {
+        ctx.moveTo(0, -9);
+        ctx.quadraticCurveTo(8, -2, 0, 9);
+        ctx.quadraticCurveTo(-8, -2, 0, -9);
+      }
+      ctx.fillStyle = q.colore;
+      ctx.fill();
+      bordo(1.5, V.cosa === 'foglio' ? '#5a6662' : '#6a2a10');
+      ctx.stroke();
+      if (V.cosa === 'foglio') {
+        ctx.beginPath();
+        for (let r = -5; r <= 5; r += 5) { ctx.moveTo(-5, r); ctx.lineTo(5, r); }
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#9aa6a3';
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   function onda(x, t, davanti) {
     return ACQUA + Math.sin(x * 0.018 + t * (davanti ? 2.2 : 1.6)) * 5 + Math.sin(x * 0.043 - t * 1.3) * 3 + (davanti ? 10 : 0);
   }
@@ -1646,19 +1738,20 @@
     for (let x = x0; x <= x1; x += 12) ctx.lineTo(x, onda(x, t, davanti));
     ctx.lineTo(x1, H + 400);
     ctx.closePath();
+    const L = liquido();
     if (davanti) {
-      ctx.fillStyle = 'rgba(38, 120, 196, 0.72)';
+      ctx.fillStyle = L.davanti;
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.strokeStyle = L.schiuma;
       ctx.beginPath();
       for (let x = x0; x <= x1; x += 12) ctx.lineTo(x, onda(x, t, true));
       ctx.stroke();
     } else {
-      ctx.fillStyle = '#5bb2e8';
+      ctx.fillStyle = L.dietro;
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = '#2c6fa8';
+      ctx.strokeStyle = L.bordo;
       ctx.stroke();
     }
   }
@@ -1936,7 +2029,10 @@
     ctx.save();
     ctx.translate(x + dx, y + dy);
     ctx.rotate(rot);
-    ctx.scale(sx * (g.verso > 0 && !P.agente ? -1 : 1), sy);
+    // la foto di Tino guarda a destra, Gino è di fronte: si specchia chi
+    // guarderebbe dalla parte opposta a quella in cui spara il mezzo
+    const specchia = P.agente ? false : g.personaggio === 'tino' ? g.verso < 0 : g.verso > 0;
+    ctx.scale(sx * (specchia ? -1 : 1), sy);
     ctx.drawImage(img, -w / 2, -h, w, h);
     ctx.restore();
   }
@@ -2294,9 +2390,9 @@
       } else if (q.tipo === 'goccia') {
         ctx.beginPath();
         ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
-        ctx.fillStyle = '#d6f0ff';
+        ctx.fillStyle = liquido().goccia;
         ctx.fill();
-        bordo(1.5, '#2c6fa8');
+        bordo(1.5, liquido().bordo);
         ctx.stroke();
       } else if (q.tipo === 'fumo') {
         ctx.globalAlpha = k * 0.85;
@@ -2625,8 +2721,12 @@
     const titolo = scelta.modo === 'cpu' ? `Livello ${scelta.livello}: scegli il mezzo di Tino`
       : scelta.modo === 'campagna' ? `Tappa ${scelta.livello}: scegli il mezzo di Tino` : `${nome}, scegli il tuo mezzo`;
     const indietro = scelta.modo === 'campagna' ? 'campagna' : 'menu';
+    // in due si sceglie anche dove giocare
+    const dove = scelta.modo === 'due' && scelta.chi === 0 ? `<div class="ambienti"><span>Dove:</span>${
+      ['caso', ...NOMI_AMBIENTI].map((k) => `<button class="ambiente${scelta.ambiente === k ? ' scelto' : ''}" data-ambiente="${k}" aria-pressed="${scelta.ambiente === k}">${k === 'caso' ? 'A caso' : AMBIENTI[k].nome}</button>`).join('')
+    }</div>` : '';
     return `<div class="riquadro largo">
-      <h2>${titolo}</h2>
+      <h2>${titolo}</h2>${dove}
       <div class="mezzi">${schede}</div>
       <div class="scelte"><button class="bottone secondario" data-azione="${indietro}">Indietro</button></div>
     </div>`;
@@ -2746,13 +2846,24 @@
   }
 
   function apriScelta(modo, livello) {
-    scelta = { modo, livello, mezzi: [], oggetti: [], chi: 0 };
+    const ambiente = leggi('ambiente', 'caso');
+    scelta = { modo, livello, mezzi: [], oggetti: [], chi: 0, ambiente: AMBIENTI[ambiente] ? ambiente : 'caso' };
     mostraPannello(pannelloScelta());
   }
 
   pannello.addEventListener('click', (e) => {
     const tp = e.target.closest('[data-tappa]');
     if (tp && !tp.disabled) { suoni.clic(); apriScelta('campagna', Number(tp.dataset.tappa)); return; }
+    const am = e.target.closest('[data-ambiente]');
+    if (am && scelta) {
+      scelta.ambiente = am.dataset.ambiente;
+      scrivi('ambiente', scelta.ambiente);
+      suoni.clic();
+      mostraPannello(pannelloScelta());
+      const b = pannello.querySelector(`[data-ambiente="${scelta.ambiente}"]`);
+      if (b && !touch) b.focus({ preventScroll: true });
+      return;
+    }
     const m = e.target.closest('[data-mezzo-scelto]');
     if (m && scelta) {
       scelta.mezzi[scelta.chi] = m.dataset.mezzoScelto;
@@ -2788,6 +2899,7 @@
         ultimeScelte = { ...scelta, oggetti: scelta.oggetti.slice() };
         iniziaPartita(scelta.modo, scelta.livello, {
           mezzo0: scelta.mezzi[0], mezzo1: scelta.mezzi[1], oggetti0: scelta.oggetti[0], oggetti1: scelta.oggetti[1],
+          ambiente: scelta.modo === 'due' ? scelta.ambiente : null,
         });
         scelta = null;
         break;
@@ -2800,6 +2912,7 @@
       case 'campagna': mostraPannello(pannelloCampagna()); break;
       case 'riprova': iniziaPartita(stato.modo, stato.livello, {
         mezzo0: ultimeScelte ? ultimeScelte.mezzi[0] : null, oggetti0: ultimeScelte ? ultimeScelte.oggetti[0] : null,
+        ambiente: stato.ambiente,
       }); break;
       case 'riprendi': riprendi(); break;
       case 'menu': vaiAlMenu(); break;
