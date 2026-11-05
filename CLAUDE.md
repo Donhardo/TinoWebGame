@@ -442,7 +442,8 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 Lancio a distanza a tempismo che diventa un volo a colpi d'ala (meccaniche da
 classici del genere): Tino lancia Gino con un'altalena a bilico, Gino vola e poi
 apre una foglia. File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su
-canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
+canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home), disegni
+dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png`.
 - **Decisioni prese**: titolo "Gino Volante"; Tino lancia Gino per gioco (niente
   agenti della Tari); altalena a bilico; la foglia dura finché non urta ma si
   sgualcisce (due urti); ambientazione che va dal prato al bosco fino al cielo;
@@ -491,8 +492,9 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   si schiaccia ai rimbalzi, si inclina ai colpi d'ala, trema negli urti, saltella
   quando si ferma.
 - **Difficoltà tarata** con voli simulati (giocatori simulati che mirano al varco
-  con errore, ritardo e colpi persi, 30 voli ciascuno): bravo ~1800 m di media, medio
-  ~1000 m, principiante ~600 m (da 120 a 1500 m). Per dimostrare che è sempre battibile
+  con errore, ritardo e colpi persi, 30 voli ciascuno): con gli ostacoli dipinti bravo
+  ~2250 m di media, medio ~1350 m, principiante ~580 m (prima, con i rettangoli, ~1800,
+  ~1000, ~600). Per dimostrare che è sempre battibile
   c'è un giocatore che pianifica (prova le sequenze di colpi d'ala per 1,2 s avanti, con
   un piccolo margine, correnti d'aria comprese, e mira al centro del varco quando
   entrambe le mosse sono sicure): 16 voli su 16 fino a 3000 m senza strappi. Il
@@ -545,9 +547,11 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   `foglia.svg`, i disegni dipinti (`fondali/`, `ostacoli/`, `aliante*.png`) e
   `assets/tino/`, `assets/gino/`; si
   pubblica con `files` e `root`.
-- **Stato**: completo. Possibili seguiti, non ancora decisi: cappelli o foglie
-  diverse da comprare con le ghiande, una musica di sottofondo, altre tappe oltre il
-  cielo.
+- **Stato**: completo, con grafica dipinta (fondali, aliante, ostacoli). Possibili
+  seguiti, non ancora decisi: fondali più grandi (quelli di Gemini sono da 1024 px, un
+  po' sfocati sul telefono in verticale), cappelli o foglie diverse da comprare con le
+  ghiande, una musica di sottofondo, altre tappe oltre il cielo, restringere un po' i
+  varchi lontani se risulta troppo facile.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;

@@ -38,3 +38,5 @@ e poi si visita http://localhost:8000.
   bilico (tempismo!), Gino vola e poi apre una foglia per continuare a colpi d'ala
   tra fiori, tronchi e nuvole, dal prato al bosco fino al cielo. Un solo comando
   (Spazio, clic o tocco); vince la distanza più lunga, con il record salvato.
+  Fondali, foglia-aliante e ostacoli sono dipinti (in `games/gino-volante/fondali/`
+  e `ostacoli/`).
