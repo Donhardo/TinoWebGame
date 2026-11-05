@@ -313,7 +313,8 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 - **Tappe**: 1 motore (fatta: terreno, turni, vento, 3 mezzi, IA, due
   giocatori); 2 contenuti (fatta: cannone a tappi, talpa trivella, soffiabolle;
   oggetti; campagna contro gli agenti con l'ispettore capo); 3 rifinitura
-  (ambientazioni: prato, spiaggia, uffici della Tari…; fondali; suoni; taratura).
+  (ambientazioni fatte: prato, spiaggia, autunno, uffici della Tari; restano suoni
+  e taratura).
 - **Mondo**: 1600 × 900 pixel, acqua da y = 846 (chi ci cade perde). Schermo
   logico 960 × 540; la camera inquadra i giocatori (e i colpi in volo), zoom con
   rotella o + −. Gravità 500, vento fino a ±10 (13 px/s² per punto).
@@ -324,13 +325,20 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   radici); `scava` toglie i pixel e ripassa il bordo del cratere.
 - **Fondali**: dipinti con Gemini (prompt di stile comune + uno per ambientazione:
   sfondo lontano senza primo piano, orizzonte nel terzo basso, centro sgombro,
-  fondo che sfuma nell'acqua), in `games/tino-bum/fondali/` (`prato.png`, 1600 × 900,
-  palette a 256 colori, ~450 KB). Si disegna un po' più grande dello schermo e
-  scorre piano con la camera. Se l'immagine non c'è, resta il fondale disegnato
-  nel codice (`nuovoFondale`: montagne, colline con alberi, nuvole, sole).
-  Già salvati, da agganciare nella tappa 3: `spiaggia.png`, `autunno.png`,
-  `uffici.png` (interno chiuso, senza cielo, con le scritte TARI; in basso una
-  fascia scura: negli uffici al posto dell'acqua andrà un'altra cosa).
+  fondo che sfuma nell'acqua), in `games/tino-bum/fondali/` (`prato.png`,
+  `spiaggia.png`, `autunno.png`, `uffici.png`, 1600 × 900, palette a 256 colori).
+  Si disegna un po' più grande dello schermo e scorre piano con la camera. Se
+  l'immagine non c'è, resta il fondale disegnato nel codice (`nuovoFondale`).
+- **Ambientazioni** (tabella `AMBIENTI` in `gioco.js`, colori del terreno in
+  `PALETTE` in `terreno.js`): prato (erba), spiaggia (sabbia, mare turchese),
+  bosco in autunno (foglie arancioni, lago; foglie che volano col vento), uffici
+  della Tari (moquette sopra pile di fogli, roccia di metallo, post-it al posto dei
+  sassolini; al posto dell'acqua una vasca d'inchiostro viola dei timbri; fogli che
+  volano col vento; un velo scuro sul fondale, che è molto pieno). Foglie e fogli
+  sono solo decorazione, ma fanno vedere il vento. Contro Gino l'ambientazione
+  cambia a ogni livello (prato, spiaggia, autunno, uffici, poi da capo); in due si
+  sceglie nella schermata dei mezzi ("Dove:", ricordata in `localStorage`, o a
+  caso); campagna: tappe 1 e 4 prato, 2 spiaggia, 3 autunno, 5 e 6 uffici.
 - **Partenze**: punti in piano lontani tra loro (un terzo sinistro e un terzo
   destro); la mappa si scarta se l'IA non trova un tiro che colpisce da
   entrambe le parti senza vento.
@@ -398,12 +406,10 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   con `files` e `root`. Le partite simulate (computer contro computer a vari
   livelli, con `stato.test = true`) si fanno girare con Playwright; i copioni
   non sono nel repository.
-- **Prossimo passo: tappa 3** (rifinitura): ambientazioni con i fondali già
-  salvati (spiaggia, autunno, uffici della Tari: negli uffici al posto dell'acqua
-  serve un'altra cosa), suoni, ritaratura generale (es. la fionda in mano al
-  computer).
+- **Prossimo passo: resto della tappa 3**: suoni (ce ne sono di base, sintetizzati
+  con Web Audio in `suoni`), ritaratura generale (es. la fionda in mano al computer).
 - **Prove automatiche**: `window.tinoBum` (`stato`, `iniziaPartita(modo,
-  livello, { cpu0, liv, liv0, mezzo0, mezzo1, oggetti0, oggetti1, seme, tipo })`
+  livello, { ambiente, cpu0, liv, liv0, mezzo0, mezzo1, oggetti0, oggetti1, seme, tipo })`
   (modo `cpu`, `due`, `campagna` con il numero della tappa, `demo`), `usaOggetto`, `aggiorna`,
   `simulaTiro`, `cercaTiro`, `pianificaIA`); con `stato.test = true` il gioco
   non avanza da solo e si possono simulare partite intere chiamando `aggiorna`.

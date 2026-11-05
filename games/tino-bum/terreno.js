@@ -54,11 +54,11 @@
   // ---------------------------------------------------------------- generazione
   const TIPI = ['arcipelago', 'colline', 'ponti', 'valle'];
 
-  function nuovoTerreno(seme, tipo) {
+  function nuovoTerreno(seme, tipo, ambiente) {
     const r = generatore(seme);
     tipo = tipo || TIPI[Math.floor(r() * TIPI.length)];
     const mat = new Uint8Array(W * H);
-    const t = { seme, tipo, mat, r };
+    const t = { seme, tipo, mat, r, ambiente: PALETTE[ambiente] ? ambiente : 'prato' };
 
     const colonna = (x, y0, y1, m) => {
       x = Math.round(x);
@@ -267,17 +267,57 @@
   }
 
   const col = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-  const C = {
-    bordo: col('#3a2210'), bordoErba: col('#24501a'),
-    erbaChiara: col('#93dc5e'), erba: col('#68bb45'), erbaOmbra: col('#3f8a2e'),
-    terra: col('#c07a3e'), terraScura: col('#9a5a2a'), sassolino: col('#e2ad70'), puntino: col('#6e3d1b'),
-    roccia: col('#9aa1ad'), rocciaChiara: col('#c4cad3'), rocciaScura: col('#717885'), bordoRoccia: col('#2c2f37'),
-    grotta: col('#6a3e1e'), grottaScura: col('#4a2a12'),
-    legno: col('#a8693a'), legnoScuro: col('#7d4a24'), bordoLegno: col('#3a2010'),
+  // colori del terreno per ambientazione (lo strato in cima, la terra, la roccia,
+  // le grotte, i sassolini e il bordo dei crateri)
+  const PALETTE = {
+    prato: {
+      bordo: '#3a2210', bordoErba: '#24501a',
+      erbaChiara: '#93dc5e', erba: '#68bb45', erbaOmbra: '#3f8a2e',
+      terra: '#c07a3e', terraScura: '#9a5a2a', sassolini: ['#e2ad70', '#b8865a'], puntino: '#6e3d1b',
+      roccia: '#9aa1ad', rocciaChiara: '#c4cad3', rocciaScura: '#717885', bordoRoccia: '#2c2f37',
+      grotta: '#6a3e1e', grottaScura: '#4a2a12',
+      legno: '#a8693a', legnoScuro: '#7d4a24', bordoLegno: '#3a2010',
+      radici: 'rgba(110, 61, 27, 0.7)', cratere: 'rgba(70, 36, 14, 0.45)',
+    },
+    spiaggia: {
+      bordo: '#5a3a18', bordoErba: '#7a5a24',
+      erbaChiara: '#fbe7a6', erba: '#f1d17e', erbaOmbra: '#d4ad5c',
+      terra: '#dba862', terraScura: '#b9844a', sassolini: ['#fff2dc', '#f4b8a8'], puntino: '#8a5a2c',
+      roccia: '#a99f94', rocciaChiara: '#d2cabd', rocciaScura: '#7f766d', bordoRoccia: '#3a332d',
+      grotta: '#8a6236', grottaScura: '#664424',
+      legno: '#b98a56', legnoScuro: '#8d6236', bordoLegno: '#4a2e14',
+      radici: 'rgba(138, 90, 44, 0.35)', cratere: 'rgba(110, 70, 30, 0.4)',
+    },
+    autunno: {
+      bordo: '#3a2210', bordoErba: '#6a2a10',
+      erbaChiara: '#ffb24a', erba: '#ef8a2c', erbaOmbra: '#c45a1e',
+      terra: '#a86a3a', terraScura: '#804a24', sassolini: ['#d9a070', '#a87a52'], puntino: '#5e321a',
+      roccia: '#9a96a2', rocciaChiara: '#c6c2cc', rocciaScura: '#6f6b78', bordoRoccia: '#2c2a32',
+      grotta: '#5a3218', grottaScura: '#3e200e',
+      legno: '#9a5f34', legnoScuro: '#70411f', bordoLegno: '#36200e',
+      radici: 'rgba(94, 50, 26, 0.7)', cratere: 'rgba(60, 30, 12, 0.45)',
+    },
+    // negli uffici: moquette in cima, sotto pile di fogli; la roccia è metallo
+    uffici: {
+      bordo: '#2e3a36', bordoErba: '#1e3a38',
+      erbaChiara: '#5fa39a', erba: '#3f8178', erbaOmbra: '#2a5f58',
+      terra: '#ecdfbf', terraScura: '#b8a47a', sassolini: ['#ffffff', '#f6d36a'], puntino: '#6a6a72',
+      roccia: '#8fa3a8', rocciaChiara: '#bfd0d3', rocciaScura: '#6a7d83', bordoRoccia: '#23302f',
+      grotta: '#5a6662', grottaScura: '#3c4643',
+      legno: '#b07a48', legnoScuro: '#855628', bordoLegno: '#3a2010',
+      radici: null, cratere: 'rgba(40, 50, 48, 0.4)', fogli: true,
+    },
+  };
+  const tavolozza = (nome) => {
+    const P = PALETTE[nome] || PALETTE.prato;
+    const c = {};
+    for (const [k, v] of Object.entries(P)) c[k] = typeof v === 'string' && v[0] === '#' ? col(v) : v;
+    return c;
   };
 
   function disegnaTerreno(t) {
     const { mat } = t;
+    const C = tavolozza(t.ambiente);
     const dTutto = distanze(mat, (m) => m !== 0);
     const dRoccia = distanze(mat, (m) => m === ROCCIA);
     // profondità dall'aria sopra (per l'erba)
@@ -340,7 +380,9 @@
           c = C.erbaOmbra;
         } else {
           // terra: più scura in profondità e vicino ai bordi, a macchie morbide
-          const k = clamp01((p - 40) / 260) * 0.55 + r2(x, y) * 0.3 + (d <= 7 ? 0.3 : 0);
+          let k = clamp01((p - 40) / 260) * 0.55 + r2(x, y) * 0.3 + (d <= 7 ? 0.3 : 0);
+          // pile di fogli: righe orizzontali, ogni pila un po' sfalsata
+          if (C.fogli) k = k * 0.5 + (((y + Math.floor(hash(x >> 5, 0, 3) * 7)) % 7) === 0 ? 0.75 : 0);
           c = misto(C.terra, C.terraScura, clamp01(k));
         }
         metti(pt, j, c);
@@ -350,12 +392,13 @@
     telaRoccia.ctx.putImageData(imgR, 0, 0);
     telaFondo.ctx.putImageData(imgF, 0, 0);
     t.telaFondo = telaFondo.canvas;
-    decora(t, telaTerra.ctx, dTutto, prof);
+    decora(t, telaTerra.ctx, dTutto, prof, C);
     t.telaTerra = telaTerra.canvas;
     t.ctxTerra = telaTerra.ctx;
     t.telaRoccia = telaRoccia.canvas;
   }
 
+  const rgb = (c) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
   const clamp01 = (k) => (k < 0 ? 0 : k > 1 ? 1 : k);
 
   // rumore liscio a due dimensioni (celle di lato "lato"), risultato 0..1
@@ -372,7 +415,7 @@
   }
 
   // sassolini e radici disegnati sopra la terra (solo dove è ben piena)
-  function decora(t, c, dTutto, prof) {
+  function decora(t, c, dTutto, prof, C) {
     const r = generatore(t.seme + 17);
     c.save();
     c.globalCompositeOperation = 'source-atop';
@@ -384,14 +427,16 @@
       if (t.mat[i] !== TERRA || dTutto[i] < 10 || prof[i] < 30) continue;
       const rx = 3 + r() * 6, ry = rx * (0.6 + r() * 0.3);
       c.beginPath();
-      c.ellipse(x, y, rx, ry, r() * 3, 0, Math.PI * 2);
-      c.fillStyle = r() < 0.6 ? '#e2ad70' : '#b8865a';
+      // negli uffici: post-it e foglietti storti
+      if (C.fogli) c.rect(x - rx, y - rx * 0.7, rx * 2, rx * 1.4);
+      else c.ellipse(x, y, rx, ry, r() * 3, 0, Math.PI * 2);
+      c.fillStyle = r() < 0.6 ? C.sassolini[0] : C.sassolini[1];
       c.fill();
       c.lineWidth = 2;
-      c.strokeStyle = '#6e3d1b';
+      c.strokeStyle = rgb(C.puntino);
       c.stroke();
     }
-    for (let k = 0; k < 40; k++) {
+    for (let k = 0; k < (C.radici ? 40 : 0); k++) {
       const x = Math.floor(r() * W), y = Math.floor(r() * H);
       const i = y * W + x;
       if (t.mat[i] !== TERRA || prof[i] < 22 || prof[i] > 70 || dTutto[i] < 10) continue;
@@ -404,7 +449,7 @@
         px = nx; py = ny;
       }
       c.lineWidth = 3;
-      c.strokeStyle = 'rgba(110, 61, 27, 0.7)';
+      c.strokeStyle = C.radici;
       c.stroke();
     }
     c.restore();
@@ -436,12 +481,13 @@
     c.arc(cx, cy, rr, 0, Math.PI * 2);
     c.fill();
     c.globalCompositeOperation = 'source-atop';
-    c.strokeStyle = 'rgba(70, 36, 14, 0.45)';
+    const C = PALETTE[t.ambiente] || PALETTE.prato;
+    c.strokeStyle = C.cratere;
     c.lineWidth = 16;
     c.beginPath();
     c.arc(cx, cy, rr + 8, 0, Math.PI * 2);
     c.stroke();
-    c.strokeStyle = '#3a2210';
+    c.strokeStyle = C.bordo;
     c.lineWidth = 7;
     c.beginPath();
     c.arc(cx, cy, rr + 2, 0, Math.PI * 2);
@@ -525,5 +571,5 @@
     c.restore();
   }
 
-  TB.terreno = { nuovoTerreno, nuovoFondale, scava, superficie, TIPI };
+  TB.terreno = { nuovoTerreno, nuovoFondale, scava, superficie, TIPI, AMBIENTI: Object.keys(PALETTE) };
 })();

@@ -69,10 +69,39 @@
     timbro: caricaImg('agenti-tari/agente-timbro.svg'),
     capo: caricaImg('agenti-tari/ispettore-capo.svg'),
   };
-  // fondale dipinto (se non si carica, si usa quello disegnato nel codice)
-  const FONDALE = new Image();
-  FONDALE.src = 'fondali/prato.png';
-  const fondaleDipinto = () => FONDALE.complete && FONDALE.naturalWidth > 0;
+  // ambientazioni: fondale dipinto, liquido in fondo al mondo (chi ci cade perde)
+  // e cose che volano col vento; i colori del terreno sono in terreno.js
+  const AMBIENTI = {
+    prato: {
+      nome: 'Prato', fondale: 'fondali/prato.png',
+      liquido: { in: 'in acqua', dietro: '#5bb2e8', bordo: '#2c6fa8', davanti: 'rgba(38, 120, 196, 0.72)', schiuma: 'rgba(255, 255, 255, 0.85)', goccia: '#d6f0ff' },
+    },
+    spiaggia: {
+      nome: 'Spiaggia', fondale: 'fondali/spiaggia.png',
+      liquido: { in: 'in mare', dietro: '#4fd0d6', bordo: '#1d8a99', davanti: 'rgba(24, 158, 178, 0.7)', schiuma: 'rgba(255, 255, 255, 0.9)', goccia: '#dffbff' },
+    },
+    autunno: {
+      nome: 'Bosco in autunno', fondale: 'fondali/autunno.png',
+      liquido: { in: 'nel lago', dietro: '#86b6d6', bordo: '#3d6a90', davanti: 'rgba(58, 104, 160, 0.72)', schiuma: 'rgba(255, 236, 214, 0.85)', goccia: '#e6f2fb' },
+      volano: { cosa: 'foglia', quante: 26, colori: ['#ef8a2c', '#d9541e', '#f6b73c', '#b8432a'] },
+    },
+    uffici: {
+      nome: 'Uffici della Tari', fondale: 'fondali/uffici.png',
+      velo: 'rgba(28, 48, 44, 0.32)',  // il fondale è pieno di cose: si spinge indietro
+      // al posto dell'acqua: una vasca d'inchiostro dei timbri
+      liquido: { in: "nell'inchiostro", dietro: '#5d4396', bordo: '#2a1a4a', davanti: 'rgba(50, 28, 96, 0.8)', schiuma: 'rgba(196, 176, 255, 0.75)', goccia: '#9b7ee0' },
+      volano: { cosa: 'foglio', quante: 12, colori: ['#ffffff', '#f4efe2', '#f6d36a'] },
+    },
+  };
+  const NOMI_AMBIENTI = Object.keys(AMBIENTI);
+  // fondali dipinti (se non si caricano, si usa quello disegnato nel codice)
+  const FONDALI = {};
+  const fondale = (k) => {
+    if (!FONDALI[k]) { FONDALI[k] = new Image(); FONDALI[k].src = AMBIENTI[k].fondale; }
+    return FONDALI[k];
+  };
+  const fondaleDipinto = () => { const f = fondale(stato.ambiente); return f.complete && f.naturalWidth > 0; };
+  const liquido = () => AMBIENTI[stato.ambiente].liquido;
   // gli agenti hanno la scritta TARI: non si specchiano
   const PERSONAGGI = {
     tino: { nome: 'Tino', colore: '#ffd59a', altezza: 58 },
@@ -85,27 +114,27 @@
   // campagna contro gli agenti della Tari: a ogni tappa si sblocca la successiva
   const CAMPAGNA = [
     {
-      nome: 'Il primo agente', liv: 2,
+      nome: 'Il primo agente', ambiente: 'prato', liv: 2,
       testo: "Un agente della Tari col retino è sbarcato sull'isola. Rimandalo a casa!",
       nemici: [{ chi: 'retino', mezzo: 'catapulta' }],
     },
     {
-      nome: 'Bolle e bollette', liv: 3,
+      nome: 'Bolle e bollette', ambiente: 'spiaggia', liv: 3,
       testo: "L'agente col timbro ha portato il soffiabolle: occhio al vento!",
       nemici: [{ chi: 'timbro', mezzo: 'bolle' }],
     },
     {
-      nome: 'Gino dà una mano', liv: 5, alleato: { mezzo: 'catapulta', liv: 5 },
+      nome: 'Gino dà una mano', ambiente: 'autunno', liv: 5, alleato: { mezzo: 'catapulta', liv: 5 },
       testo: 'Gli agenti adesso sono due, ma Gino si mette in squadra con Tino.',
       nemici: [{ chi: 'retino', mezzo: 'fionda' }, { chi: 'timbro', mezzo: 'cannone' }],
     },
     {
-      nome: 'Sotto i piedi', liv: 4,
+      nome: 'Sotto i piedi', ambiente: 'prato', liv: 4,
       testo: "Un agente con la talpa trivella scava gallerie sotto l'isola.",
       nemici: [{ chi: 'timbro', mezzo: 'talpa' }],
     },
     {
-      nome: 'La squadra della Tari', liv: 3, alleato: { mezzo: 'mortaio', liv: 7 },
+      nome: 'La squadra della Tari', ambiente: 'uffici', liv: 3, alleato: { mezzo: 'mortaio', liv: 7 },
       testo: 'Tre agenti tutti insieme! Sono meno robusti, ma tirano spesso: Tino e Gino contro la squadra della Tari.',
       nemici: [
         { chi: 'retino', mezzo: 'mortaio', vita: 550 }, { chi: 'timbro', mezzo: 'catapulta', vita: 550 },
@@ -113,7 +142,7 @@
       ],
     },
     {
-      nome: "L'ispettore capo", liv: 6, alleato: { mezzo: 'cannone', liv: 6 },
+      nome: "L'ispettore capo", ambiente: 'uffici', liv: 6, alleato: { mezzo: 'cannone', liv: 6 },
       testo: "Arriva l'ispettore capo in persona, con il mortaio e un agente di scorta.",
       nemici: [{ chi: 'capo', mezzo: 'mortaio', vita: 1550 }, { chi: 'timbro', mezzo: 'talpa' }],
     },
@@ -223,6 +252,8 @@
     livello: 1,
     terreno: null,
     fondale: null,
+    ambiente: 'prato',
+    volano: [],
     giocatori: [],
     attivo: null,
     vento: 0,
@@ -522,9 +553,11 @@
     stato.modo = modo;
     stato.livello = livello;
     const seme = scelte.seme || (Math.random() * 1e9) | 0;
+    stato.ambiente = scegliAmbiente(modo, livello, scelte.ambiente);
+    fondale(stato.ambiente);
     let tentativi = 0;
     for (;;) {
-      stato.terreno = TB.terreno.nuovoTerreno(seme + tentativi * 7919, scelte.tipo);
+      stato.terreno = TB.terreno.nuovoTerreno(seme + tentativi * 7919, scelte.tipo, stato.ambiente);
       stato.giocatori = [];
       const tappa = modo === 'campagna' ? CAMPAGNA[livello - 1] : null;
       const liv = scelte.liv || (modo === 'demo' ? 6 : tappa ? tappa.liv : livello);
@@ -560,6 +593,7 @@
       if (++tentativi > 12) break;
     }
     stato.fondale = TB.terreno.nuovoFondale(seme);
+    stato.volano = [];
     stato.proiettili = [];
     stato.particelle = [];
     stato.messaggio = null;
@@ -570,6 +604,15 @@
     inquadra(true);
     if (modo !== 'demo') nascondiPannello();
     iniziaTurno();
+  }
+
+  // campagna: quello della tappa; contro Gino cambia a ogni livello; altrimenti
+  // quello scelto nel menu o a caso
+  function scegliAmbiente(modo, livello, scelto) {
+    if (AMBIENTI[scelto]) return scelto;
+    if (modo === 'campagna') return CAMPAGNA[livello - 1].ambiente;
+    if (modo === 'cpu') return NOMI_AMBIENTI[(livello - 1) % NOMI_AMBIENTI.length];
+    return NOMI_AMBIENTI[Math.floor(Math.random() * NOMI_AMBIENTI.length)];
   }
 
   // sceglie i punti di partenza: lontani tra loro, in piano, sopra l'acqua
@@ -782,6 +825,7 @@
     aggiornaMessaggio(dt);
     for (const g of stato.giocatori) aggiornaAnimazioni(g, dt);
     aggiornaParticelle(dt);
+    if (!stato.test) aggiornaVolano(dt);
     stato.scossa = Math.max(0, stato.scossa - dt * 2.5);
 
     stato.accumulo += dt;
@@ -912,7 +956,7 @@
     suoni.splash();
     if (!g.morto) {
       g.vita = 0;
-      mostraMessaggio(g.nome + ' è finito in acqua!', 1.6);
+      mostraMessaggio(g.nome + ' è finito ' + liquido().in + '!', 1.6);
       muore(g);
     }
   }
@@ -932,7 +976,7 @@
     else if (e.tipo === 'acqua') {
       spruzzi(e.x, ACQUA, 12);
       suoni.splash();
-      if (e.p.colpo.teletrasporto) mostraMessaggio('La ghianda magica è in acqua!', 1.2);
+      if (e.p.colpo.teletrasporto) mostraMessaggio('La ghianda magica è finita ' + liquido().in + '!', 1.2);
     } else if (e.tipo === 'fuori') mostraMessaggio('Fuori!', 0.9);
     else if (e.tipo === 'rimbalzo') { suoni.rimbalzo(); polvere(e.x, e.y, 3); }
     else if (e.tipo === 'divide') { suoni.divide(); fumo(e.x, e.y, 10, 4); }
@@ -1550,6 +1594,7 @@
     if (stato.terreno.grotte.length) ctx.drawImage(stato.terreno.telaFondo, 0, 0);
     ctx.drawImage(stato.terreno.telaTerra, 0, 0);
     ctx.drawImage(stato.terreno.telaRoccia, 0, 0);
+    disegnaVolano();
     for (const g of stato.giocatori) disegnaGiocatore(g);
     if (stato.fase === 'mira' && stato.attivo) disegnaMira(stato.attivo);
     for (const p of stato.proiettili) disegnaProiettile(p);
@@ -1571,7 +1616,9 @@
       const vw = VW / cam.z;
       const fx = W > vw ? clamp(cam.x / (W - vw), 0, 1) : 0.5;
       const fy = clamp((cam.y + 260) / (260 + H - VH / cam.z + 1), 0, 1);
-      ctx.drawImage(FONDALE, -(w - VW) * fx, -(h - VH) * fy, w, h);
+      ctx.drawImage(fondale(stato.ambiente), -(w - VW) * fx, -(h - VH) * fy, w, h);
+      const velo = AMBIENTI[stato.ambiente].velo;
+      if (velo) { ctx.fillStyle = velo; ctx.fillRect(0, 0, VW, VH); }
       return;
     }
     const gr = ctx.createLinearGradient(0, 0, 0, VH);
@@ -1634,6 +1681,71 @@
     ctx.restore();
   }
 
+  // foglie (autunno) e fogli (uffici) che passano spinti dal vento: aiutano a
+  // capire da che parte tira; solo decorazione, non toccano niente
+  function aggiornaVolano(dt) {
+    const V = AMBIENTI[stato.ambiente].volano;
+    if (!V || !stato.terreno) return;
+    const cam = stato.camera;
+    const vw = VW / cam.z, vh = VH / cam.z;
+    const spinta = stato.vento * 9;
+    // a inizio partita sono già sparse per lo schermo, poi entrano dal lato da
+    // cui tira il vento (o dall'alto, se è quasi fermo)
+    const sparse = !stato.volano.length;
+    while (stato.volano.length < V.quante) {
+      const lato = Math.abs(stato.vento) < 1.5 ? 0 : stato.vento > 0 ? -1 : 1;
+      const daLato = !sparse && lato && Math.random() < 0.7;
+      stato.volano.push({
+        x: daLato ? (lato < 0 ? cam.x - 30 : cam.x + vw + 30) : cam.x + Math.random() * vw,
+        y: daLato ? cam.y + Math.random() * vh * 0.8 : sparse ? cam.y + Math.random() * vh * 0.9 : cam.y - 30 - Math.random() * vh * 0.3,
+        vx: 0, vy: 0, a: Math.random() * 6.3, va: (Math.random() - 0.5) * 6,
+        fase: Math.random() * 6.3, s: 0.7 + Math.random() * 0.6,
+        colore: V.colori[Math.floor(Math.random() * V.colori.length)],
+      });
+    }
+    const caduta = V.cosa === 'foglio' ? 28 : 40;
+    for (const q of stato.volano) {
+      q.fase += dt * 2.2;
+      q.vx += (spinta + Math.sin(q.fase) * 30 - q.vx) * Math.min(1, dt * 1.5);
+      q.vy = caduta + Math.cos(q.fase * 1.3) * 18;
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.a += q.va * dt;
+      q.fuori = q.y > ACQUA + 10 || q.x < cam.x - 80 || q.x > cam.x + vw + 80 || q.y > cam.y + vh + 60;
+    }
+    stato.volano = stato.volano.filter((q) => !q.fuori);
+  }
+  function disegnaVolano() {
+    const V = AMBIENTI[stato.ambiente].volano;
+    if (!V) return;
+    for (const q of stato.volano) {
+      ctx.save();
+      ctx.translate(q.x, q.y);
+      ctx.rotate(q.a);
+      // si girano su sé stesse: schiacciate in larghezza
+      ctx.scale(q.s * (0.35 + Math.abs(Math.sin(q.fase)) * 0.65), q.s);
+      ctx.beginPath();
+      if (V.cosa === 'foglio') ctx.rect(-8, -10, 16, 20);
+      else {
+        ctx.moveTo(0, -9);
+        ctx.quadraticCurveTo(8, -2, 0, 9);
+        ctx.quadraticCurveTo(-8, -2, 0, -9);
+      }
+      ctx.fillStyle = q.colore;
+      ctx.fill();
+      bordo(1.5, V.cosa === 'foglio' ? '#5a6662' : '#6a2a10');
+      ctx.stroke();
+      if (V.cosa === 'foglio') {
+        ctx.beginPath();
+        for (let r = -5; r <= 5; r += 5) { ctx.moveTo(-5, r); ctx.lineTo(5, r); }
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#9aa6a3';
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   function onda(x, t, davanti) {
     return ACQUA + Math.sin(x * 0.018 + t * (davanti ? 2.2 : 1.6)) * 5 + Math.sin(x * 0.043 - t * 1.3) * 3 + (davanti ? 10 : 0);
   }
@@ -1646,19 +1758,20 @@
     for (let x = x0; x <= x1; x += 12) ctx.lineTo(x, onda(x, t, davanti));
     ctx.lineTo(x1, H + 400);
     ctx.closePath();
+    const L = liquido();
     if (davanti) {
-      ctx.fillStyle = 'rgba(38, 120, 196, 0.72)';
+      ctx.fillStyle = L.davanti;
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.strokeStyle = L.schiuma;
       ctx.beginPath();
       for (let x = x0; x <= x1; x += 12) ctx.lineTo(x, onda(x, t, true));
       ctx.stroke();
     } else {
-      ctx.fillStyle = '#5bb2e8';
+      ctx.fillStyle = L.dietro;
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = '#2c6fa8';
+      ctx.strokeStyle = L.bordo;
       ctx.stroke();
     }
   }
@@ -2294,9 +2407,9 @@
       } else if (q.tipo === 'goccia') {
         ctx.beginPath();
         ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
-        ctx.fillStyle = '#d6f0ff';
+        ctx.fillStyle = liquido().goccia;
         ctx.fill();
-        bordo(1.5, '#2c6fa8');
+        bordo(1.5, liquido().bordo);
         ctx.stroke();
       } else if (q.tipo === 'fumo') {
         ctx.globalAlpha = k * 0.85;
@@ -2625,8 +2738,12 @@
     const titolo = scelta.modo === 'cpu' ? `Livello ${scelta.livello}: scegli il mezzo di Tino`
       : scelta.modo === 'campagna' ? `Tappa ${scelta.livello}: scegli il mezzo di Tino` : `${nome}, scegli il tuo mezzo`;
     const indietro = scelta.modo === 'campagna' ? 'campagna' : 'menu';
+    // in due si sceglie anche dove giocare
+    const dove = scelta.modo === 'due' && scelta.chi === 0 ? `<div class="ambienti"><span>Dove:</span>${
+      ['caso', ...NOMI_AMBIENTI].map((k) => `<button class="ambiente${scelta.ambiente === k ? ' scelto' : ''}" data-ambiente="${k}" aria-pressed="${scelta.ambiente === k}">${k === 'caso' ? 'A caso' : AMBIENTI[k].nome}</button>`).join('')
+    }</div>` : '';
     return `<div class="riquadro largo">
-      <h2>${titolo}</h2>
+      <h2>${titolo}</h2>${dove}
       <div class="mezzi">${schede}</div>
       <div class="scelte"><button class="bottone secondario" data-azione="${indietro}">Indietro</button></div>
     </div>`;
@@ -2746,13 +2863,24 @@
   }
 
   function apriScelta(modo, livello) {
-    scelta = { modo, livello, mezzi: [], oggetti: [], chi: 0 };
+    const ambiente = leggi('ambiente', 'caso');
+    scelta = { modo, livello, mezzi: [], oggetti: [], chi: 0, ambiente: AMBIENTI[ambiente] ? ambiente : 'caso' };
     mostraPannello(pannelloScelta());
   }
 
   pannello.addEventListener('click', (e) => {
     const tp = e.target.closest('[data-tappa]');
     if (tp && !tp.disabled) { suoni.clic(); apriScelta('campagna', Number(tp.dataset.tappa)); return; }
+    const am = e.target.closest('[data-ambiente]');
+    if (am && scelta) {
+      scelta.ambiente = am.dataset.ambiente;
+      scrivi('ambiente', scelta.ambiente);
+      suoni.clic();
+      mostraPannello(pannelloScelta());
+      const b = pannello.querySelector(`[data-ambiente="${scelta.ambiente}"]`);
+      if (b && !touch) b.focus({ preventScroll: true });
+      return;
+    }
     const m = e.target.closest('[data-mezzo-scelto]');
     if (m && scelta) {
       scelta.mezzi[scelta.chi] = m.dataset.mezzoScelto;
@@ -2788,6 +2916,7 @@
         ultimeScelte = { ...scelta, oggetti: scelta.oggetti.slice() };
         iniziaPartita(scelta.modo, scelta.livello, {
           mezzo0: scelta.mezzi[0], mezzo1: scelta.mezzi[1], oggetti0: scelta.oggetti[0], oggetti1: scelta.oggetti[1],
+          ambiente: scelta.modo === 'due' ? scelta.ambiente : null,
         });
         scelta = null;
         break;
@@ -2800,6 +2929,7 @@
       case 'campagna': mostraPannello(pannelloCampagna()); break;
       case 'riprova': iniziaPartita(stato.modo, stato.livello, {
         mezzo0: ultimeScelte ? ultimeScelte.mezzi[0] : null, oggetti0: ultimeScelte ? ultimeScelte.oggetti[0] : null,
+        ambiente: stato.ambiente,
       }); break;
       case 'riprendi': riprendi(); break;
       case 'menu': vaiAlMenu(); break;

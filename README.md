@@ -32,4 +32,5 @@ e poi si visita http://localhost:8000.
   caso. Si sceglie il mezzo (sei: catapulta, fionda gigante, mortaio di zucca,
   cannone a tappi, talpa trivella, soffiabolle) e due oggetti, si prende la mira
   e si tiene conto del vento. Contro Gino (livelli sempre più difficili), in due
-  sullo stesso dispositivo o nella campagna contro gli agenti della Tari.
+  sullo stesso dispositivo o nella campagna contro gli agenti della Tari. Quattro
+  ambientazioni: prato, spiaggia, bosco in autunno e uffici della Tari.
