@@ -89,7 +89,7 @@
       nome: 'Uffici della Tari', fondale: 'fondali/uffici.png',
       velo: 'rgba(28, 48, 44, 0.32)',  // il fondale è pieno di cose: si spinge indietro
       // al posto dell'acqua: una vasca d'inchiostro dei timbri
-      liquido: { in: "nell'inchiostro", dietro: '#5d4396', bordo: '#2a1a4a', davanti: 'rgba(50, 28, 96, 0.8)', schiuma: 'rgba(196, 176, 255, 0.75)', goccia: '#9b7ee0' },
+      liquido: { suono: 'inchiostro', in: "nell'inchiostro", dietro: '#5d4396', bordo: '#2a1a4a', davanti: 'rgba(50, 28, 96, 0.8)', schiuma: 'rgba(196, 176, 255, 0.75)', goccia: '#9b7ee0' },
       volano: { cosa: 'foglio', quante: 12, colori: ['#ffffff', '#f4efe2', '#f6d36a'] },
     },
   };
@@ -179,70 +179,41 @@
   }
 
   // ---------------------------------------------------------------- audio
-  let audio = null;
+  // i suoni sono in suoni.js; qui si decide quando si può suonare
   let muto = leggi('muto', false);
-  function contesto() {
-    if (muto || stato.modo === 'demo') return null;
-    try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
-      return audio;
-    } catch (e) { return null; }
+  const audioPermesso = () => !muto && stato.modo !== 'demo' && !stato.test;
+  const suoni = new Proxy(TB.audio.effetti, {
+    get: (E, k) => (...args) => { TB.audio.permetti(audioPermesso()); if (E[k]) E[k](...args); },
+  });
+  // suoni continui: vento, carica, motore, fischio dei colpi, rumori di fondo
+  const ascolto = { mosso: -1, chi: null, motoreT: 0, secondi: 99 };
+  function aggiornaAudio(dt) {
+    if (stato.test) return;
+    TB.audio.permetti(audioPermesso());
+    const g = stato.attivo;
+    const gioca = stato.fase === 'mira' || stato.fase === 'volo' || stato.fase === 'assesta' || stato.fase === 'fine';
+    // il motore si sente mentre il mezzo si sposta (anche quello del computer)
+    if (g && g === ascolto.chi && g.mosso !== ascolto.mosso && stato.fase === 'mira') ascolto.motoreT = 0.12;
+    ascolto.chi = g;
+    ascolto.mosso = g ? g.mosso : -1;
+    ascolto.motoreT = Math.max(0, ascolto.motoreT - dt);
+    // tic tac negli ultimi 5 secondi del turno
+    if (g && !g.cpu && stato.fase === 'mira') {
+      const sec = Math.ceil(stato.tempoTurno);
+      if (sec !== ascolto.secondi && sec <= 5 && sec > 0) suoni.tic(sec);
+      ascolto.secondi = sec;
+    } else ascolto.secondi = 99;
+    const p = stato.proiettili.find((q) => !q.morto);
+    TB.audio.continui({
+      attivo: gioca,
+      vento: stato.vento,
+      ambiente: stato.ambiente,
+      carica: g && g.carica && stato.fase === 'mira' ? g.potenza : null,
+      motore: ascolto.motoreT > 0 && g ? g.mezzo : null,
+      volo: p ? { vy: p.vy, bolla: /^bolla/.test(p.colpo.disegno || '') } : null,
+      scavo: !!(p && p.scava),
+    }, dt);
   }
-  function suono(freq, durata = 0.1, tipo = 'square', volume = 0.06, freqFine = null, ritardo = 0) {
-    const a = contesto();
-    if (!a) return;
-    const t = a.currentTime + ritardo;
-    const o = a.createOscillator();
-    const g = a.createGain();
-    o.type = tipo;
-    o.frequency.setValueAtTime(freq, t);
-    if (freqFine) o.frequency.exponentialRampToValueAtTime(freqFine, t + durata);
-    g.gain.setValueAtTime(volume, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + durata);
-    o.connect(g).connect(a.destination);
-    o.start(t);
-    o.stop(t + durata + 0.02);
-  }
-  let bufferRumore = null;
-  function rumore(durata, volume, filtro, filtroFine) {
-    const a = contesto();
-    if (!a) return;
-    if (!bufferRumore) {
-      bufferRumore = a.createBuffer(1, a.sampleRate, a.sampleRate);
-      const d = bufferRumore.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    }
-    const t = a.currentTime;
-    const s = a.createBufferSource();
-    s.buffer = bufferRumore;
-    const f = a.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.setValueAtTime(filtro, t);
-    f.frequency.exponentialRampToValueAtTime(filtroFine, t + durata);
-    const g = a.createGain();
-    g.gain.setValueAtTime(volume, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + durata);
-    s.connect(f).connect(g).connect(a.destination);
-    s.start(t);
-    s.stop(t + durata + 0.05);
-  }
-  const suoni = {
-    tiro: (p) => { suono(180 + p * 220, 0.18, 'triangle', 0.07, 600 + p * 500); rumore(0.15, 0.08, 2500, 400); },
-    bum: (k) => { rumore(0.5 + k * 0.4, 0.22 + k * 0.1, 1800, 80); suono(90, 0.35, 'sine', 0.12, 40); },
-    rimbalzo: () => suono(300, 0.12, 'triangle', 0.07, 700),
-    splash: () => { rumore(0.45, 0.12, 3000, 300); suono(500, 0.2, 'sine', 0.04, 150); },
-    ahi: () => suono(700, 0.15, 'square', 0.035, 380),
-    turno: () => { suono(660, 0.08, 'triangle', 0.06); suono(880, 0.12, 'triangle', 0.06, null, 0.09); },
-    divide: () => suono(1200, 0.08, 'square', 0.04, 500),
-    clic: () => suono(900, 0.03, 'square', 0.025),
-    trivella: () => { rumore(0.3, 0.07, 900, 200); suono(140, 0.25, 'sawtooth', 0.03, 90); },
-    bolla: () => suono(500, 0.25, 'sine', 0.06, 1100),
-    scoppio: () => { suono(1400, 0.05, 'square', 0.05, 300); rumore(0.08, 0.08, 4000, 1500); },
-    oggetto: () => { suono(784, 0.1, 'triangle', 0.06); suono(1175, 0.16, 'triangle', 0.06, null, 0.08); },
-    vittoria: () => [523, 659, 784, 1046].forEach((f, i) => suono(f, 0.18, 'triangle', 0.08, null, i * 0.12)),
-    sconfitta: () => [392, 330, 262, 196].forEach((f, i) => suono(f, 0.22, 'sawtooth', 0.045, null, i * 0.15)),
-  };
 
   // ---------------------------------------------------------------- stato
   const stato = {
@@ -697,7 +668,9 @@
     stato.zoomUtente = 1;
     g.ia = g.cpu ? { fase: 'pensa', t: IA.pensa * (0.7 + Math.random() * 0.6), piano: null } : null;
     mostraMessaggio(PERSONAGGI[g.personaggio].turno || 'Tocca a ' + g.nome + '!', 1.3);
-    suoni.turno();
+    suoni.turno(!g.cpu);
+    // il colpo speciale è appena diventato pronto
+    if (g.speciale >= 1 && !g.specialePronto) { g.specialePronto = true; if (!g.cpu) suoni.speciale(); }
     aggiornaPlancia(true);
   }
 
@@ -712,7 +685,7 @@
     if (g.colpo === 2 && g.speciale < 1) g.colpo = 0;
     g.ia = g.cpu ? { fase: 'pensa', t: IA.pensa * 0.6, piano: null } : null;
     mostraMessaggio('Secondo tiro!', 1.1);
-    suoni.turno();
+    suoni.turno(!g.cpu);
     aggiornaPlancia(true);
   }
 
@@ -726,7 +699,7 @@
     if (o.tipo === 'teletrasporto') {
       // si consuma solo quando si tira
       g.magica = true;
-      suoni.clic();
+      suoni.oggetto('teletrasporto');
       aggiornaPlancia(true);
       return true;
     }
@@ -746,7 +719,7 @@
     }
     stellineSu(g);
     mostraMessaggio(O.nome + '!', 1);
-    suoni.oggetto();
+    suoni.oggetto(o.tipo);
     aggiornaPlancia(true);
     return true;
   }
@@ -770,12 +743,12 @@
     g.tiri = (g.tiri || 0) + 1;
     g.tiroAndato = false;
     g.ritardo += colpo.ritardo * M.peso + g.mosso * TURNO.ritardoPasso;
-    if (colpo.speciale) { g.speciale = 0; g.colpo = 0; }
+    if (colpo.speciale) { g.speciale = 0; g.colpo = 0; g.specialePronto = false; }
     g.carica = false;
     g.potenza = 0;
     stato.fase = 'volo';
     stato.attesa = 0;
-    suoni.tiro(potenza);
+    suoni.tiro(g.mezzo, potenza, colpo);
     aggiornaPlancia(true);
   }
 
@@ -784,6 +757,7 @@
     g.carica = false;
     g.potenza = 0;
     mostraMessaggio('Tempo scaduto!', 1);
+    suoni.scaduto();
     stato.fase = 'assesta';
     stato.attesa = 0;
   }
@@ -821,6 +795,7 @@
   // ---------------------------------------------------------------- aggiornamento
   function aggiorna(dt) {
     stato.tempo += dt;
+    aggiornaAudio(dt);
     if (stato.fase === 'pausa') return;
     aggiornaMessaggio(dt);
     for (const g of stato.giocatori) aggiornaAnimazioni(g, dt);
@@ -921,7 +896,7 @@
       while (dy > 0) {
         if (appoggiato(g.x, g.y)) {
           g.aTerra = true;
-          if (g.vy > 300 && !g.morto) polvere(g.x, g.y, 6);
+          if (g.vy > 300 && !g.morto) { polvere(g.x, g.y, 6); suoni.atterra(); }
           if (g.daBolla) {
             // caduta dalla bollona
             g.daBolla = false;
@@ -953,7 +928,7 @@
     g.annegato = true;
     g.aTerra = true;
     spruzzi(g.x, ACQUA, 26);
-    suoni.splash();
+    suoni.splash(liquido().suono, true);
     if (!g.morto) {
       g.vita = 0;
       mostraMessaggio(g.nome + ' è finito ' + liquido().in + '!', 1.6);
@@ -967,7 +942,7 @@
     g.vita = 0;
     g.caduta = 0.001;
     g.carica = false;
-    suoni.sconfitta();
+    suoni.ko(g.personaggio);
   }
 
   // ---------------------------------------------------------------- esplosioni
@@ -975,7 +950,7 @@
     if (e.tipo === 'esplosione') esplodi(e);
     else if (e.tipo === 'acqua') {
       spruzzi(e.x, ACQUA, 12);
-      suoni.splash();
+      suoni.splash(liquido().suono, false);
       if (e.p.colpo.teletrasporto) mostraMessaggio('La ghianda magica è finita ' + liquido().in + '!', 1.2);
     } else if (e.tipo === 'fuori') mostraMessaggio('Fuori!', 0.9);
     else if (e.tipo === 'rimbalzo') { suoni.rimbalzo(); polvere(e.x, e.y, 3); }
@@ -1032,7 +1007,7 @@
       g.aTerra = false;
       g.inclinazione = 0;
       stellineSu(g);
-      suoni.oggetto();
+      suoni.magica();
       mostraMessaggio('Teletrasporto!', 1);
       return;
     }
@@ -1049,14 +1024,14 @@
   }
 
   function colpisci(g, d, autore) {
-    if (g.ombrello) { d = Math.round(d / 2); g.ombrelloUsato = true; }
+    if (g.ombrello) { d = Math.round(d / 2); g.ombrelloUsato = true; suoni.parata(); }
     g.vita = Math.max(0, g.vita - d);
     g.colpitoT = 1.5;
     g.tremaT = 0.6;
     if (d >= 180) g.feritoT = 1.5;
     g.speciale = Math.min(1, g.speciale + d / 1000 * TURNO.specialeDanno);
     aggiungiParticella({ tipo: 'numero', x: g.x, y: g.y - 70, vy: -50, vita: 1.3, durata: 1.3, testo: '-' + d });
-    suoni.ahi();
+    suoni.ahi(g.personaggio, d);
     if (autore && autore !== g && autore.squadra !== g.squadra) {
       autore.festaT = 1.2;
       if (!autore.tiroAndato) { autore.tiroAndato = true; autore.aSegno = (autore.aSegno || 0) + 1; }
@@ -1428,7 +1403,7 @@
 
   canvas.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.buttons) miraVerso(e); });
   canvas.addEventListener('pointerdown', (e) => {
-    contesto();
+    TB.audio.sblocca();
     miraVerso(e);
     if (e.pointerType === 'mouse' && e.button === 0 && turnoUmano()) mouseGiu = true;
   });
@@ -1446,7 +1421,7 @@
     if (TASTI_GIOCO.includes(e.code) && !pannelloAperto()) e.preventDefault();
     if (e.repeat && tasti.has(e.code)) return;
     tasti.add(e.code);
-    contesto();
+    TB.audio.sblocca();
     const g = turnoUmano();
     if (e.code === 'KeyP' || e.code === 'Escape') {
       if (stato.fase === 'pausa') riprendi();
@@ -1461,7 +1436,10 @@
   });
   window.addEventListener('keyup', (e) => tasti.delete(e.code));
   window.addEventListener('blur', () => { tasti.clear(); tieni.clear(); mouseGiu = false; if (inPartita()) pausa(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && inPartita()) pausa(); });
+  document.addEventListener('visibilitychange', () => {
+    TB.audio.sospendi(document.hidden);
+    if (document.hidden && inPartita()) pausa();
+  });
 
   function scegliColpo(g, i) {
     if (g.carica) return;
@@ -1475,7 +1453,7 @@
   // pulsanti della plancia (si tengono premuti)
   plancia.addEventListener('pointerdown', (e) => {
     const b = e.target.closest('[data-tieni]');
-    contesto();
+    TB.audio.sblocca();
     if (b) {
       e.preventDefault();
       tieni.add(b.dataset.tieni);

@@ -303,7 +303,7 @@ Artiglieria a turni (meccaniche da classico dei carri armati a turni): ogni
 giocatore guida un mezzo su una mappa di isole generata a caso, sceglie alzo e
 potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 (tabelle `MEZZI` con i colpi e `OGGETTI`), `terreno.js` (generazione, crateri, fondali),
-`gioco.js` (turni, fisica, IA, disegno, pannelli).
+`suoni.js` (tutti i suoni), `gioco.js` (turni, fisica, IA, disegno, pannelli).
 - **Decisioni prese**: titolo "Tino Bum!"; mezzi ricchi con caratteristiche
   proprie; IA brava ma battibile; mappe con isole e ostacoli generate a caso;
   fondali in stile cartone (per ora disegnati nel codice: se non bastano, si
@@ -313,8 +313,7 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 - **Tappe**: 1 motore (fatta: terreno, turni, vento, 3 mezzi, IA, due
   giocatori); 2 contenuti (fatta: cannone a tappi, talpa trivella, soffiabolle;
   oggetti; campagna contro gli agenti con l'ispettore capo); 3 rifinitura
-  (ambientazioni fatte: prato, spiaggia, autunno, uffici della Tari; restano suoni
-  e taratura).
+  (ambientazioni e suoni fatti; resta la taratura).
 - **Mondo**: 1600 × 900 pixel, acqua da y = 846 (chi ci cade perde). Schermo
   logico 960 × 540; la camera inquadra i giocatori (e i colpi in volo), zoom con
   rotella o + −. Gravità 500, vento fino a ±10 (13 px/s² per punto).
@@ -339,6 +338,25 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   cambia a ogni livello (prato, spiaggia, autunno, uffici, poi da capo); in due si
   sceglie nella schermata dei mezzi ("Dove:", ricordata in `localStorage`, o a
   caso); campagna: tappe 1 e 4 prato, 2 spiaggia, 3 autunno, 5 e 6 uffici.
+- **Suoni** (`suoni.js`, `TB.audio`): tutti sintetizzati con Web Audio, nessun
+  file; passano da un compressore. Effetti brevi in `TB.audio.effetti` (in
+  `gioco.js` si chiamano con `suoni.nome(...)`, che controlla se si può suonare:
+  non muto, non nella partita dimostrativa del menu, non nelle prove): tiro
+  diverso per ogni mezzo (e per la ghianda magica), esplosione a tre strati
+  (botta, schiocco, rombo, più le zolle che ricadono) secondo la grandezza,
+  spruzzo nell'acqua o "blop" nell'inchiostro, voce di chi è colpito (più acuta
+  per Gino, più bassa per gli agenti e il capo), fischio che scende al KO, tonfo
+  quando un mezzo atterra, campanello del turno (più piano per il computer), tic
+  tac negli ultimi 5 s dei turni umani, "tempo scaduto", speciale pronto, un
+  suono per ogni oggetto, parata dell'ombrello, musichette di vittoria e
+  sconfitta. Suoni continui in `TB.audio.continui`, aggiornati a ogni fotogramma
+  da `aggiornaAudio`: vento (a raffiche, più forte e acuto col vento), carica
+  della potenza (sale di tono), motore del mezzo mentre si sposta, fischio del
+  colpo in volo (sale mentre sale, scende mentre cade; le bolle ondeggiano),
+  trivella sotto terra; rumori di fondo dell'ambientazione (uccellini nel prato,
+  onde e gabbiani sulla spiaggia, foglie nel bosco, macchine da scrivere,
+  telefono e timbri negli uffici). In pausa, nel menu e con la scheda nascosta
+  tace tutto. M o il pulsante in alto tolgono i suoni (`localStorage` `muto`).
 - **Partenze**: punti in piano lontani tra loro (un terzo sinistro e un terzo
   destro); la mappa si scarta se l'IA non trova un tiro che colpisce da
   entrambe le parti senza vento.
@@ -400,14 +418,14 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   quando è colpito, saltella quando colpisce, cade ruotato quando perde.
 - **Provarlo su Claude**: come per l'avventura, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
-  `css/sito.css`, `stile.css`, `mezzi.js`, `terreno.js`, `gioco.js` (con
+  `css/sito.css`, `stile.css`, `mezzi.js`, `terreno.js`, `suoni.js`, `gioco.js` (con
   `BASE = 'assets/'` e `tappaCampagna = Math.max(6, ...)` per sbloccare tutte le
   tappe), `fondali/` e `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica
   con `files` e `root`. Le partite simulate (computer contro computer a vari
   livelli, con `stato.test = true`) si fanno girare con Playwright; i copioni
   non sono nel repository.
-- **Prossimo passo: resto della tappa 3**: suoni (ce ne sono di base, sintetizzati
-  con Web Audio in `suoni`), ritaratura generale (es. la fionda in mano al computer).
+- **Prossimo passo: resto della tappa 3**: ritaratura generale (es. la fionda in
+  mano al computer).
 - **Prove automatiche**: `window.tinoBum` (`stato`, `iniziaPartita(modo,
   livello, { ambiente, cpu0, liv, liv0, mezzo0, mezzo1, oggetti0, oggetti1, seme, tipo })`
   (modo `cpu`, `due`, `campagna` con il numero della tappa, `demo`), `usaOggetto`, `aggiorna`,
