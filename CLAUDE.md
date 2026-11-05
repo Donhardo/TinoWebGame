@@ -302,18 +302,17 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
 Artiglieria a turni (meccaniche da classico dei carri armati a turni): ogni
 giocatore guida un mezzo su una mappa di isole generata a caso, sceglie alzo e
 potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
-(tabella `MEZZI` con i colpi), `terreno.js` (generazione, crateri, fondali),
+(tabelle `MEZZI` con i colpi e `OGGETTI`), `terreno.js` (generazione, crateri, fondali),
 `gioco.js` (turni, fisica, IA, disegno, pannelli).
 - **Decisioni prese**: titolo "Tino Bum!"; mezzi ricchi con caratteristiche
   proprie; IA brava ma battibile; mappe con isole e ostacoli generate a caso;
   fondali in stile cartone (per ora disegnati nel codice: se non bastano, si
   passano a Gemini i prompt per i fondali per ambientazione); tre modalità:
   Tino contro Gino (computer), due giocatori sullo stesso dispositivo, campagna
-  contro gli agenti della Tari (tappa 2). Sul telefono si gioca in orizzontale.
+  contro gli agenti della Tari. Sul telefono si gioca in orizzontale.
 - **Tappe**: 1 motore (fatta: terreno, turni, vento, 3 mezzi, IA, due
-  giocatori); 2 contenuti (altri mezzi: cannone a tappi, talpa trivella,
-  soffiabolle; oggetti: cerotto, ombrello, doppio tiro, vento fermo,
-  teletrasporto; campagna contro gli agenti con l'ispettore capo); 3 rifinitura
+  giocatori); 2 contenuti (fatta: cannone a tappi, talpa trivella, soffiabolle;
+  oggetti; campagna contro gli agenti con l'ispettore capo); 3 rifinitura
   (ambientazioni: prato, spiaggia, uffici della Tari…; fondali; suoni; taratura).
 - **Mondo**: 1600 × 900 pixel, acqua da y = 846 (chi ci cade perde). Schermo
   logico 960 × 540; la camera inquadra i giocatori (e i colpi in volo), zoom con
@@ -342,12 +341,25 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   è la potenza del tiro prima, il puntino rosso l'alzo di prima). Una breve
   traccia guida (senza vento) mostra solo l'inizio del tiro. Comportamenti in
   `mezzi.js`: `lancio` (più colpi), `rimbalzi`, `esplodeRimbalzo`, `divide`
-  (all'apice o in discesa). Danno lineare dal centro al bordo del cratere,
+  (all'apice o in discesa), `calo` (il danno cala con la strada percorsa),
+  `trivella` (dentro il terreno va dritta scavando; se sbuca dall'altra parte
+  riprende il volo, altrimenti esplode a fine corsa), `galleria` (come la trivella
+  ma in orizzontale, esplode sotto il primo nemico), `bolla` (cattura chi è vicino,
+  lo fa salire 2 s spinto dal vento e lo lascia cadere: danno di caduta, tabella
+  `BOLLA`, e se finisce in acqua perde). Lo scavo è fatto un po' indietro rispetto
+  alla punta, così la simulazione dell'IA (che non scava) dà lo stesso risultato.
+  Danno lineare dal centro al bordo del cratere,
   +10% sul colpo diretto; le esplosioni spingono (tabella `FISICA.spinta`).
   Speciale: barra che si carica a ogni turno e coi danni subiti.
-- **Mezzi** (tappa 1): catapulta (equilibrata), fionda gigante (tiri tesi,
+- **Mezzi**: catapulta (equilibrata), fionda gigante (tiri tesi,
   poco vento, molto movimento), mortaio di zucca (solo tiri alti, crateri grandi,
-  pesante). Disegnati nel codice (`disegnaMezzo`), con il personaggio seduto
+  pesante), cannone a tappi (tappo, tappone, speciale raffica di 5 tappi: danno
+  pieno fino a 350-450 px di strada, poi cala fino al 40-50%), talpa trivella
+  (trivella, scavafosse, speciale galleria), soffiabolle (bolle con vento ×2 e
+  gravità dimezzata, bollicine che si dividono, speciale bollona). Girone di
+  partite simulate al livello 5 (10 per coppia): la fionda resta il mezzo più
+  debole in mano al computer (i suoi tiri tesi soffrono l'errore sull'alzo),
+  soffiabolle e catapulta i più forti. Disegnati nel codice (`disegnaMezzo`), con il personaggio seduto
   dietro (`SEDILE`).
 - **IA** (tabella `IA`): prova davvero i tiri con la stessa fisica del gioco
   (`simulaTiro`, `cercaTiro`: tutti gli alzi e le potenze, poi affina), sceglie
@@ -356,30 +368,43 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   livello e si riduce se tira di nuovo allo stesso bersaglio fermo. Tarato con
   partite simulate computer contro computer: ~28% di tiri a segno al livello 1,
   ~45% ai livelli 4-8, ~60% dal 12 (non sale oltre). Vento massimo 2 + livello.
+- **Oggetti** (tabella `OGGETTI` in `mezzi.js`): se ne scelgono due per partita
+  dopo il mezzo (scelta ricordata in `localStorage`), ognuno una volta sola, al
+  massimo uno per turno, prima di tirare (tasti 4 e 5 o icone nella plancia):
+  cerotto (+250), ombrello (dimezza i danni del prossimo tiro nemico che prende,
+  anche se a più colpi; si vede sopra il mezzo), doppio tiro (secondo tiro subito
+  dopo, stesso vento), vento fermo, teletrasporto (il tiro diventa una ghianda
+  magica che non fa danni: si ricompare dove cade; in acqua va persa). Il computer
+  sceglie a caso tra i primi quattro e li usa con le soglie di `IA_OGGETTI`.
+- **Campagna** (tabella `CAMPAGNA` in `gioco.js`, progressi in `localStorage`
+  `campagna`): 6 tappe contro gli agenti della Tari (`PERSONAGGI` retino, timbro,
+  capo: disegni SVG, non si specchiano per via della scritta, animati come Gino;
+  nella scheda si vede la testa). Tappe 3, 5 e 6 con Gino alleato al computer
+  (squadra 0); più giocatori per parte a 120 px l'uno dall'altro; con più di due
+  giocatori le schede sono piccole e impilate. La vita massima è per giocatore
+  (`vitaMax`). Si vince se resta in piedi qualcuno della squadra di Tino.
+  Livelli degli agenti 2, 3, 5, 4, 3, 6; nella tappa 5 i tre agenti hanno 550 di vita
+  (con 1000 tirano troppo spesso e la tappa era quasi impossibile), l'ispettore capo
+  1550. Tarata con Tino al computer (livello 6): vince ~58%, ~67%, ~60%, ~70%, ~59%,
+  ~55% delle partite (12-32 partite per tappa, quindi ±15%).
 - **Espressioni**: Tino arrabbiato quando è colpito, con poca vita o quando il
   nemico è quasi KO; ferito sui colpi da 180 in su; ko quando perde. Gino trema
   quando è colpito, saltella quando colpisce, cade ruotato quando perde.
 - **Provarlo su Claude**: come per l'avventura, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `mezzi.js`, `terreno.js`, `gioco.js` (con
-  `BASE = 'assets/'`), `fondali/` e `assets/tino/`, `assets/gino/`; si pubblica
+  `BASE = 'assets/'` e `tappaCampagna = Math.max(6, ...)` per sbloccare tutte le
+  tappe), `fondali/` e `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica
   con `files` e `root`. Le partite simulate (computer contro computer a vari
   livelli, con `stato.test = true`) si fanno girare con Playwright; i copioni
   non sono nel repository.
-- **Prossimo passo: tappa 2** (approvata, da fare in una nuova sessione):
-  - mezzi nuovi, ognuno con due colpi e uno speciale: cannone a tappi (danno
-    alto da vicino, poco da lontano; speciale raffica di tappi), talpa trivella
-    (colpi che scavano nel terreno; speciale galleria sotto il nemico),
-    soffiabolle (colpi leggeri spinti dal vento; speciale bolla che solleva e
-    lascia cadere);
-  - oggetti, un paio per partita a scelta: cerotto (cura), ombrello (dimezza il
-    prossimo danno), doppio tiro, vento fermo, teletrasporto a ghianda;
-  - campagna contro gli agenti della Tari (`assets/agenti-tari/`, anche più
-    agenti per partita, squadre già previste in `squadra`), con l'ispettore capo
-    alla fine; l'IA va adattata ai colpi nuovi (la simulazione va estesa a
-    scavo, bolle e teletrasporto) e ritarata con le partite simulate.
+- **Prossimo passo: tappa 3** (rifinitura): ambientazioni con i fondali già
+  salvati (spiaggia, autunno, uffici della Tari: negli uffici al posto dell'acqua
+  serve un'altra cosa), suoni, ritaratura generale (es. la fionda in mano al
+  computer).
 - **Prove automatiche**: `window.tinoBum` (`stato`, `iniziaPartita(modo,
-  livello, { cpu0, liv, mezzo0, mezzo1, seme, tipo })`, `aggiorna`,
+  livello, { cpu0, liv, liv0, mezzo0, mezzo1, oggetti0, oggetti1, seme, tipo })`
+  (modo `cpu`, `due`, `campagna` con il numero della tappa, `demo`), `usaOggetto`, `aggiorna`,
   `simulaTiro`, `cercaTiro`, `pianificaIA`); con `stato.test = true` il gioco
   non avanza da solo e si possono simulare partite intere chiamando `aggiorna`.
 
