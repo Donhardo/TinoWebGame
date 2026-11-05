@@ -562,8 +562,8 @@ dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png` (pi�
   420 / 1125 / 2325 (più pesante: aiuta chi è bravo, l'urto in più conta per chi sbaglia
   poco), felce 490 / 1400 / 2170, oro 440 / 1405 / 2200 (ghiande doppie). Prima della
   ritaratura acero e felce davano +15-20% e il fico +47% al bravo. Il pianificatore
-  arriva a 3000 m senza strappi (16 voli su 16) con acero, castagno e ginkgo; pioppo,
-  fico, felce e oro in prova.
+  arriva a 3000 m senza strappi con ogni foglia (16 voli su 16 per foglia, tunnel
+  compresi).
 - **Disegni dipinti** (fatti con Gemini, ci sono già; se un file mancasse resterebbe
   la grafica disegnata nel codice): `fondali/prato.png`, `fondali/bosco.png`,
   `fondali/cielo.png` (uno per tappa, 16:9, es. 1600 × 900) e `aliante.png`,
