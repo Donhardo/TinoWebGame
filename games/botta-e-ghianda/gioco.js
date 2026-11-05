@@ -689,8 +689,8 @@
     const ev = verticale ? w : h;   // larghezza lungo v
     const uCentro = g.lato === 'tino' ? FACCIA - eu / 2 : L - FACCIA + eu / 2;
     const c = aSchermo(uCentro, g.v);
-    // Tino guarda verso Gino quando il campo è orizzontale
-    return { img, w, h, eu, ev, x: c.x, y: c.y, specchia: g.lato === 'tino' && !verticale };
+    // (la foto di Tino guarda già a destra, verso Gino: non si specchia)
+    return { img, w, h, eu, ev, x: c.x, y: c.y };
   }
 
   // Maschera dei pixel non trasparenti di ogni immagine. Se il browser non
@@ -729,10 +729,9 @@
     const m = maschera(sg.img);
     if (!m) return true;
     const prova = (x, y) => {
-      let lx = x / sg.w + 0.5;
+      const lx = x / sg.w + 0.5;
       const ly = y / sg.h + 0.5;
       if (lx < 0 || lx >= 1 || ly < 0 || ly >= 1) return false;
-      if (sg.specchia) lx = 1 - lx;
       return m.a[Math.floor(ly * m.h) * m.w + Math.floor(lx * m.w)] === 1;
     };
     if (prova(dx, dy)) return true;
@@ -1095,12 +1094,10 @@
       dy += (1 - Math.pow(1 - g.caduta, 3)) * 12;
     }
 
-    const specchia = sg.specchia;
-
     ctx.save();
     ctx.translate(c.x + dx, c.y + dy);
     ctx.rotate(rot);
-    ctx.scale(sx * (specchia ? -1 : 1), sy);
+    ctx.scale(sx, sy);
     ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
     ctx.shadowBlur = 10;
     ctx.shadowOffsetY = 5;
@@ -1386,7 +1383,7 @@
   function pannelloMenu() {
     const rec = record > 1 ? `<p class="record">Il tuo record: livello ${record}</p>` : '';
     return `<div class="riquadro">
-      <div class="ritratti">${img('normale', 'salta specchia')}<span class="vs">contro</span>${img('gino')}</div>
+      <div class="ritratti">${img('normale', 'salta')}<span class="vs">contro</span>${img('gino')}</div>
       <h1>Botta e Ghianda</h1>
       <p>Rimanda la ghianda e non lasciarla passare! Colpiscila con i bordi per tiri più angolati.</p>
       <p>Ogni colpo carica la barra del <b>super tiro</b>: quando è piena, il colpo dopo infuoca la ghianda… e poi succede qualcosa di croccante!</p>
@@ -1413,7 +1410,7 @@
   function pannelloLivelloSuperato() {
     const n = stato.livello;
     return `<div class="riquadro">
-      <div class="ritratti">${img('normale', 'salta specchia')}${img('gino', 'caduto')}</div>
+      <div class="ritratti">${img('normale', 'salta')}${img('gino', 'caduto')}</div>
       <h2>Livello ${n} superato!</h2>
       <p>Tino vince ${stato.punti.tino} a ${stato.punti.gino}. Gino però si allena: nel prossimo livello sarà più veloce.</p>
       <div class="scelte">
@@ -1441,7 +1438,7 @@
   function pannelloVittoriaDue() {
     const vinceTino = stato.vincitore === 'tino';
     const ritratti = vinceTino
-      ? `${img('normale', 'salta specchia')}${img('gino', 'caduto')}`
+      ? `${img('normale', 'salta')}${img('gino', 'caduto')}`
       : `${img('ko')}${img('gino', 'salta')}`;
     return `<div class="riquadro">
       <div class="ritratti">${ritratti}</div>

@@ -96,7 +96,7 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
   width: auto;
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
 }
-.ap-tino { left: 7%; transform: scaleX(-1); animation: ap-tino 1.6s ease-in-out infinite; }
+.ap-tino { left: 7%; animation: ap-tino 1.6s ease-in-out infinite; }
 .ap-gino { right: 7%; height: 62%; animation: ap-gino 1.6s ease-in-out infinite; }
 .ap-ghianda {
   position: absolute;
