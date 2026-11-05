@@ -105,14 +105,14 @@
       nemici: [{ chi: 'timbro', mezzo: 'talpa' }],
     },
     {
-      nome: 'La squadra della Tari', liv: 3, alleato: { mezzo: 'mortaio', liv: 7 },
+      nome: 'La squadra della Tari', liv: 2, alleato: { mezzo: 'mortaio', liv: 7 },
       testo: 'Tre agenti tutti insieme! Tino e Gino contro la squadra della Tari.',
       nemici: [{ chi: 'retino', mezzo: 'mortaio' }, { chi: 'timbro', mezzo: 'catapulta' }, { chi: 'retino', mezzo: 'bolle' }],
     },
     {
       nome: "L'ispettore capo", liv: 6, alleato: { mezzo: 'cannone', liv: 6 },
       testo: "Arriva l'ispettore capo in persona, con il mortaio e un agente di scorta.",
-      nemici: [{ chi: 'capo', mezzo: 'mortaio', vita: 1400 }, { chi: 'timbro', mezzo: 'talpa' }],
+      nemici: [{ chi: 'capo', mezzo: 'mortaio', vita: 1550 }, { chi: 'timbro', mezzo: 'talpa' }],
     },
   ];
 
