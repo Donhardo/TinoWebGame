@@ -34,3 +34,7 @@ e poi si visita http://localhost:8000.
   e si tiene conto del vento. Contro Gino (livelli sempre più difficili), in due
   sullo stesso dispositivo o nella campagna contro gli agenti della Tari. Quattro
   ambientazioni: prato, spiaggia, bosco in autunno e uffici della Tari.
+- **Gino Volante** (`games/gino-volante/`): Tino lancia Gino con l'altalena a
+  bilico (tempismo!), Gino vola e poi apre una foglia per continuare a colpi d'ala
+  tra fiori, tronchi e nuvole, dal prato al bosco fino al cielo. Un solo comando
+  (Spazio, clic o tocco); vince la distanza più lunga, con il record salvato.

@@ -438,6 +438,70 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   `simulaTiro`, `cercaTiro`, `pianificaIA`); con `stato.test = true` il gioco
   non avanza da solo e si possono simulare partite intere chiamando `aggiorna`.
 
+### Gino Volante (`games/gino-volante/`)
+Lancio a distanza a tempismo che diventa un volo a colpi d'ala (meccaniche da
+classici del genere): Tino lancia Gino con un'altalena a bilico, Gino vola e poi
+apre una foglia. File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su
+canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
+- **Decisioni prese**: titolo "Gino Volante"; Tino lancia Gino per gioco (niente
+  agenti della Tari); altalena a bilico; la foglia dura finché non urta ma si
+  sgualcisce (due urti); ambientazione che va dal prato al bosco fino al cielo;
+  un solo comando per tutto (Spazio, Invio o ↑, clic, tocco). Si gioca anche con il
+  telefono in verticale (si vede meno avanti e più cielo).
+- **Mondo**: x verso destra (0 = perno dell'altalena), h verso l'alto (0 = terreno),
+  20 px = 1 m. Schermo logico alto 540 (largo 760-1400 secondo lo schermo; in
+  verticale largo 560 e alto fino a 1100). La telecamera segue Gino di lato e sale
+  se lui va in alto.
+- **Fase 1, il lancio** (tabelle `ALTALENA`, `TINO`, `LANCIO`): Tino saltella sul
+  ceppo; il primo tocco lo fa saltare (più in alto se è in cima al saltello, e allora
+  piomba con più forza). Il secondo tocco lo fa piombare dritto giù: sopra la punta
+  dell'asse (x da -120 a -94) è "Perfetto!" (forza 0,8-1,05, angolo 40°); più verso
+  il perno la forza cala e l'angolo sale fino a 66°; troppo presto manca l'asse
+  (Tino ko, 0 m); se non preme atterra vicino al perno (lancio corto, ~35 m).
+  Senza foglia un lancio va da ~35 a ~225 m (rimbalzi e scivolata compresi).
+- **Fase 2, il volo libero** (tabella `VOLO`): parabola con un po' d'attrito; Gino
+  ruota, si schiaccia ai rimbalzi, poi scivola sull'erba e saltella quando si ferma.
+- **Fase 3, la foglia** (tabelle `FOGLIA`, `OSTACOLI`, `CORRENTE`): si apre una sola
+  volta, prima di toccare terra. Lo slancio iniziale viene dalla velocità di Gino
+  all'apertura e si consuma piano; aprendola in cima al volo (velocità verticale
+  sotto 150) lo slancio è +30% ("Apertura perfetta!") e più in alto si parte, più a
+  lungo si plana. Sopra il "tetto" (h 460) la foglia non sale più e plana; il primo
+  ostacolo arriva solo dopo la planata. Ogni tocco dà una spinta verso l'alto, la
+  gravità tira giù. Il primo urto strappa la foglia (1,3 s di invulnerabilità, colpi
+  d'ala un po' più deboli), il secondo chiude il volo; toccare terra chiude il volo.
+- **Ostacoli**: coppie sopra/sotto con un varco, sempre raggiungibile dal varco prima
+  (salita chiesta al massimo 150 px/s, discesa 300). Coi metri (fino a 900 m) il varco
+  passa da 245 a 168 px, la distanza tra le coppie da 560 a 340 px e la velocità da 240
+  a 340 px/s; dai 350 m gli ostacoli si muovono su e giù (fino a 44 px). Tappe: prato
+  (0 m: fiori alti e rami), bosco (250 m: tronchi tagliati e rami col muschio), cielo
+  (600 m: nuvoloni temporaleschi); colori e sfondi sfumano da una tappa all'altra.
+- **Aiuti e premi**: ghiande nei varchi e tra le coppie; ogni 8 coppie una radura con
+  una corrente d'aria che spinge in alto (fin sotto il tetto) e una fila di ghiande;
+  ogni 11 coppie una foglia nuova che ripara quella strappata (se è integra, +3
+  ghiande).
+- **Punteggio**: distanza totale in metri (lancio + foglia); `localStorage`
+  `gino-volante:record`, `record-ghiande` (più ghiande in un volo), `ghiande-totali`,
+  `lanci`, `muto`.
+- **Espressioni**: Tino arrabbiato (concentrato) mentre salta e se il lancio è corto,
+  normale e saltellante se il lancio è buono, ko se manca l'asse. Gino ruota in volo,
+  si schiaccia ai rimbalzi, si inclina ai colpi d'ala, trema negli urti, saltella
+  quando si ferma.
+- **Difficoltà tarata** con voli simulati (giocatori simulati che mirano al varco
+  con errore, ritardo e colpi persi, 20-30 voli ciascuno): il perfetto arriva sempre
+  al limite della prova (3000 m) senza quasi mai urtare (sempre battibile); bravo
+  ~2300 m di media, medio ~1200 m, principiante ~600 m (da 110 a 1450 m). Le persone
+  vere reagiscono peggio dei copioni, quindi si arriva meno lontano.
+- **Prove automatiche**: `window.ginoVolante` (`stato`, `avvia(seme)`, `premi`,
+  `aggiorna`, `centroOstacolo`, `urtaOstacolo`, tabelle); con `stato.test = true` il
+  gioco non avanza da solo e non apre pannelli. I copioni non sono nel repository.
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
+  `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
+  `foglia.svg` e `assets/tino/`, `assets/gino/`; si pubblica con `files` e `root`.
+- **Stato**: completo. Possibili seguiti, non ancora decisi: cappelli o foglie
+  diverse da comprare con le ghiande, una musica di sottofondo, altre tappe oltre il
+  cielo.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)
