@@ -629,6 +629,100 @@ dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png` (pi�
   aggiunti). Possibili seguiti, non ancora decisi: fondali più grandi (quelli di Gemini sono da
   1024 px, un po' sfocati sul telefono in verticale), altre tappe oltre il cielo.
 
+### Ghiande e Mattoncini (`games/ghiande-e-mattoncini/`)
+Gioco a mattoncini (meccaniche da classico del genere): con un'asse si fa
+rimbalzare una ghianda contro un muro di mattoncini piccoli; quando sono tutti
+rotti si passa al livello dopo. File: `index.html`, `stile.css`, `livelli.js`
+(mondi e mappe), `gioco.js` (tutta la logica, su canvas), `ghianda.svg` (vite e
+anteprima della home). I fondali sono quelli di Tino Bum (`../tino-bum/fondali/`).
+- **Decisioni prese**: titolo "Ghiande e Mattoncini"; si sceglie nel menu se giocare
+  con Tino (asse di legno) o Gino (foglia di quercia): stesse regole, cambia solo
+  l'aspetto e il suono del rimbalzo (scelta in `localStorage` `personaggio`); il
+  personaggio regge l'asse da sotto. Tarato su adulti: la ghianda è veloce e diventa
+  più veloce a ogni livello. Sul telefono si gioca in verticale (in orizzontale
+  compare l'invito a girarlo); il campo si allunga fino a 980 se lo schermo è lungo.
+- **Campo**: logico 604 × 820 (verticale), muri di 14 px, 16 colonne di mattoncini da
+  36 × 18 da y = 58; l'asse ha la cima a `H - 104` (716) ed è spessa 14; ghianda di
+  raggio 7. Il rimbalzo sull'asse dipende solo da dove la colpisce (fino a 62° dalla
+  verticale); la direzione non scende mai sotto il 30% di componente verticale.
+  Movimento a passi di 4 px; negli spigoli tra due mattoncini vicini il rimbalzo è
+  dritto. Se per 15 s non si rompe niente, l'angolo si corregge un poco (giri chiusi).
+- **Controlli**: mouse (l'asse segue il puntatore), ← → o A D; clic, Spazio, ↑ o Invio
+  lanciano la ghianda. Sul telefono il dito sposta l'asse di quanto si sposta (×1,25,
+  così si tocca dove si vuole), un tocco breve lancia. P o Esc pausa, M suoni, N musica.
+- **Livelli** (`livelli.js`, legenda in cima): `a`-`f` colorati (il colore dipende dal
+  mondo), `2` `3` resistenti, `#` indistruttibili, `*` petardo (fa saltare gli otto
+  vicini, a catena), `?` sorpresa (lascia sempre un potenziamento). 4 mondi da 4
+  livelli, ognuno con colori, cornice e disegnino dei mattoncini propri: il prato
+  (fiorellini; 1 Il prato fiorito, 2 Il girasole, 3 Le aiuole, 4 I petardi della
+  sagra), la spiaggia (sabbia; 5 Il castello di sabbia, 6 Le onde, 7 Il faro, 8 La
+  barriera corallina), il bosco d'autunno (venature; 9 La grande quercia, 10 I
+  funghi, 11 Il sentiero nascosto, 12 La tana del tasso), gli uffici della Tari
+  (faldoni e casseforti; 13 Lo sportello, 14 Le pile di bollette, 15 L'archivio, 16
+  L'ufficio del capo, con la scritta TARI in mattoncini da tre colpi).
+- **Difficoltà** (tabelle `PALLA`, `ASSE`, `CADUTA` in cima a `gioco.js`, livello da 0):
+  velocità al lancio 430 → 625, massima 650 → 940 (cresce dell'1,2% a ogni rimbalzo
+  sull'asse e dello 0,4% a ogni mattoncino), asse larga 108 → 80, potenziamenti dal
+  13% al 10% dei mattoncini.
+- **Potenziamenti** (tabella `POTERI`, con peso e durata): asse lunga (×1,45, 20 s),
+  tre ghiande, miele (la ghianda si attacca all'asse e parte da sola dopo 2,5 s, 18
+  s), ghianda di fuoco (passa tra i mattoncini rompibili, 8 s), fionda (semini dalle
+  estremità dell'asse ogni 0,42 s, 10 s), lumaca (velocità ×0,72, 12 s), siepe (in
+  fondo, salva una volta), ghianda d'oro (+1 vita, rara); dispetti: asse corta (×0,65,
+  14 s) e vespa (velocità ×1,22, 12 s). Le icone dei poteri attivi stanno in alto
+  a sinistra con l'anello del tempo; nel menu c'è la legenda.
+- **Punti e vite**: 3 vite (massimo 6), una in più ogni 20000 punti. Mattoncino 50
+  (resistenti 50 per colpo da dare, petardo 80, sorpresa 60) più il 10% per ogni
+  mattoncino della stessa volata (fino a +100%), 10 per i colpi che non rompono, 100
+  per un potenziamento buono; a fine livello bonus del livello (500 per mondo + 100 per
+  livello) e del tempo (10 per ogni secondo sotto i 150). `localStorage`: `record`,
+  `sbloccati` (si può ripartire da ogni livello raggiunto, con i punti da zero),
+  `personaggio`, `muto`, `musica-spenta`.
+- **Suoni** (tutti Web Audio, con un compressore, come negli altri giochi): nota che
+  sale sulla pentatonica di Re minore a ogni mattoncino della stessa volata,
+  "tock" dei resistenti, "clank" degli indistruttibili, rimbalzo di legno (Tino) o di
+  foglia (Gino), petardo, arpeggi per i potenziamenti (che scendono per i dispetti),
+  fionda, siepe, vita persa, vittoria, sconfitta. **Musica** (tabelle `MUSICA` e
+  `BRANO`, come in Gino Volante): 8 battute in Re minore (Rem, Sib, Fa, Do, Rem, Sib,
+  Do, La7), menu a 96 bpm e partita a 116; con 6 mattoncini o meno il filtro si apre e
+  il charleston si fa fitto. Tace in pausa e con la scheda nascosta.
+- **Espressioni**: Tino concentrato (arrabbiato) con l'ultima vita, quando restano 3
+  mattoncini o meno e quando prende un dispetto; ferito quando perde una vita; ko a
+  fine partita; saltella a fine livello e coi potenziamenti. Gino trema quando perde
+  una vita o prende un dispetto, saltella quando prende un potenziamento e a fine
+  livello, cade ruotato a fine partita. Il personaggio segue l'asse con un po' di
+  ritardo, si inclina quando corre e si schiaccia a ogni rimbalzo.
+- **Partita dimostrativa**: nel menu il computer gioca i primi livelli sbloccati
+  (giocatore simulato `pilotaIA`, che prevede dove arriva la ghianda e mira a un
+  mattoncino rompibile con `sceltaMira`).
+- **Difficoltà tarata** con partite simulate (vite infinite, 8 partite per livello e per
+  giocatore; giocatori con ritardo, errore che cresce con la velocità e l'angolo della
+  ghianda, velocità dell'asse e mira: principiante 0,22 s / 16 px / 1300 px/s / mira 30%,
+  medio 0,16 / 12 / 1800 / 60%, bravo 0,11 / 8 / 2600 / 85%). Vite perse per livello
+  (principiante / medio / bravo): mondo 1 da 0,1 / 0 / 0 a 1,1 / 1 / 0,4; mondo 2 da 0,9
+  / 0,8 / 0,4 a 3,5 / 1 / 0,6; mondo 3 da 1,4 / 1 / 0,3 a 5,1 / 3,5 / 0,8 (il sentiero
+  nascosto, col varco nel muro, è il più duro); mondo 4 da 3,6 / 2,4 / 1,4 a 6 / 4,4 /
+  2,1 (l'archivio). Il bravo perde ~10 vite in tutto il gioco e ne guadagna ~9 coi punti,
+  quindi lo finisce; il medio arriva al mondo 3 e poi riparte dal livello raggiunto.
+  Un livello dura 1,5-5 minuti (~200 s in media), 7000-20000 punti.
+- **Prove automatiche**: `window.ghiandeEMattoncini` (`stato`, `iniziaPartita(n)`,
+  `caricaLivello`, `aggiorna`, `azione`, `prendi(id)`, `nuovaCapsula`, tabelle); con
+  `stato.test = true` il gioco non avanza da solo, non suona, non apre pannelli e non va
+  in pausa, e con `stato.iaGioca = true` (e `stato.parametriIA`) l'asse la guida il
+  giocatore simulato; a livello finito `stato.fase` diventa `superato`. I copioni non
+  sono nel repository: per ogni livello `iniziaPartita(n)`, `stato.vite = 999`, poi
+  `aggiorna(1 / 120)` fino a `superato` (o 600 s), contando le vite perse.
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
+  `css/sito.css`, `stile.css`, `livelli.js`, `gioco.js` (con `ASSETS = 'assets/'`,
+  `FONDALI = 'fondali/'` e `leggi('sbloccati', 16)` per aprire tutti i livelli),
+  `ghianda.svg`, `fondali/` (da Tino Bum), `assets/tino/` e `assets/gino/`; si pubblica
+  con `files` e `root`.
+- **Stato**: prima versione giocabile (4 mondi, 16 livelli, 10 potenziamenti, musica).
+  Possibili seguiti, non ancora decisi: un livello col capo della Tari che si muove e
+  lancia bollette, mattoncini che si muovono o che ricrescono, classifica dei punti,
+  differenze di gioco tra Tino e Gino.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)

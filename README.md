@@ -42,3 +42,11 @@ e poi si visita http://localhost:8000.
   e `ostacoli/`). Musica sintetizzata (si spegne a parte), tunnel di nuvole sempre più
   lunghi e stretti nel cielo, e un negozio dove si spendono le ghiande: foglie con un
   potere ciascuna e cappelli per Gino.
+- **Ghiande e Mattoncini** (`games/ghiande-e-mattoncini/`): gioco a mattoncini.
+  Si sceglie se giocare con Tino (asse di legno) o Gino (foglia di quercia), si fa
+  rimbalzare la ghianda e si rompono tutti i mattoncini. 16 livelli in quattro mondi
+  (prato, spiaggia, bosco d'autunno, uffici della Tari), sempre più veloci; mattoncini
+  resistenti, indistruttibili, petardi e sorprese; potenziamenti (asse lunga, tre
+  ghiande, miele, ghianda di fuoco, fionda, lumaca, siepe, vita) e due dispetti (asse
+  corta, vespa). Suoni e musica sintetizzati. I livelli si modificano in
+  `games/ghiande-e-mattoncini/livelli.js`.

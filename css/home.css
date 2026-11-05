@@ -218,6 +218,35 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
 }
 @keyframes ap-battito { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.06, 0.92) rotate(-4deg); } }
 
+/* Anteprima di Ghiande e Mattoncini: Tino rimanda la ghianda contro il muro */
+.anteprima-mattoncini {
+  background:
+    linear-gradient(transparent 82%, #6cbf4a 82%, #58a83c),
+    linear-gradient(#9fd6f2, #d6effa);
+}
+.ap-muro {
+  position: absolute; left: 6%; right: 6%; top: 8%; height: 30%;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(12.5% - 2px), rgba(40, 20, 5, 0.35) calc(12.5% - 2px) 12.5%),
+    repeating-linear-gradient(0deg, transparent 0 calc(20% - 2px), rgba(40, 20, 5, 0.35) calc(20% - 2px) 20%),
+    linear-gradient(#e8483f 0 20%, #f5c518 20% 40%, #4ea3e0 40% 60%, #f08bb8 60% 80%, #6cbf4a 80%);
+  border-radius: 4px;
+}
+.ap-ghianda-m {
+  position: absolute; width: 16px; height: 19px; margin: -9px 0 0 -8px;
+  background: url("../games/ghiande-e-mattoncini/ghianda.svg") center / contain no-repeat;
+  animation: ap-ghianda-m 1.3s linear infinite alternate;
+}
+.ap-giocatore { position: absolute; bottom: 4%; width: 24%; height: 48%; margin-left: -12%; animation: ap-giocatore 1.3s ease-in-out infinite alternate; }
+.ap-asse { position: absolute; left: 0; right: 0; top: 0; height: 9%; border-radius: 6px; background: linear-gradient(#e3a964, #a8682e); box-shadow: 0 0 0 2px #5c3517; z-index: 1; }
+.ap-tino-m { position: absolute; left: 50%; top: 6%; height: 94%; translate: -50% 0; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25)); }
+@keyframes ap-ghianda-m {
+  0% { left: 28%; top: 49%; }
+  50% { left: 50%; top: 41%; }
+  100% { left: 72%; top: 49%; }
+}
+@keyframes ap-giocatore { from { left: 28%; } to { left: 72%; } }
+
 .piede { text-align: center; padding: 16px; font-size: 0.95rem; opacity: 0.75; }
 
 @media (max-width: 520px) {
