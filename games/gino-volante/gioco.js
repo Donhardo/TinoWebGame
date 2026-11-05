@@ -148,6 +148,28 @@
   const FONDALI = ['fondali/prato.png', 'fondali/bosco.png', 'fondali/cielo.png'].map(facoltativa);
   const ALIANTE = { intero: facoltativa('aliante.png'), strappato: facoltativa('aliante-strappato.png') };
   const PARALLASSE_FONDALE = 0.15;
+
+  // Ostacoli dipinti (in ostacoli/). w, h: misure del PNG; largo: larghezza in
+  // gioco; verso 'su' = la parte bella è in cima e lo stelo si allunga verso il
+  // basso, 'giu' = pende dall'alto e il ramo si allunga verso l'alto; ripeti: riga
+  // del PNG da cui si allunga (ripetendo quella riga); bande: sagoma della parte
+  // bella per gli urti ([y0, y1, x0, x1] in pixel del PNG, ricavate dai pixel non
+  // trasparenti); fusto: larghezza della parte allungata.
+  const SPRITE = {
+    girasole: {"w": 262, "h": 628, "largo": 105, "verso": "su", "ripeti": 333, "bande": [[0, 23, 70, 192], [23, 47, 52, 209], [47, 71, 35, 227], [71, 95, 24, 238], [95, 119, 21, 241], [119, 143, 24, 238], [143, 167, 35, 227], [167, 190, 39, 224], [190, 214, 69, 193], [214, 238, 30, 157], [238, 262, 12, 237], [262, 286, 1, 261], [286, 310, 1, 245], [310, 334, 123, 221]], "fusto": [123, 139]},
+    ramo: {"w": 250, "h": 778, "largo": 100, "verso": "giu", "ripeti": 528, "bande": [[528, 545, 80, 192], [545, 563, 56, 201], [563, 581, 23, 232], [581, 599, 13, 232], [599, 617, 15, 241], [617, 635, 7, 240], [635, 653, 0, 249], [653, 670, 0, 250], [670, 688, 10, 244], [688, 706, 10, 241], [706, 724, 23, 225], [724, 742, 31, 216], [742, 760, 46, 211], [760, 778, 92, 159]], "fusto": [115, 136]},
+    tronco: {"w": 230, "h": 1184, "largo": 92, "verso": "su", "ripeti": 236, "bande": [[0, 16, 16, 193], [16, 33, 3, 206], [33, 50, 3, 206], [50, 67, 3, 206], [67, 84, 4, 209], [84, 101, 4, 211], [101, 118, 5, 228], [118, 135, 5, 228], [135, 152, 6, 215], [152, 169, 6, 215], [169, 186, 7, 212], [186, 203, 8, 210], [203, 220, 8, 208], [220, 237, 8, 204]], "fusto": [7, 202]},
+    muschio: {"w": 230, "h": 1304, "largo": 92, "verso": "giu", "ripeti": 962, "bande": [[962, 986, 54, 196], [986, 1010, 44, 205], [1010, 1035, 32, 220], [1035, 1059, 17, 228], [1059, 1084, 7, 228], [1084, 1108, 2, 220], [1108, 1133, 2, 201], [1133, 1157, 10, 193], [1157, 1181, 15, 174], [1181, 1206, 24, 171], [1206, 1230, 28, 171], [1230, 1255, 32, 92], [1255, 1279, 77, 90], [1279, 1304, 79, 91]], "fusto": [68, 165]}
+  };
+  const COPPIE = [{ basso: 'girasole', alto: 'ramo' }, { basso: 'tronco', alto: 'muschio' }];
+  // nuvole del cielo: mucchi di nuvole sciolte (quelle che ci sono tra le tre)
+  // largo: larghezza dell'ostacolo; misura: larghezza media di una nuvola; passo: distanza tra
+  // una nuvola e la successiva (in altezze di nuvola: sotto 1 si toccano, quindi niente buchi)
+  const NUVOLE = { largo: 140, misura: 112, file: ['nuvola', 'nuvola2', 'nuvola3'], rx: 0.44, ry: 0.42, passo: 0.82 };
+  const IMG_OST = {};
+  for (const n of [...Object.keys(SPRITE), ...NUVOLE.file]) IMG_OST[n] = facoltativa('ostacoli/' + n + '.png');
+  const coppiaPronta = (t) => COPPIE[t] && IMG_OST[COPPIE[t].basso].ok && IMG_OST[COPPIE[t].alto].ok;
+  const nuvolePronte = () => NUVOLE.file.filter((n) => IMG_OST[n].ok);
   // colore della riga in alto del fondale, per riempire il cielo se la telecamera sale
   function coloreCima(im) {
     if (im.cima !== undefined) return im.cima;
@@ -664,7 +686,7 @@
     centro = clamp(centro, minC, maxC);
     const tappa = tappaDi(metri);
     const o = {
-      x: gen.x, w: OSTACOLI.larghezza * (tappa === 2 ? 1.25 : tappa === 1 ? 1.05 : 0.9),
+      x: gen.x, ...formaOstacolo(tappa),
       centro, varco, ampiezza, periodo: tra(OSTACOLI.periodo[0], OSTACOLI.periodo[1]), fase: tra(0, Math.PI * 2),
       tappa, seme: Math.floor(tra(0, 1e6)), passato: false,
     };
@@ -699,12 +721,93 @@
     const dx = cx - px, dh = ch - ph;
     return dx * dx + dh * dh < r * r;
   }
+  // Che forma ha un ostacolo nuovo: disegni dipinti se ci sono, altrimenti rettangoli
+  function formaOstacolo(tappa) {
+    if (tappa < 2 && coppiaPronta(tappa)) {
+      const c = COPPIE[tappa];
+      return { forma: 'disegno', w: Math.max(SPRITE[c.basso].largo, SPRITE[c.alto].largo) };
+    }
+    if (tappa === 2 && nuvolePronte().length) return { forma: 'nuvole', w: NUVOLE.largo };
+    return { forma: 'rett', w: OSTACOLI.larghezza * (tappa === 2 ? 1.25 : tappa === 1 ? 1.05 : 0.9) };
+  }
+
+  // Sagoma di un disegno in coordinate del mondo, relative al centro (dx) e al
+  // bordo del varco (dh): rettangoli [dx0, dx1, dh0, dh1]; l'ultimo è il fusto.
+  function sagoma(nome) {
+    const S = SPRITE[nome];
+    if (S.sagoma) return S.sagoma;
+    const k = S.largo / S.w;
+    const X = (x) => (x - S.w / 2) * k;
+    const forme = S.bande.map(([y0, y1, x0, x1]) => (S.verso === 'su'
+      ? [X(x0), X(x1), -y1 * k, -y0 * k]
+      : [X(x0), X(x1), (S.h - y1) * k, (S.h - y0) * k]));
+    forme.push(S.verso === 'su'
+      ? [X(S.fusto[0]), X(S.fusto[1]), -100000, -S.ripeti * k]
+      : [X(S.fusto[0]), X(S.fusto[1]), (S.h - S.ripeti) * k, 100000]);
+    S.sagoma = forme;
+    return forme;
+  }
+
+  // Le nuvole di un ostacolo del cielo: sotto il varco fino alle chiome, sopra
+  // fino in cima. Ognuna è un'ellisse per gli urti; v = quale disegno, giro = specchiata.
+  function nuvoleDi(o, c) {
+    const disegni = nuvolePronte();
+    const n = Math.max(1, disegni.length);
+    const lista = [];
+    const cx = o.x + o.w / 2;
+    const fai = (i, sopra, bordo) => {
+      const r = hash(o.seme + i * 7 + (sopra ? 1000 : 0));
+      const ww = NUVOLE.misura * (0.85 + 0.3 * r);
+      const im = IMG_OST[disegni[(o.seme + i + (sopra ? 1 : 0)) % n]];
+      const hh = ww * (im && im.ok ? im.naturalHeight / im.naturalWidth : 0.72);
+      const rx = ww * NUVOLE.rx, ry = hh * NUVOLE.ry;
+      const gioco = Math.max(0, o.w / 2 - rx) * (i % 2 ? 1 : -1) * (0.5 + 0.5 * hash(o.seme + i * 13));
+      return { x: cx + gioco, h: bordo, ww, hh, rx, ry, im, giro: (o.seme + i) % 2 === 1 };
+    };
+    // sotto: la prima nuvola tocca il bordo basso del varco
+    let h = c - o.varco / 2;
+    for (let i = 0; h > -60 && i < 20; i++) {
+      const q = fai(i, false, 0);
+      q.h = h - q.ry;
+      lista.push(q);
+      h = q.h - q.hh * (NUVOLE.passo - NUVOLE.ry);
+    }
+    h = c + o.varco / 2;
+    for (let i = 0; h < 1600 && i < 30; i++) {
+      const q = fai(i, true, 0);
+      q.h = h + q.ry;
+      lista.push(q);
+      h = q.h + q.hh * (NUVOLE.passo - NUVOLE.ry);
+    }
+    return lista;
+  }
+
   function urtaOstacolo(o, g, tempo) {
     const tol = OSTACOLI.tolleranza;
     const c = centroOstacolo(o, tempo);
     const r = VOLO.raggio;
     const x1 = o.x + tol, x2 = o.x + o.w - tol;
     if (g.x + r < x1 || g.x - r > x2) return false;
+    if (o.forma === 'disegno') {
+      const cx = o.x + o.w / 2;
+      const coppia = COPPIE[o.tappa];
+      for (const [nome, bordo] of [[coppia.basso, c - o.varco / 2], [coppia.alto, c + o.varco / 2]]) {
+        for (const [dx0, dx1, dh0, dh1] of sagoma(nome)) {
+          if (dx1 - dx0 <= 2 * tol) continue;
+          if (urtaRett(g.x, g.h, r, cx + dx0 + tol, cx + dx1 - tol, bordo + dh0 + tol, bordo + dh1 - tol)) return true;
+        }
+      }
+      return false;
+    }
+    if (o.forma === 'nuvole') {
+      const rr = r - tol;
+      for (const q of nuvoleDi(o, c)) {
+        if (Math.abs(g.h - q.h) > q.ry + rr) continue;
+        const dx = (g.x - q.x) / (q.rx + rr), dh = (g.h - q.h) / (q.ry + rr);
+        if (dx * dx + dh * dh < 1) return true;
+      }
+      return false;
+    }
     return urtaRett(g.x, g.h, r, x1, x2, -1000, c - o.varco / 2 - tol)
       || urtaRett(g.x, g.h, r, x1, x2, c + o.varco / 2 + tol, 100000);
   }
@@ -1260,7 +1363,21 @@
       const yBasso = sy(c - o.varco / 2); // cima dell'ostacolo dal basso
       const yAlto = sy(c + o.varco / 2);  // fondo dell'ostacolo dall'alto
       const yTerra = sy(0) + 4;
-      if (o.tappa === 0) {
+      if (o.forma === 'disegno') {
+        const coppia = COPPIE[o.tappa];
+        disegnaSprite(coppia.basso, x + o.w / 2, yBasso, yTerra);
+        disegnaSprite(coppia.alto, x + o.w / 2, yAlto, yTerra);
+      } else if (o.forma === 'nuvole') {
+        for (const q of nuvoleDi(o, c)) {
+          const y = sy(q.h);
+          if (y < -q.hh || y > alt + q.hh || !q.im) continue;
+          ctx.save();
+          ctx.translate(sx(q.x), y);
+          if (q.giro) ctx.scale(-1, 1);
+          ctx.drawImage(q.im, -q.ww / 2, -q.hh / 2, q.ww, q.hh);
+          ctx.restore();
+        }
+      } else if (o.tappa === 0) {
         steloFiore(x, o.w, yBasso, yTerra, o.seme);
         ramoAlto(x, o.w, yAlto, o.seme, '#7a4a22', '#5aa845');
       } else if (o.tappa === 1) {
@@ -1271,6 +1388,28 @@
         nuvolone(x, o.w, -40, yAlto, false, o.seme);
       }
     }
+  }
+
+  // Un ostacolo dipinto: la parte bella intera, poi la riga 'ripeti' allungata
+  // fino a terra (verso 'su') o fino in cima allo schermo (verso 'giu').
+  function disegnaSprite(nome, cx, yBordo, yTerra) {
+    const S = SPRITE[nome];
+    const im = IMG_OST[nome];
+    const k = S.largo / S.w;
+    const x0 = cx - S.largo / 2;
+    ctx.save();
+    if (S.verso === 'su') {
+      ctx.beginPath(); ctx.rect(x0 - 10, -10, S.largo + 20, yTerra + 10); ctx.clip();
+      const yS = yBordo + S.ripeti * k;
+      ctx.drawImage(im, 0, 0, S.w, S.ripeti, x0, yBordo, S.largo, S.ripeti * k);
+      if (yTerra > yS) ctx.drawImage(im, 0, S.ripeti - 1, S.w, 2, x0, yS - 0.5, S.largo, yTerra - yS + 0.5);
+    } else {
+      const hb = (S.h - S.ripeti) * k;
+      const yS = yBordo - hb;
+      ctx.drawImage(im, 0, S.ripeti, S.w, S.h - S.ripeti, x0, yS, S.largo, hb);
+      if (yS > -10) ctx.drawImage(im, 0, S.ripeti - 1, S.w, 2, x0, -10, S.largo, yS + 10.5);
+    }
+    ctx.restore();
   }
 
   function steloFiore(x, w, yCima, yTerra, seme) {
@@ -1743,7 +1882,7 @@
 
   // utile per le prove automatiche
   window.ginoVolante = {
-    stato, avvia, premi, aggiorna, finisci, superficie, centroOstacolo, urtaOstacolo, crociera,
+    stato, avvia, premi, aggiorna, finisci, superficie, centroOstacolo, urtaOstacolo, nuvoleDi, sagoma, crociera,
     ALTALENA, TINO, LANCIO, VOLO, FOGLIA, OSTACOLI, CURVE, curva, CORRENTE, PX_M,
   };
 })();

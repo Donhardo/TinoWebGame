@@ -517,14 +517,29 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   riga dura in cima (tagliata: da y 108); palette a 256 colori. Aliante: magenta tolto
   calcolando la trasparenza da quanto è magenta il pixel (e ripulendo i bordi),
   ritagliato, allargato perché il manubrio stia al centro, 512 px di larghezza; in
-  gioco è largo 150 px. Gli ostacoli sono ancora disegnati nel codice.
+  gioco è largo 150 px.
+- **Ostacoli dipinti** (Gemini, sfondo magenta tolto come per l'aliante), in
+  `ostacoli/`: `girasole.png` + `ramo.png` (prato), `tronco.png` + `muschio.png`
+  (bosco), `nuvola.png` (+ `nuvola2.png`, `nuvola3.png` se ci sono) per il cielo.
+  Tabella `SPRITE` in `gioco.js`: per ogni disegno la parte bella (in cima per girasole
+  e tronco, in fondo per ramo e muschio) si disegna intera e la riga `ripeti` si allunga
+  fino a terra o in cima allo schermo, così l'ostacolo è alto quanto serve. Gli urti
+  seguono la sagoma: 14 fasce ricavate dai pixel non trasparenti della parte bella più
+  il fusto (`sagoma`). Il cielo non ha colonne: ogni ostacolo è un mucchio di nuvole
+  sciolte (tabella `NUVOLE`), sfalsate a destra e a sinistra e di misure diverse, dal
+  varco fino alle chiome e dal varco fino in cima; ogni nuvola è un'ellisse per gli urti
+  e sono abbastanza vicine da non lasciare buchi. Se i disegni mancano, ostacoli
+  disegnati nel codice con urti a rettangolo (`formaOstacolo`). Con le sagome il
+  pianificatore arriva ancora sempre a 3000 m (16 su 16, senza strappi); i fusti sottili
+  perdonano un po' di più: bravo ~2250 m, medio ~1350 m, principiante ~580 m.
 - **Prove automatiche**: `window.ginoVolante` (`stato`, `avvia(seme)`, `premi`,
   `aggiorna`, `centroOstacolo`, `urtaOstacolo`, tabelle); con `stato.test = true` il
   gioco non avanza da solo e non apre pannelli. I copioni non sono nel repository.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
-  `foglia.svg`, i disegni dipinti se ci sono e `assets/tino/`, `assets/gino/`; si
+  `foglia.svg`, i disegni dipinti (`fondali/`, `ostacoli/`, `aliante*.png`) e
+  `assets/tino/`, `assets/gino/`; si
   pubblica con `files` e `root`.
 - **Stato**: completo. Possibili seguiti, non ancora decisi: cappelli o foglie
   diverse da comprare con le ghiande, una musica di sottofondo, altre tappe oltre il
