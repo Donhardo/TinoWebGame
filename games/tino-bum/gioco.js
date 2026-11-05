@@ -2027,7 +2027,10 @@
     ctx.save();
     ctx.translate(x + dx, y + dy);
     ctx.rotate(rot);
-    ctx.scale(sx * (g.verso > 0 && !P.agente ? -1 : 1), sy);
+    // la foto di Tino guarda a destra, Gino è di fronte: si specchia chi
+    // guarderebbe dalla parte opposta a quella in cui spara il mezzo
+    const specchia = P.agente ? false : g.personaggio === 'tino' ? g.verso < 0 : g.verso > 0;
+    ctx.scale(sx * (specchia ? -1 : 1), sy);
     ctx.drawImage(img, -w / 2, -h, w, h);
     ctx.restore();
   }
