@@ -383,6 +383,10 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   (squadra 0); più giocatori per parte a 120 px l'uno dall'altro; con più di due
   giocatori le schede sono piccole e impilate. L'ispettore capo ha 1600 di vita
   (`vitaMax` per giocatore). Si vince se resta in piedi qualcuno della squadra di Tino.
+  Livelli degli agenti 2, 3, 5, 4, 3, 6; nella tappa 5 i tre agenti hanno 550 di vita
+  (con 1000 tirano troppo spesso e la tappa era quasi impossibile), l'ispettore capo
+  1550. Tarata con Tino al computer (livello 6): vince ~58%, ~67%, ~60%, ~70%, ~59%,
+  ~55% delle partite (12-32 partite per tappa, quindi ±15%).
 - **Espressioni**: Tino arrabbiato quando è colpito, con poca vita o quando il
   nemico è quasi KO; ferito sui colpi da 180 in su; ko quando perde. Gino trema
   quando è colpito, saltella quando colpisce, cade ruotato quando perde.
