@@ -28,3 +28,7 @@ e poi si visita http://localhost:8000.
   (12 livelli; l'ultimo di ogni mondo con l'inseguimento dell'ispettore capo; alla fine
   si libera Gino con la Ghianda d'Oro).
   I livelli si modificano in `games/ghianda-d-oro/livelli.js`.
+- **Tino Bum!** (`games/tino-bum/`): artiglieria a turni tra isole generate a
+  caso. Si sceglie il mezzo (catapulta, fionda gigante, mortaio di zucca), si
+  prende la mira e si tiene conto del vento. Contro Gino (livelli sempre più
+  difficili) o in due sullo stesso dispositivo.
