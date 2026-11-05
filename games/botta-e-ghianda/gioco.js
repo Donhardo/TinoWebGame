@@ -827,6 +827,10 @@
   // tela a parte e poi si copia a ogni fotogramma.
   let prato = null;
   let pratoScala = 0;
+  // Fondale dipinto (vista dall'alto, 16:9): se c'è, prende il posto del prato
+  // disegnato nel codice. Ruota insieme al campo quando lo schermo è verticale.
+  const fondale = new Image();
+  fondale.src = 'fondale.png';
 
   function casualeConSeme(seme) {
     return () => { seme = (seme * 16807) % 2147483647; return seme / 2147483647; };
@@ -933,6 +937,11 @@
   }
 
   function disegnaCampo() {
+    if (fondale.complete && fondale.naturalWidth) {
+      ctx.drawImage(fondale, 0, 0, L, S);
+      disegnaFormiche();
+      return;
+    }
     const k = Math.min(2, Math.max(1, scala * Math.min(window.devicePixelRatio || 1, 2)));
     if (!prato || Math.abs(k - pratoScala) > 0.25) {
       prato = preparaPrato(k);
