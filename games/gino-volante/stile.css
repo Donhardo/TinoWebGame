@@ -167,12 +167,66 @@ kbd {
 }
 .record { font-size: 0.95rem; opacity: 0.8; }
 
+/* Negozio di foglie e cappelli */
+.ico-ghianda { width: 0.95em; height: 1.1em; vertical-align: -0.15em; }
+.in-uso { font-size: 0.92rem; opacity: 0.85; }
+.sbloccato { font-weight: 600; color: var(--verde-scuro); }
+.negozio { width: min(720px, 100%); }
+.anteprima-gino { display: block; margin: 0 auto; }
+.borsa { font-size: 1.05rem; }
+.schede { display: flex; justify-content: center; gap: 6px; margin: 8px 0 2px; }
+.scheda {
+  font: inherit;
+  font-weight: 600;
+  padding: 6px 18px;
+  border: 2px solid var(--marrone);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--marrone);
+  cursor: pointer;
+}
+.scheda.attiva { background: var(--marrone); color: #fff; }
+.scheda:focus-visible { outline: 3px solid #ffd59a; }
+.nota { font-size: 0.9rem; opacity: 0.8; }
+.merce {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.pezzo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px 10px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid transparent;
+}
+.pezzo.scelto { border-color: var(--verde-scuro); background: #f1f8e8; }
+.pezzo.chiuso canvas { opacity: 0.55; filter: grayscale(0.5); }
+.pezzo .nome { font-weight: 700; line-height: 1.15; }
+.potere { display: flex; flex-direction: column; font-size: 0.82rem; line-height: 1.2; min-height: 2.5em; }
+.potere .piu { color: var(--verde-scuro); }
+.potere .piu::before { content: '+ '; font-weight: 700; }
+.potere .meno { color: #a0522d; }
+.potere .meno::before { content: '− '; font-weight: 700; }
+.bottone.piccolo { padding: 5px 14px; font-size: 0.95rem; margin-top: auto; }
+.bottone.piccolo[disabled] { opacity: 0.45; cursor: not-allowed; }
+.in-uso-etichetta, .traguardo { margin-top: auto; font-size: 0.88rem; font-weight: 600; padding: 5px 0; }
+.in-uso-etichetta { color: var(--verde-scuro); }
+.traguardo { color: #7a6a5a; }
+
 @media (max-width: 560px) {
   .barra { grid-template-columns: auto 1fr auto; }
   .barra-home span { display: none; }
   .tabellone { justify-self: center; font-size: 1rem; }
   .record-barra { margin-left: 4px; font-size: 0.8rem; }
   .ritratti { height: 88px; }
+  .merce { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-height: 460px) {
   .barra { padding-top: 2px; padding-bottom: 2px; }
@@ -182,4 +236,5 @@ kbd {
   .riquadro { padding: 12px 16px 14px; }
   .ritratti { height: 70px; }
   .comandi { margin-top: 8px; padding: 6px 10px; font-size: 0.88rem; }
+  .merce { grid-template-columns: repeat(4, 1fr); }
 }
