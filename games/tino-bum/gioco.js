@@ -95,24 +95,24 @@
       nemici: [{ chi: 'timbro', mezzo: 'bolle' }],
     },
     {
-      nome: 'Gino dà una mano', liv: 4, alleato: { mezzo: 'catapulta', liv: 5 },
+      nome: 'Gino dà una mano', liv: 5, alleato: { mezzo: 'catapulta', liv: 5 },
       testo: 'Gli agenti adesso sono due, ma Gino si mette in squadra con Tino.',
       nemici: [{ chi: 'retino', mezzo: 'fionda' }, { chi: 'timbro', mezzo: 'cannone' }],
     },
     {
-      nome: 'Sotto i piedi', liv: 5,
+      nome: 'Sotto i piedi', liv: 4,
       testo: "Un agente con la talpa trivella scava gallerie sotto l'isola.",
       nemici: [{ chi: 'timbro', mezzo: 'talpa' }],
     },
     {
-      nome: 'La squadra della Tari', liv: 5, alleato: { mezzo: 'mortaio', liv: 6 },
+      nome: 'La squadra della Tari', liv: 3, alleato: { mezzo: 'mortaio', liv: 7 },
       testo: 'Tre agenti tutti insieme! Tino e Gino contro la squadra della Tari.',
       nemici: [{ chi: 'retino', mezzo: 'mortaio' }, { chi: 'timbro', mezzo: 'catapulta' }, { chi: 'retino', mezzo: 'bolle' }],
     },
     {
       nome: "L'ispettore capo", liv: 6, alleato: { mezzo: 'cannone', liv: 6 },
       testo: "Arriva l'ispettore capo in persona, con il mortaio e un agente di scorta.",
-      nemici: [{ chi: 'capo', mezzo: 'mortaio', vita: 1600 }, { chi: 'timbro', mezzo: 'talpa' }],
+      nemici: [{ chi: 'capo', mezzo: 'mortaio', vita: 1400 }, { chi: 'timbro', mezzo: 'talpa' }],
     },
   ];
 
