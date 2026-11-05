@@ -298,6 +298,64 @@ porte e agenti della Tari. Storia: gli agenti hanno rapito Gino. File:
   livelli non sono nel repository; per un livello nuovo vanno riscritti
   (passi vai, salta, sali, frusta, dondola) e fatti girare con Playwright.
 
+### Tino Bum! (`games/tino-bum/`)
+Artiglieria a turni (meccaniche da classico dei carri armati a turni): ogni
+giocatore guida un mezzo su una mappa di isole generata a caso, sceglie alzo e
+potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
+(tabella `MEZZI` con i colpi), `terreno.js` (generazione, crateri, fondali),
+`gioco.js` (turni, fisica, IA, disegno, pannelli).
+- **Decisioni prese**: titolo "Tino Bum!"; mezzi ricchi con caratteristiche
+  proprie; IA brava ma battibile; mappe con isole e ostacoli generate a caso;
+  fondali in stile cartone (per ora disegnati nel codice: se non bastano, si
+  passano a Gemini i prompt per i fondali per ambientazione); tre modalità:
+  Tino contro Gino (computer), due giocatori sullo stesso dispositivo, campagna
+  contro gli agenti della Tari (tappa 2). Sul telefono si gioca in orizzontale.
+- **Tappe**: 1 motore (fatta: terreno, turni, vento, 3 mezzi, IA, due
+  giocatori); 2 contenuti (altri mezzi: cannone a tappi, talpa trivella,
+  soffiabolle; oggetti: cerotto, ombrello, doppio tiro, vento fermo,
+  teletrasporto; campagna contro gli agenti con l'ispettore capo); 3 rifinitura
+  (ambientazioni: prato, spiaggia, uffici della Tari…; fondali; suoni; taratura).
+- **Mondo**: 1600 × 900 pixel, acqua da y = 846 (chi ci cade perde). Schermo
+  logico 960 × 540; la camera inquadra i giocatori (e i colpi in volo), zoom con
+  rotella o + −. Gravità 500, vento fino a ±10 (13 px/s² per punto).
+- **Terreno** (`terreno.js`): griglia di materiali (0 aria, 1 terra, 2 roccia
+  indistruttibile, 3 legno). Quattro tipi di mappa: `arcipelago`, `colline`,
+  `ponti`, `valle` (con torre di roccia); grotte (con il fondo scuro), massi,
+  tronchi. Disegnato una volta in ImageData (contorno spesso, erba, sassolini,
+  radici); `scava` toglie i pixel e ripassa il bordo del cratere. Fondali a
+  parallasse: montagne, colline con alberi, nuvole.
+- **Partenze**: punti in piano lontani tra loro (un terzo sinistro e un terzo
+  destro); la mappa si scarta se l'IA non trova un tiro che colpisce da
+  entrambe le parti senza vento.
+- **Turni**: tocca a chi ha meno "ritardo" (ogni colpo ne aggiunge, moltiplicato
+  per il `peso` del mezzo, più i passi fatti): i colpi forti fanno aspettare.
+  30 s per i turni umani. Energia di movimento per turno (`energia` del mezzo).
+- **Colpi**: tenere premuto carica la potenza (0,55 al secondo; il segno rosso
+  è la potenza del tiro prima, il puntino rosso l'alzo di prima). Una breve
+  traccia guida (senza vento) mostra solo l'inizio del tiro. Comportamenti in
+  `mezzi.js`: `lancio` (più colpi), `rimbalzi`, `esplodeRimbalzo`, `divide`
+  (all'apice o in discesa). Danno lineare dal centro al bordo del cratere,
+  +10% sul colpo diretto; le esplosioni spingono (tabella `FISICA.spinta`).
+  Speciale: barra che si carica a ogni turno e coi danni subiti.
+- **Mezzi** (tappa 1): catapulta (equilibrata), fionda gigante (tiri tesi,
+  poco vento, molto movimento), mortaio di zucca (solo tiri alti, crateri grandi,
+  pesante). Disegnati nel codice (`disegnaMezzo`), con il personaggio seduto
+  dietro (`SEDILE`).
+- **IA** (tabella `IA`): prova davvero i tiri con la stessa fisica del gioco
+  (`simulaTiro`, `cercaTiro`: tutti gli alzi e le potenze, poi affina), sceglie
+  il colpo che fa più danno (meno quello a sé stessa), si sposta se da dove sta
+  non ha tiri buoni, poi sbaglia apposta: errore su alzo e potenza che cala col
+  livello e si riduce se tira di nuovo allo stesso bersaglio fermo. Tarato con
+  partite simulate computer contro computer: ~28% di tiri a segno al livello 1,
+  ~45% ai livelli 4-8, ~60% dal 12 (non sale oltre). Vento massimo 2 + livello.
+- **Espressioni**: Tino arrabbiato quando è colpito, con poca vita o quando il
+  nemico è quasi KO; ferito sui colpi da 180 in su; ko quando perde. Gino trema
+  quando è colpito, saltella quando colpisce, cade ruotato quando perde.
+- **Prove automatiche**: `window.tinoBum` (`stato`, `iniziaPartita(modo,
+  livello, { cpu0, liv, mezzo0, mezzo1, seme, tipo })`, `aggiorna`,
+  `simulaTiro`, `cercaTiro`, `pianificaIA`); con `stato.test = true` il gioco
+  non avanza da solo e si possono simulare partite intere chiamando `aggiorna`.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)
