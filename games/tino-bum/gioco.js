@@ -1275,8 +1275,10 @@
     const [b, c, min] = IA.scalaMinima;
     const s = Math.max(Math.max(min, b - c * (g.liv - 1)), Math.pow(IA.aggiusta, m.colpi));
     const M = MEZZI[g.mezzo];
-    piano.angolo = clamp(Math.round(piano.angolo + gauss() * scalaErrore(g.liv, IA.erroreAngolo) * s), M.angoli[0], M.angoli[1]);
-    piano.potenza = clamp(piano.potenza + gauss() * scalaErrore(g.liv, IA.errorePotenza) * s, 0.05, 1);
+    // i mezzi dai tiri tesi soffrono di più lo stesso errore: ne hanno uno più piccolo
+    const k = M.erroreIA || 1;
+    piano.angolo = clamp(Math.round(piano.angolo + gauss() * scalaErrore(g.liv, IA.erroreAngolo) * s * k), M.angoli[0], M.angoli[1]);
+    piano.potenza = clamp(piano.potenza + gauss() * scalaErrore(g.liv, IA.errorePotenza) * s * k, 0.05, 1);
   }
 
   function guidaIA(g, dt) {

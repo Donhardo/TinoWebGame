@@ -313,7 +313,7 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 - **Tappe**: 1 motore (fatta: terreno, turni, vento, 3 mezzi, IA, due
   giocatori); 2 contenuti (fatta: cannone a tappi, talpa trivella, soffiabolle;
   oggetti; campagna contro gli agenti con l'ispettore capo); 3 rifinitura
-  (ambientazioni e suoni fatti; resta la taratura).
+  (fatta: ambientazioni, suoni, ritaratura dei mezzi).
 - **Mondo**: 1600 × 900 pixel, acqua da y = 846 (chi ci cade perde). Schermo
   logico 960 × 540; la camera inquadra i giocatori (e i colpi in volo), zoom con
   rotella o + −. Gravità 500, vento fino a ±10 (13 px/s² per punto).
@@ -383,9 +383,13 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   pieno fino a 350-450 px di strada, poi cala fino al 40-50%), talpa trivella
   (trivella, scavafosse, speciale galleria), soffiabolle (bolle con vento ×2 e
   gravità dimezzata, bollicine che si dividono, speciale bollona). Girone di
-  partite simulate al livello 5 (10 per coppia): la fionda resta il mezzo più
-  debole in mano al computer (i suoi tiri tesi soffrono l'errore sull'alzo),
-  soffiabolle e catapulta i più forti. Disegnati nel codice (`disegnaMezzo`), con il personaggio seduto
+  partite simulate al livello 5 (10 per coppia, 50 partite per mezzo, ±14%):
+  prima della ritaratura la fionda vinceva il 18% (i suoi tiri tesi soffrono
+  l'errore sull'alzo) e la catapulta il 74%. Ritaratura: `erroreIA: 0.4` per la
+  fionda (moltiplica l'errore del computer, solo per quel mezzo), sasso con
+  raggio 38 (era 32), ghianda della catapulta 200 di danno (era 240) e tre
+  ghiande 95 (era 105). Dopo: catapulta 50%, fionda 48%, mortaio 58%, cannone
+  52%, talpa 42%, soffiabolle 50%. Disegnati nel codice (`disegnaMezzo`), con il personaggio seduto
   dietro (`SEDILE`).
 - **IA** (tabella `IA`): prova davvero i tiri con la stessa fisica del gioco
   (`simulaTiro`, `cercaTiro`: tutti gli alzi e le potenze, poi affina), sceglie
@@ -411,8 +415,9 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   (`vitaMax`). Si vince se resta in piedi qualcuno della squadra di Tino.
   Livelli degli agenti 2, 3, 5, 4, 3, 6; nella tappa 5 i tre agenti hanno 550 di vita
   (con 1000 tirano troppo spesso e la tappa era quasi impossibile), l'ispettore capo
-  1550. Tarata con Tino al computer (livello 6): vince ~58%, ~67%, ~60%, ~70%, ~59%,
-  ~55% delle partite (12-32 partite per tappa, quindi ±15%).
+  1550. Tarata con Tino al computer (livello 6, mezzo a turno tra tutti): dopo la
+  ritaratura dei mezzi vince ~72%, ~67%, ~72%, ~78%, ~50%, ~56% delle partite
+  (18 partite per tappa, quindi ±15%; prima era ~58%, ~67%, ~60%, ~70%, ~59%, ~55%).
 - **Espressioni**: Tino arrabbiato quando è colpito, con poca vita o quando il
   nemico è quasi KO; ferito sui colpi da 180 in su; ko quando perde. Gino trema
   quando è colpito, saltella quando colpisce, cade ruotato quando perde.
@@ -424,8 +429,9 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   con `files` e `root`. Le partite simulate (computer contro computer a vari
   livelli, con `stato.test = true`) si fanno girare con Playwright; i copioni
   non sono nel repository.
-- **Prossimo passo: resto della tappa 3**: ritaratura generale (es. la fionda in
-  mano al computer).
+- **Stato**: le tre tappe sono fatte. Possibili seguiti, non ancora decisi: una
+  musica di sottofondo, fondali di riserva disegnati nel codice per ogni
+  ambientazione, altre tappe della campagna.
 - **Prove automatiche**: `window.tinoBum` (`stato`, `iniziaPartita(modo,
   livello, { ambiente, cpu0, liv, liv0, mezzo0, mezzo1, oggetti0, oggetti1, seme, tipo })`
   (modo `cpu`, `due`, `campagna` con il numero della tappa, `demo`), `usaOggetto`, `aggiorna`,
