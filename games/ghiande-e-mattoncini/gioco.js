@@ -27,7 +27,8 @@
   const MONDI = window.GM_MONDI;
   const LIVELLI = window.GM_LIVELLI;
 
-  // Difficoltà: [base, aumento per livello, limite]; il livello parte da 0.
+  // Difficoltà: [base, aumento per livello, limite]; il grado va da 0 (primo
+  // livello) a 15 (ultimo), boss compresi (vedi grado()).
   const PALLA = {
     inizio: [430, 13, 640],    // velocità al lancio
     max: [650, 20, 940],       // velocità massima che raggiunge nel livello
@@ -77,6 +78,34 @@
     vespa: 'ghianda più veloce',
   };
 
+  // Boss alla fine di ogni mondo (campo boss in livelli.js). alt = altezza del
+  // disegno; vita = colpi da dare; vel = px/s. Il retino ogni tanto alza la rete:
+  // se la ghianda la tocca la prende e la ributta giù dalla parte lontana dall'asse.
+  // Timbro e capo lanciano bollette (stordiscono l'asse) e timbrano mattoncini nuovi
+  // nei buchi delle righe sotto di loro. Sotto metà vita si arrabbiano: più veloci e
+  // più frequenti (arrabbiato = moltiplicatore dei tempi).
+  const BOSS = {
+    retino: {
+      img: 'agente-retino', nome: 'Agente col retino', alt: 118, vita: 12, vel: 125,
+      rete: { ogni: 6, dura: 1.6, raggio: 26, tiene: 0.45, lancio: 1.12 },
+      mano: [0.83, 0.11], corpo: [0.15, 0.08, 0.73, 0.94],
+    },
+    timbro: {
+      img: 'agente-timbro', nome: 'Agente col timbro', alt: 118, vita: 14, vel: 100,
+      bollette: { ogni: 3.4, quante: 1 }, timbra: { ogni: 9, quanti: 3 },
+      mano: [0.86, 0.36], corpo: [0.15, 0.08, 0.73, 0.94],
+    },
+    capo: {
+      img: 'ispettore-capo', nome: 'Ispettore capo', alt: 136, vita: 20, vel: 85,
+      bollette: { ogni: 5.2, quante: 2, arrabbiato: 3 }, timbra: { ogni: 10, quanti: 4 },
+      mano: [0.95, 0.34], corpo: [0.18, 0.08, 0.8, 0.94],
+    },
+  };
+  const COPPIA = 0.6;               // in due, ognuno ha questa frazione della vita
+  const ARRABBIATO = { vel: 1.35, tempi: 0.7 };
+  const BOLLETTE = { velocita: 230, stordito: 0.7, sparpaglia: 0.38 };
+  const Y_BOSS = 64;                // cima dei boss
+
   // Giocatore simulato (partita dimostrativa e prove automatiche)
   // reazione: secondi tra una stima e l'altra; errore: px a 500 px/s (cresce con la
   // velocità e con l'angolo); mira: probabilità di mirare a un mattoncino rompibile.
@@ -91,6 +120,7 @@
     ko: carica(ASSETS + 'tino/tino-ko.png'),
     gino: carica(ASSETS + 'gino/gino.png'),
   };
+  for (const k in BOSS) immagini[k] = carica(ASSETS + 'agenti-tari/' + BOSS[k].img + '.svg');
   const fondali = {};
   for (const m of MONDI) fondali[m.fondale] = carica(FONDALI + m.fondale + '.png');
   function carica(src) {
@@ -151,10 +181,12 @@
     palle: [],
     capsule: [],
     semi: [],
+    boss: [],
+    bollette: [],
     esplosioni: [],
     particelle: [],
     scritte: [],
-    asse: { x: W / 2, w: 108, vx: 0, bersaglio: null, schiaccia: 0 },
+    asse: { x: W / 2, w: 108, vx: 0, bersaglio: null, schiaccia: 0, stordito: 0 },
     poteri: { lunga: 0, corta: 0, miele: 0, fuoco: 0, fionda: 0, lumaca: 0, vespa: 0 },
     siepe: false,
     fattoreVel: 1,
@@ -176,6 +208,8 @@
   let sbloccati = leggi('sbloccati', 1);   // quanti livelli si possono scegliere
 
   const livello = () => LIVELLI[stato.livello];
+  const grado = () => stato.livello * 15 / (LIVELLI.length - 1);
+  const bossVivi = () => stato.boss.filter((b) => b.stato !== 'ko');
   const mondo = () => MONDI[livello().mondo];
 
   // ---------------------------------------------------------------- audio
@@ -287,6 +321,21 @@
     vinto: () => note([523, 659, 784, 1046, 784, 1046, 1318], 0.09, { tipo: 'triangle', vol: 0.07, d: 0.18 }),
     sconfitta: () => note([392, 330, 262, 196], 0.17, { tipo: 'sawtooth', vol: 0.04, filtro: 1500, d: 0.24 }),
     via: () => tono(660, 0.08, { tipo: 'triangle', vol: 0.06 }),
+    // boss
+    ahi(chi) {
+      const f = chi === 'capo' ? 190 : 300;
+      tono(f, 0.22, { tipo: 'sawtooth', f2: f * 0.7, vol: 0.06, filtro: 1400 });
+      tono(f * 1.5, 0.12, { tipo: 'square', f2: f, vol: 0.025, filtro: 1800, rit: 0.03 });
+      rumore(0.05, { f: 1800, vol: 0.05 });
+    },
+    rete: () => { rumore(0.25, { tipo: 'bandpass', f: 900, f2: 2600, q: 1.4, vol: 0.06 }); tono(500, 0.12, { tipo: 'triangle', f2: 900, vol: 0.03 }); },
+    presa: () => { tono(240, 0.15, { tipo: 'triangle', f2: 150, vol: 0.08 }); rumore(0.12, { f: 700, vol: 0.06 }); },
+    ributta: () => { rumore(0.2, { tipo: 'bandpass', f: 2400, f2: 700, q: 1.2, vol: 0.07 }); tono(700, 0.14, { tipo: 'square', f2: 250, vol: 0.03, filtro: 2500 }); },
+    bolletta: () => rumore(0.16, { tipo: 'bandpass', f: 3000, f2: 1500, q: 2, vol: 0.05 }),
+    stordito: () => { tono(160, 0.35, { tipo: 'square', vol: 0.035, filtro: 900 }); note([1400, 1100, 1400, 1100], 0.06, { tipo: 'sine', vol: 0.03, d: 0.08 }); },
+    timbra: () => { tono(85, 0.25, { tipo: 'sine', f2: 45, vol: 0.3 }); rumore(0.12, { f: 900, vol: 0.15 }); },
+    megafono: () => tono(520, 0.3, { tipo: 'sawtooth', f2: 380, vol: 0.04, filtro: 2200 }),
+    bossKo: () => { tono(900, 0.9, { tipo: 'triangle', f2: 120, vol: 0.06 }); rumore(0.4, { f: 1200, f2: 200, vol: 0.12, rit: 0.6 }); },
   };
   const suoni = new Proxy(EFFETTI, {
     get: (o, k) => (...a) => { if (puoSuonare()) { try { o[k](...a); } catch (e) { /* niente */ } } },
@@ -401,7 +450,7 @@
     }
     if (!on) return;
     const liv = inPartita() ? 1 : 0;
-    const teso = liv === 1 && stato.rimasti > 0 && stato.rimasti <= 6;
+    const teso = liv === 1 && (stato.boss.length > 0 || (stato.rimasti > 0 && stato.rimasti <= 6));
     musica.filtro.frequency.setTargetAtTime(teso ? 3800 : liv ? 2400 : 1500, t, 0.3);
     if (musica.prossimo < t) musica.prossimo = t + 0.03;
     const durata = 60 / MUSICA.bpm[liv] / 4;
@@ -558,8 +607,10 @@
     });
     stato.capsule = [];
     stato.semi = [];
+    stato.bollette = [];
     stato.esplosioni = [];
     stato.particelle = [];
+    stato.boss = (liv.boss || []).map((tipo, i, tutti) => nuovoBoss(tipo, i, tutti.length));
     stato.scritte = [];
     stato.tempo = 0;
     stato.conto = null;
@@ -572,6 +623,7 @@
     stato.eroe.caduta = 0;
     stato.fase = 'gioco';
     mostraMessaggio(`${n + 1}. ${liv.nome}`, 2.2);
+    if (stato.boss.length) stato.messaggioDopo = { testo: stato.boss.length > 1 ? 'Arrivano gli agenti!' : stato.boss[0].tipo === 'capo' ? 'Arriva il capo!' : 'Arriva un agente!', t: 2.3 };
     if (stato.modo === 'gioco') suoni.via();
     // fondale del mondo anche dietro al campo
     document.body.classList.remove('mondo-0', 'mondo-1', 'mondo-2', 'mondo-3');
@@ -589,6 +641,8 @@
     stato.fermo = 0;
     stato.capsule = [];
     stato.semi = [];
+    stato.bollette = [];
+    stato.asse.stordito = 0;
     stato.palle = [nuovaPalla()];
     stato.ia.attesa = IA.attesa;
   }
@@ -596,14 +650,14 @@
   function nuovaPalla() {
     return {
       x: stato.asse.x, y: PY - R, vx: 0, vy: -1,
-      vel: cresce(PALLA.inizio, stato.livello),
+      vel: cresce(PALLA.inizio, grado()),
       attaccata: true, offset: casuale(-10, 10), auto: 0,
       rot: 0, scia: [], persa: false,
     };
   }
 
   function larghezzaAsse() {
-    const base = cresce(ASSE.larghezza, stato.livello);
+    const base = cresce(ASSE.larghezza, grado());
     if (stato.poteri.lunga > 0) return base * ASSE.lunga;
     if (stato.poteri.corta > 0) return base * ASSE.corta;
     return base;
@@ -630,6 +684,8 @@
     stato.timer = 1.3;
     stato.capsule = [];
     stato.semi = [];
+    stato.bollette = [];
+    stato.asse.stordito = 0;
     const e = stato.eroe;
     if (stato.personaggio === 'tino') imposta('ferito', 1.3);
     e.tremaT = 0.8;
@@ -660,12 +716,13 @@
   function vinci() {
     if (stato.fase !== 'gioco') return;
     stato.fase = 'vinto';
-    stato.timer = 1.6;
+    stato.timer = stato.boss.length ? 2.2 : 1.6;
     stato.capsule = [];
     stato.semi = [];
+    stato.bollette = [];
     stato.eroe.festa = true;
     imposta('normale', Infinity);
-    const bonusLivello = 500 * (livello().mondo + 1) + 100 * stato.livello;
+    const bonusLivello = (stato.boss.length ? 2500 : 500) * (livello().mondo + 1) + 100 * stato.livello;
     const bonusTempo = Math.max(0, Math.round(150 - stato.tempo)) * 10;
     stato.conto = { punti: stato.punti, bonusLivello, bonusTempo, tempo: stato.tempo };
     aggiungiPunti(bonusLivello + bonusTempo);
@@ -675,7 +732,7 @@
       scrivi('sbloccati', sbloccati);
       if (stato.punti > record) { record = stato.punti; scrivi('record', record); }
     }
-    mostraMessaggio('Livello superato!', 1.6);
+    mostraMessaggio(stato.boss.length ? (stato.boss.length > 1 ? 'Agenti battuti!' : stato.boss[0].tipo === 'capo' ? 'Capo battuto!' : 'Agente battuto!') : 'Livello superato!', 1.6);
     suoni.vinto();
   }
 
@@ -771,6 +828,11 @@
     }
     stato.scossa = Math.max(0, stato.scossa - dt);
     for (const b of stato.mattoni) if (b.lampo > 0) b.lampo = Math.max(0, b.lampo - dt);
+    animaBoss(dt);
+    if (stato.messaggioDopo) {
+      stato.messaggioDopo.t -= dt;
+      if (stato.messaggioDopo.t <= 0) { mostraMessaggio(stato.messaggioDopo.testo, 1.6); stato.messaggioDopo = null; if (stato.boss.length) suoni.megafono(); }
+    }
 
     if (stato.fase === 'persa') {
       stato.timer -= dt;
@@ -791,6 +853,8 @@
     for (const p of stato.palle) muoviPalla(p, dt);
     stato.palle = stato.palle.filter((p) => !p.persa);
 
+    aggiornaBoss(dt);
+    aggiornaBollette(dt);
     aggiornaEsplosioni(dt);
     aggiornaCapsule(dt);
     aggiornaSemi(dt);
@@ -825,7 +889,10 @@
     const a = stato.asse;
     const prima = a.x;
     const guidaIA = stato.modo === 'demo' || stato.iaGioca;
-    if (guidaIA) {
+    if (a.stordito > 0) {
+      a.stordito = Math.max(0, a.stordito - dt);
+      if (guidaIA) pilotaIA(0);   // il giocatore simulato continua a guardare, ma non si muove
+    } else if (guidaIA) {
       pilotaIA(dt);
     } else {
       let dir = 0;
@@ -872,6 +939,14 @@
       }
       return;
     }
+    if (p.presa) {
+      const b = p.presa;
+      const [mx, my] = puntoMano(b);
+      p.x = mx; p.y = my;
+      p.presaT -= dt;
+      if (p.presaT <= 0) ributta(p);
+      return;
+    }
     const v = velocita(p);
     const passi = Math.max(1, Math.ceil(v * dt / 4));
     const h = dt / passi;
@@ -901,6 +976,10 @@
         suoni.siepe();
         for (let k = 0; k < 14; k++) aggiungiParticella({ x: p.x + casuale(-30, 30), y: Y_SIEPE, vx: casuale(-120, 120), vy: casuale(-260, -80), colore: '#4f9a3f', dim: 4, vita: 0.7 });
       }
+      // boss
+      if (stato.boss.length && p.y - R < Y_BOSS + 160 && urtaBoss(p)) {
+        if (p.presa || stato.fase !== 'gioco') return;
+      }
       // mattoncini
       if (p.y - R < GY + stato.righe * CH + 2 && p.y + R > GY - 2) {
         if (urtaMattoni(p, fuoco) && stato.fase !== 'gioco') return;
@@ -921,7 +1000,7 @@
     p.vx = Math.sin(ang);
     p.vy = -Math.cos(ang);
     p.y = PY - R;
-    p.vel = Math.min(cresce(PALLA.max, stato.livello), p.vel * (1 + PALLA.colpoAsse));
+    p.vel = Math.min(cresce(PALLA.max, grado()), p.vel * (1 + PALLA.colpoAsse));
     stato.combo = 0;
     stato.statistiche.colpiAsse++;
     a.schiaccia = 1;
@@ -981,7 +1060,7 @@
     p.y += ny * prof;
     raddrizza(p);
     colpisci(migliore, false);
-    if (migliore.tipo !== 'duro') p.vel = Math.min(cresce(PALLA.max, stato.livello), p.vel * (1 + PALLA.colpoMattone));
+    if (migliore.tipo !== 'duro') p.vel = Math.min(cresce(PALLA.max, grado()), p.vel * (1 + PALLA.colpoMattone));
     return true;
   }
 
@@ -1017,10 +1096,10 @@
       aggiungiParticella({ x: b.x + casuale(3, CW - 3), y: b.y + casuale(3, CH - 3), vx: casuale(-150, 150), vy: casuale(-220, 40), colore: col, dim: casuale(3, 6), vita: casuale(0.5, 0.9), giro: casuale(-10, 10) });
     }
     // potenziamenti
-    const prob = cresce(CADUTA.probabilita, stato.livello);
+    const prob = cresce(CADUTA.probabilita, grado()) * (b.tipo === 'timbrato' ? 0.5 : 1);
     if (b.tipo === 'sorpresa' || Math.random() < prob) nuovaCapsula(b.x + CW / 2, b.y + CH / 2);
     if (b.tipo === 'petardo') stato.esplosioni.push({ b, t: 0.07 });
-    if (stato.rimasti <= 0) vinci();
+    if (stato.rimasti <= 0 && !stato.boss.length) vinci();
   }
 
   function aggiornaEsplosioni(dt) {
@@ -1087,11 +1166,12 @@
     if (id === 'tre') {
       const nuove = [];
       for (const q of stato.palle) {
+        if (q.presa) continue;
         if (q.attaccata) lancia(q);
         for (const ang of [-0.4, 0.4]) {
           if (stato.palle.length + nuove.length >= MAX_PALLE) break;
           const c = Math.cos(ang), s = Math.sin(ang);
-          const n = { ...q, scia: [], vx: q.vx * c - q.vy * s, vy: q.vx * s + q.vy * c };
+          const n = { ...q, presa: null, scia: [], vx: q.vx * c - q.vy * s, vy: q.vx * s + q.vy * c };
           raddrizza(n);
           nuove.push(n);
         }
@@ -1125,6 +1205,10 @@
     for (const s of stato.semi) {
       s.y -= FIONDA.velocita * dt;
       if (s.y < MURO) { s.via = true; continue; }
+      const bol = stato.bollette.find((k) => Math.abs(k.x - s.x) < 14 && Math.abs(k.y - s.y) < 14);
+      if (bol) { s.via = true; bol.via = true; aggiungiPunti(20); coriandoli(bol.x, bol.y, '#f7f7f2'); continue; }
+      const capo = bossVivi().find((b) => dentroCorpo(b, s.x, s.y, 0));
+      if (capo) { s.via = true; colpisciBoss(capo, 0.34); if (stato.fase !== 'gioco') return; continue; }
       const r = Math.floor((s.y - GY) / CH), c = Math.floor((s.x - MURO) / CW);
       const b = cella(r, c);
       if (b) {
@@ -1134,6 +1218,236 @@
       }
     }
     stato.semi = stato.semi.filter((s) => !s.via);
+  }
+
+  // ---------------------------------------------------------------- boss
+  function nuovoBoss(tipo, i, quanti) {
+    const T = BOSS[tipo];
+    const img = immagini[tipo];
+    const h = T.alt;
+    const w = h * 260 / 320;
+    // in due si dividono il campo: uno a sinistra, uno a destra
+    const xMin = MURO + 4 + (quanti > 1 ? i * (W - 2 * MURO) / 2 : 0);
+    const xMax = (quanti > 1 ? MURO + (i + 1) * (W - 2 * MURO) / 2 : W - MURO) - w - 4;
+    const vita = Math.round(T.vita * (quanti > 1 ? COPPIA : 1));
+    return {
+      tipo, T, img, w, h, vita, max: vita,
+      x: (xMin + xMax) / 2, y: Y_BOSS, dir: i % 2 ? -1 : 1, xMin, xMax,
+      stato: 'cammina', t: 0,
+      rete: T.rete ? T.rete.ogni * (0.6 + 0.4 * i) : 0, reteSu: 0,
+      bollette: T.bollette ? T.bollette.ogni : 0,
+      timbra: T.timbra ? T.timbra.ogni * 0.8 : 0,
+      lampo: 0, trema: 0, salto: 0, invulnerabile: 0, caduta: 0, arrabbiato: false, giro: casuale(1.5, 3.5),
+    };
+  }
+
+  const puntoMano = (b) => [b.x + b.w * b.T.mano[0], b.y + b.h * b.T.mano[1]];
+  function corpo(b) {
+    const [x0, y0, x1, y1] = b.T.corpo;
+    return { x: b.x + b.w * x0, y: b.y + b.h * y0, w: b.w * (x1 - x0), h: b.h * (y1 - y0) };
+  }
+  function dentroCorpo(b, x, y, r) {
+    const c = corpo(b);
+    return x > c.x - r && x < c.x + c.w + r && y > c.y - r && y < c.y + c.h + r;
+  }
+  const tempi = (b) => (b.arrabbiato ? ARRABBIATO.tempi : 1);
+
+  function animaBoss(dt) {
+    for (const b of stato.boss) {
+      b.t += dt;
+      b.lampo = Math.max(0, b.lampo - dt);
+      b.trema = Math.max(0, b.trema - dt);
+      b.salto = Math.max(0, b.salto - dt);
+      if (b.stato === 'ko') {
+        b.caduta = Math.min(1, b.caduta + dt * 0.9);
+      }
+    }
+  }
+
+  function aggiornaBoss(dt) {
+    for (const b of stato.boss) {
+      if (b.stato === 'ko') continue;
+      b.invulnerabile = Math.max(0, b.invulnerabile - dt);
+      // cammina avanti e indietro, e ogni tanto cambia verso
+      const vel = b.T.vel * (b.arrabbiato ? ARRABBIATO.vel : 1) * (b.reteSu > 0 ? 0.5 : 1);
+      b.x += b.dir * vel * dt;
+      if (b.x < b.xMin) { b.x = b.xMin; b.dir = 1; }
+      if (b.x > b.xMax) { b.x = b.xMax; b.dir = -1; }
+      b.giro -= dt;
+      if (b.giro <= 0) { b.giro = casuale(1.5, 3.5); if (Math.random() < 0.5) b.dir *= -1; }
+      // rete
+      if (b.T.rete) {
+        if (b.reteSu > 0) b.reteSu = Math.max(0, b.reteSu - dt);
+        else {
+          b.rete -= dt;
+          if (b.rete <= 0) { b.reteSu = b.T.rete.dura; b.rete = b.T.rete.ogni * tempi(b); suoni.rete(); }
+        }
+      }
+      // bollette
+      if (b.T.bollette) {
+        b.bollette -= dt;
+        if (b.bollette <= 0) {
+          b.bollette = b.T.bollette.ogni * tempi(b) * casuale(0.85, 1.15);
+          lanciaBollette(b);
+        }
+      }
+      // timbri: mattoncini nuovi nei buchi sotto di sé
+      if (b.T.timbra) {
+        b.timbra -= dt;
+        if (b.timbra <= 0) {
+          b.timbra = b.T.timbra.ogni * tempi(b);
+          timbraMattoni(b);
+        }
+      }
+    }
+  }
+
+  function lanciaBollette(b) {
+    const [mx, my] = puntoMano(b);
+    const quante = b.arrabbiato && b.T.bollette.arrabbiato ? b.T.bollette.arrabbiato : b.T.bollette.quante;
+    const bersaglio = stato.asse.x + casuale(-50, 50);
+    const base = Math.atan2(bersaglio - mx, PY - my);
+    for (let i = 0; i < quante; i++) {
+      const a = base + (i - (quante - 1) / 2) * BOLLETTE.sparpaglia * (quante > 1 ? 1.3 : 1);
+      stato.bollette.push({ x: mx, y: my, vx: Math.sin(a) * BOLLETTE.velocita, vy: Math.cos(a) * BOLLETTE.velocita, rot: casuale(-0.5, 0.5), t: 0 });
+    }
+    b.salto = 0.3;
+    if (b.tipo === 'capo') suoni.megafono(); else suoni.bolletta();
+  }
+
+  function timbraMattoni(b) {
+    const righe = [];
+    for (let r = 8; r < Math.min(stato.righe, 10); r++) righe.push(r);
+    const centro = Math.floor((b.x + b.w / 2 - MURO) / CW);
+    const buchi = [];
+    for (const r of righe) {
+      for (let c = 0; c < COLONNE; c++) if (!stato.griglia[r][c]) buchi.push({ r, c, d: Math.abs(c - centro) + Math.random() * 2 });
+    }
+    // non si timbra sopra la ghianda
+    const liberi = buchi.filter(({ r, c }) => !stato.palle.some((p) => Math.abs(p.x - (MURO + c * CW + CW / 2)) < CW && Math.abs(p.y - (GY + r * CH + CH / 2)) < CH + R));
+    liberi.sort((u, v) => u.d - v.d);
+    const scelti = liberi.slice(0, b.T.timbra.quanti + (b.arrabbiato ? 1 : 0));
+    if (!scelti.length) return;
+    for (const { r, c } of scelti) {
+      const n = { c, r, x: MURO + c * CW, y: GY + r * CH, lampo: 0.3, ch: 't', tipo: 'timbrato', colpi: 1 };
+      stato.griglia[r][c] = n;
+      stato.mattoni.push(n);
+      stato.rimasti++;
+      coriandoli(n.x + CW / 2, n.y + CH / 2, '#7d5fb0');
+    }
+    b.salto = 0.35;
+    stato.scossa = Math.max(stato.scossa, 0.12);
+    suoni.timbra();
+  }
+
+  function coriandoli(x, y, colore) {
+    for (let k = 0; k < 6; k++) aggiungiParticella({ x, y, vx: casuale(-120, 120), vy: casuale(-180, 0), colore, dim: casuale(3, 5), vita: 0.5, giro: casuale(-8, 8) });
+  }
+
+  // urto della ghianda con i boss: la rete la prende, il corpo la fa rimbalzare
+  function urtaBoss(p) {
+    for (const b of stato.boss) {
+      if (b.stato === 'ko') continue;
+      if (b.reteSu > 0) {
+        const [mx, my] = puntoMano(b);
+        if (Math.hypot(p.x - mx, p.y - my) < b.T.rete.raggio + R) {
+          p.presa = b;
+          p.presaT = b.T.rete.tiene;
+          b.reteSu = 0;
+          suoni.presa();
+          return true;
+        }
+      }
+      const c = corpo(b);
+      const qx = clamp(p.x, c.x, c.x + c.w), qy = clamp(p.y, c.y, c.y + c.h);
+      let dx = p.x - qx, dy = p.y - qy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= R * R) continue;
+      let nx, ny, pen;
+      if (d2 > 1e-6) {
+        const d = Math.sqrt(d2);
+        nx = dx / d; ny = dy / d; pen = R - d;
+      } else {
+        // dentro al corpo (il boss gli è venuto addosso): esce dal lato più vicino
+        const l = p.x - c.x, rr = c.x + c.w - p.x, t = p.y - c.y, bb = c.y + c.h - p.y;
+        const m = Math.min(l, rr, t, bb);
+        nx = m === l ? -1 : m === rr ? 1 : 0;
+        ny = m === t ? -1 : m === bb ? 1 : 0;
+        pen = m + R;
+      }
+      const vn = p.vx * nx + p.vy * ny;
+      if (vn < 0) { p.vx -= 2 * vn * nx; p.vy -= 2 * vn * ny; }
+      p.x += nx * pen;
+      p.y += ny * pen;
+      raddrizza(p);
+      colpisciBoss(b, stato.poteri.fuoco > 0 ? 2 : 1);
+      return true;
+    }
+    return false;
+  }
+
+  function ributta(p) {
+    const b = p.presa;
+    p.presa = null;
+    // giù dalla parte lontana dall'asse, più forte del solito
+    const lontano = stato.asse.x > W / 2 ? casuale(MURO + 30, W * 0.35) : casuale(W * 0.65, W - MURO - 30);
+    const dx = lontano - p.x, dy = PY - p.y;
+    const l = Math.hypot(dx, dy);
+    p.vx = dx / l; p.vy = dy / l;
+    raddrizza(p);
+    p.vel = Math.min(cresce(PALLA.max, grado()) * 1.05, p.vel * b.T.rete.lancio);
+    b.salto = 0.3;
+    suoni.ributta();
+  }
+
+  function colpisciBoss(b, danno) {
+    if (b.invulnerabile > 0) { suoni.duro(); return; }
+    b.vita = Math.max(0, b.vita - danno);
+    b.invulnerabile = 0.25;
+    b.lampo = 0.25;
+    b.trema = 0.35;
+    stato.fermo = 0;
+    aggiungiPunti(100);
+    if (stato.modo === 'gioco') stato.scritte.push({ x: b.x + b.w / 2, y: b.y + 20, testo: '+100', t: 0 });
+    suoni.ahi(b.tipo);
+    if (!b.arrabbiato && b.vita <= b.max / 2 && b.vita > 0) {
+      b.arrabbiato = true;
+      mostraMessaggio(b.tipo === 'capo' ? 'Il capo si arrabbia!' : 'L\'agente si arrabbia!', 1.3);
+    }
+    if (b.vita <= 0) {
+      b.stato = 'ko';
+      b.reteSu = 0;
+      for (const p of stato.palle) if (p.presa === b) ributta(p);
+      suoni.bossKo();
+      stato.scossa = 0.4;
+      aggiungiPunti(2000 * (livello().mondo + 1));
+      if (!bossVivi().length) {
+        // via anche i mattoncini timbrati e le bollette: il livello è vinto
+        stato.bollette = [];
+        vinci();
+      }
+    }
+  }
+
+  function aggiornaBollette(dt) {
+    const a = stato.asse;
+    for (const k of stato.bollette) {
+      k.t += dt;
+      k.x += (k.vx + Math.sin(k.t * 6) * 40) * dt;
+      k.y += k.vy * dt;
+      k.rot += dt * 2;
+      if (k.x < MURO + 8) { k.x = MURO + 8; k.vx = Math.abs(k.vx); }
+      if (k.x > W - MURO - 8) { k.x = W - MURO - 8; k.vx = -Math.abs(k.vx); }
+      if (k.y + 9 >= PY && k.y - 9 <= PY + AH && Math.abs(k.x - a.x) <= a.w / 2 + 8) {
+        k.via = true;
+        a.stordito = BOLLETTE.stordito;
+        stato.statistiche.storditi = (stato.statistiche.storditi || 0) + 1;
+        stato.eroe.tremaT = BOLLETTE.stordito;
+        coriandoli(k.x, PY, '#f7f7f2');
+        suoni.stordito();
+      } else if (k.y > H + 20) k.via = true;
+    }
+    stato.bollette = stato.bollette.filter((k) => !k.via);
   }
 
   // ---------------------------------------------------------------- giocatore simulato
@@ -1148,6 +1462,28 @@
     if (x < 0) x += 2 * l;
     return a + (x > l ? 2 * l - x : x);
   }
+  // le bollette che arrivano all'asse prima della ghianda: cerca il punto sicuro più vicino
+  function schivaBollette(ia, a, tPalla = Infinity) {
+    const arrivi = [];
+    for (const k of stato.bollette) {
+      if (k.y > PY) continue;
+      const t = (PY - k.y) / k.vy;
+      if (t > 1.5 || t > tPalla - 0.1) continue;
+      // dove arriva, coi rimbalzi sui muri
+      const a0 = MURO + 8, l = W - 2 * MURO - 16;
+      let x = (k.x + k.vx * t - a0) % (2 * l);
+      if (x < 0) x += 2 * l;
+      arrivi.push(a0 + (x > l ? 2 * l - x : x));
+    }
+    if (!arrivi.length) return;
+    const lim = a.w / 2 + MURO;
+    const sicuro = (x) => x >= lim && x <= W - lim && arrivi.every((xk) => Math.abs(xk - x) > a.w / 2 + 22);
+    if (sicuro(ia.bersaglio)) return;
+    for (let d = 10; d < W; d += 10) {
+      for (const x of [ia.bersaglio - d, ia.bersaglio + d]) if (sicuro(x)) { ia.bersaglio = x; return; }
+    }
+  }
+
   // dove colpire la ghianda sull'asse perché vada su un mattoncino rompibile
   // (segue un raggio con i rimbalzi sui muri)
   function sceltaMira(xArrivo) {
@@ -1172,6 +1508,7 @@
     const a = stato.asse;
     const ia = stato.ia;
     const par = stato.parametriIA || IA;
+    if (dt === 0) return;
     for (const p of stato.palle) {
       if (p.attaccata) {
         ia.attesa -= dt;
@@ -1197,6 +1534,7 @@
           ia.err = (Math.random() + Math.random() - 1) * par.errore * 1.6 * difficile;
         }
         ia.bersaglio = x - ia.mira * (a.w / 2 + R * 0.7) + ia.err;
+        schivaBollette(ia, a, tMin);
       } else {
         ia.miraPer = undefined;
         // nessuna ghianda in arrivo: va verso un potenziamento buono, o segue la ghianda
@@ -1205,6 +1543,7 @@
         if (c) ia.bersaglio = c.x;
         else if (brutto) ia.bersaglio = brutto.x < a.x ? brutto.x + a.w / 2 + 30 : brutto.x - a.w / 2 - 30;
         else if (stato.palle[0]) ia.bersaglio = W / 2 + (stato.palle[0].x - W / 2) * 0.6;
+        schivaBollette(ia, a);
       }
     }
     const passo = par.vel * dt;
@@ -1230,7 +1569,9 @@
     const e = stato.eroe;
     if (e.facciaT > 0) return e.faccia;
     if (stato.fase === 'finita') return 'ko';
-    if (stato.fase === 'gioco' && stato.modo === 'gioco' && (stato.vite === 1 || stato.rimasti <= 3)) return 'arrabbiato';
+    if (stato.asse.stordito > 0) return 'ferito';
+    const quasi = stato.boss.length ? bossVivi().reduce((t, b) => t + b.vita, 0) <= 2 : stato.rimasti <= 3;
+    if (stato.fase === 'gioco' && stato.modo === 'gioco' && (stato.vite === 1 || quasi)) return 'arrabbiato';
     return 'normale';
   }
 
@@ -1259,6 +1600,7 @@
     if (b.tipo === 'resistente') return m.resistente;
     if (b.tipo === 'duro') return m.duro;
     if (b.tipo === 'petardo') return '#e8483f';
+    if (b.tipo === 'timbrato') return '#f7f3e8';
     return '#f2c14e';
   }
 
@@ -1268,6 +1610,8 @@
     if (stato.scossa > 0) ctx.translate(casuale(-1, 1) * stato.scossa * 14, casuale(-1, 1) * stato.scossa * 14);
     disegnaFondo();
     disegnaMattoni(tempo);
+    disegnaBoss(tempo);
+    disegnaBollette();
     disegnaCapsule(tempo);
     disegnaSemi();
     disegnaParticelle(false);
@@ -1278,6 +1622,7 @@
     disegnaParticelle(true);
     disegnaScritte();
     disegnaPoteri();
+    disegnaVitaBoss();
     disegnaMessaggio(tempo);
     ctx.restore();
   }
@@ -1359,7 +1704,7 @@
   function disegnaMattone(g, b, m) {
     const x = 1, y = 1, w = CW - 2, h = CH - 2;
     const col = b.tipo === 'colore' ? b.colore : b.tipo === 'resistente' ? m.resistente
-      : b.tipo === 'duro' ? m.duro : b.tipo === 'petardo' ? '#d93a30' : '#f2b71e';
+      : b.tipo === 'duro' ? m.duro : b.tipo === 'petardo' ? '#d93a30' : b.tipo === 'timbrato' ? '#f7f3e8' : '#f2b71e';
     // corpo con bordo scuro e luce in alto
     rettangolo(g, x, y, w, h, 4);
     const grad = g.createLinearGradient(0, y, 0, y + h);
@@ -1435,6 +1780,24 @@
       g.strokeStyle = 'rgba(90, 10, 5, 0.9)';
       g.strokeText('BUM', CW / 2, CH / 2 + 1);
       g.fillText('BUM', CW / 2, CH / 2 + 1);
+    } else if (b.tipo === 'timbrato') {
+      // bolletta timbrata dagli agenti
+      g.strokeStyle = 'rgba(60, 60, 80, 0.35)';
+      g.lineWidth = 0.8;
+      g.beginPath(); g.moveTo(5, 12); g.lineTo(14, 12); g.moveTo(5, 14.5); g.lineTo(11, 14.5); g.stroke();
+      g.save();
+      g.translate(CW / 2 + 5, CH / 2);
+      g.rotate(-0.12);
+      g.strokeStyle = '#7d5fb0';
+      g.lineWidth = 1.2;
+      rettangolo(g, -11, -5, 22, 10, 2);
+      g.stroke();
+      g.fillStyle = '#7d5fb0';
+      g.font = '700 7.5px Fredoka, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('TARI', 0, 0.5);
+      g.restore();
     } else if (b.tipo === 'sorpresa') {
       g.fillStyle = '#fff8ec';
       g.font = '700 13px Fredoka, sans-serif';
@@ -1751,6 +2114,24 @@
       ctx.beginPath(); ctx.moveTo(x + w, cy); ctx.quadraticCurveTo(x + w + 7, cy - 2, x + w + 9, cy + 5); ctx.stroke();
     }
     ctx.restore();
+    // asse stordita da una bolletta: stelline che girano
+    if (a.stordito > 0) {
+      ctx.save();
+      ctx.fillStyle = '#ffd84a';
+      ctx.strokeStyle = 'rgba(90, 60, 0, 0.8)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        const ang = tempo * 6 + i * Math.PI * 2 / 3;
+        const sx = a.x + Math.cos(ang) * a.w * 0.4, sy = PY - 8 + Math.sin(ang) * 5;
+        ctx.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const rr = k % 2 ? 2.4 : 5.5, aa = k * Math.PI / 5 - Math.PI / 2;
+          ctx.lineTo(sx + Math.cos(aa) * rr, sy + Math.sin(aa) * rr);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
     // miele colato
     if (stato.poteri.miele > 0) {
       ctx.fillStyle = 'rgba(240, 165, 30, 0.85)';
@@ -1805,8 +2186,130 @@
     ctx.restore();
   }
 
+  // ---- boss
+  function disegnaBoss(tempo) {
+    for (const b of stato.boss) {
+      if (!pronta(b.img)) continue;
+      ctx.save();
+      let x = b.x + b.w / 2, y = b.y + b.h;
+      if (b.trema > 0) x += Math.sin(tempo * 70) * 4;
+      if (b.stato === 'ko') {
+        // cade all'indietro e scivola giù dal campo
+        const k = b.caduta;
+        ctx.globalAlpha = 1 - Math.max(0, k - 0.7) / 0.3;
+        y += k * k * 420;
+        ctx.translate(x, y - b.h / 2);
+        ctx.rotate(k * 2.2 * (b.dir || 1));
+        ctx.translate(0, b.h / 2);
+      } else {
+        const passo = Math.sin(b.t * (b.arrabbiato ? 13 : 9));
+        y -= Math.abs(passo) * 3 + Math.sin(b.salto / 0.3 * Math.PI) * 8 * (b.salto > 0);
+        ctx.translate(x, y);
+        ctx.rotate(passo * 0.04);
+      }
+      if (b.lampo > 0 && Math.floor(b.lampo * 30) % 2 === 0) ctx.globalAlpha *= 0.45;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 4;
+      ctx.drawImage(b.img, -b.w / 2, -b.h, b.w, b.h);
+      ctx.restore();
+      if (b.stato === 'ko') continue;
+      // rete alzata: si illumina ed è pericolosa
+      if (b.reteSu > 0) {
+        const [mx, my] = puntoMano(b);
+        const f = 0.5 + 0.5 * Math.sin(tempo * 18);
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 216, 74, ${0.55 + 0.4 * f})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.arc(mx, my, b.T.rete.raggio, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+        fumetto(mx + 6, my - b.T.rete.raggio - 6, '!');
+      }
+      // arrabbiato: sbuffi
+      if (b.arrabbiato) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let i = 0; i < 2; i++) {
+          const t = (tempo * 1.5 + i * 0.5) % 1;
+          ctx.globalAlpha = 1 - t;
+          ctx.beginPath(); ctx.arc(b.x + b.w * (0.3 + i * 0.3), b.y + 6 - t * 18, 3 + t * 5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+    // la ghianda presa nella rete
+    for (const p of stato.palle) if (p.presa) disegnaGhianda(p.x, p.y, p.rot, R / 13 * 1.15);
+  }
+
+  function fumetto(x, y, testo) {
+    ctx.save();
+    ctx.font = '700 16px Fredoka, "Trebuchet MS", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff8ec';
+    ctx.strokeStyle = 'rgba(40, 30, 15, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c0392b';
+    ctx.fillText(testo, x, y + 1);
+    ctx.restore();
+  }
+
+  function disegnaBollette() {
+    for (const k of stato.bollette) {
+      ctx.save();
+      ctx.translate(k.x, k.y);
+      ctx.rotate(Math.sin(k.rot) * 0.5);
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 2;
+      ctx.fillStyle = '#fbfaf5';
+      ctx.fillRect(-9, -11, 18, 22);
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = '#3b3f4a';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-9, -11, 18, 22);
+      ctx.fillStyle = '#c0392b';
+      ctx.font = '700 6.5px Fredoka, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('TARI', 0, -4);
+      ctx.strokeStyle = 'rgba(60, 60, 80, 0.5)';
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) { ctx.moveTo(-6, 1 + i * 3.5); ctx.lineTo(6 - i * 2, 1 + i * 3.5); }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // barre della vita dei boss, in alto a destra
+  function disegnaVitaBoss() {
+    const vivi = stato.boss;
+    vivi.forEach((b, i) => {
+      const w = 170, h = 14;
+      const x = W - MURO - w - 8, y = MURO + 8 + i * 22;
+      ctx.save();
+      ctx.globalAlpha = b.stato === 'ko' ? 0.4 : 1;
+      rettangolo(ctx, x, y, w, h, 7);
+      ctx.fillStyle = 'rgba(20, 15, 10, 0.6)';
+      ctx.fill();
+      const f = b.vita / b.max;
+      if (f > 0) {
+        rettangolo(ctx, x + 2, y + 2, (w - 4) * f, h - 4, 5);
+        ctx.fillStyle = b.arrabbiato ? '#e8483f' : '#f2a31e';
+        ctx.fill();
+      }
+      ctx.font = '600 10px Fredoka, "Trebuchet MS", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff8ec';
+      ctx.fillText(b.T.nome, x + w / 2, y + h / 2 + 0.5);
+      ctx.restore();
+    });
+  }
+
   // ---- ghianda
   function disegnaPalla(p, tempo) {
+    if (p.presa) return;
     const fuoco = stato.poteri.fuoco > 0;
     // scia
     for (let i = 0; i < p.scia.length; i++) {
@@ -1992,7 +2495,7 @@
     let mondi = '';
     MONDI.forEach((m, i) => {
       const bottoni = LIVELLI.map((l, n) => (l.mondo === i
-        ? `<button data-azione="livello" data-n="${n}" ${n < sbloccati ? '' : 'disabled'} title="${l.nome}">${n + 1}</button>` : '')).join('');
+        ? `<button data-azione="livello" data-n="${n}" ${n < sbloccati ? '' : 'disabled'} title="${l.nome}"${l.boss ? ' class="boss"' : ''}>${n + 1}${l.boss ? ' · boss' : ''}</button>` : '')).join('');
       mondi += `<h3>${m.nome}</h3><div class="livelli">${bottoni}</div>`;
     });
     const continua = sbloccati > 1
@@ -2001,6 +2504,7 @@
     return `<div class="riquadro">
       <h1>Ghiande e Mattoncini</h1>
       <p>Fai rimbalzare la ghianda e rompi tutti i mattoncini! Dove la colpisci sull'asse decide dove va.</p>
+      <p>Alla fine di ogni mondo ti aspettano gli agenti della Tari, e alla fine di tutto il loro capo: colpiscili con la ghianda e schiva le bollette, che bloccano l'asse.</p>
       <div class="personaggi">${scheda('tino', 'Tino', 'con l\'asse di legno')}${scheda('gino', 'Gino', 'con la foglia di quercia')}</div>
       <div class="scelte">
         <button class="bottone" data-azione="livello" data-n="0" data-primo>Gioca</button>
@@ -2042,7 +2546,9 @@
     const n = stato.livello;
     const prossimo = LIVELLI[n + 1];
     const cambiaMondo = prossimo.mondo !== livello().mondo;
-    const avviso = cambiaMondo ? `<p>Si cambia mondo: <b>${MONDI[prossimo.mondo].nome}</b>. La ghianda andrà ancora più veloce!</p>` : '';
+    const avviso = prossimo.boss
+      ? `<p><b>Attenzione:</b> ${prossimo.boss.length > 1 ? 'arrivano due agenti della Tari' : prossimo.boss[0] === 'capo' ? 'arriva l\'ispettore capo in persona' : 'arriva un agente della Tari'}! Colpiscilo con la ghianda e schiva le bollette.</p>`
+      : cambiaMondo ? `<p>Si cambia mondo: <b>${MONDI[prossimo.mondo].nome}</b>. La ghianda andrà ancora più veloce!</p>` : '';
     return `<div class="riquadro">
       <div class="ritratti">${eroeImg('normale', 'salta')}</div>
       <h2>Livello ${n + 1} superato!</h2>
@@ -2058,8 +2564,8 @@
   function pannelloFinale() {
     return `<div class="riquadro">
       <div class="ritratti">${img('normale', 'salta')}${img('gino', 'salta')}</div>
-      <h2>Tutti i mattoncini rotti!</h2>
-      <p>Anche l'ufficio del capo della Tari è venuto giù. Tino e Gino festeggiano!</p>
+      <h2>Il capo della Tari è battuto!</h2>
+      <p>L'ispettore capo è caduto giù dal muro insieme alle sue bollette. Tino e Gino festeggiano!</p>
       ${contoLivello()}
       <p class="record">Record: ${numero(record)} punti</p>
       <div class="scelte">

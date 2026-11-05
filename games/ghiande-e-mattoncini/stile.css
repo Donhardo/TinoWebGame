@@ -217,6 +217,8 @@ body {
   box-shadow: 0 3px 0 #cbbfa9;
 }
 .livelli button:hover { background: var(--verde-chiaro); }
+.livelli button.boss { background: #ffe4dd; color: #a8322a; box-shadow: 0 3px 0 #e2b8ad; }
+.livelli button.boss:hover { background: #ffd3c8; }
 .livelli button:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 
 .comandi {

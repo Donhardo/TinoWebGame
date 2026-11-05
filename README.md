@@ -44,8 +44,10 @@ e poi si visita http://localhost:8000.
   potere ciascuna e cappelli per Gino.
 - **Ghiande e Mattoncini** (`games/ghiande-e-mattoncini/`): gioco a mattoncini.
   Si sceglie se giocare con Tino (asse di legno) o Gino (foglia di quercia), si fa
-  rimbalzare la ghianda e si rompono tutti i mattoncini. 16 livelli in quattro mondi
-  (prato, spiaggia, bosco d'autunno, uffici della Tari), sempre più veloci; mattoncini
+  rimbalzare la ghianda e si rompono tutti i mattoncini. 20 livelli in quattro mondi
+  (prato, spiaggia, bosco d'autunno, uffici della Tari), sempre più veloci; alla fine
+  di ogni mondo un boss: gli agenti della Tari col retino e col timbro, e alla fine
+  l'ispettore capo, che lanciano bollette e rimettono mattoncini; mattoncini
   resistenti, indistruttibili, petardi e sorprese; potenziamenti (asse lunga, tre
   ghiande, miele, ghianda di fuoco, fionda, lumaca, siepe, vita) e due dispetti (asse
   corta, vespa). Suoni e musica sintetizzati. I livelli si modificano in

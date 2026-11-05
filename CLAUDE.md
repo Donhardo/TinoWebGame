@@ -652,15 +652,38 @@ anteprima della home). I fondali sono quelli di Tino Bum (`../tino-bum/fondali/`
   così si tocca dove si vuole), un tocco breve lancia. P o Esc pausa, M suoni, N musica.
 - **Livelli** (`livelli.js`, legenda in cima): `a`-`f` colorati (il colore dipende dal
   mondo), `2` `3` resistenti, `#` indistruttibili, `*` petardo (fa saltare gli otto
-  vicini, a catena), `?` sorpresa (lascia sempre un potenziamento). 4 mondi da 4
-  livelli, ognuno con colori, cornice e disegnino dei mattoncini propri: il prato
-  (fiorellini; 1 Il prato fiorito, 2 Il girasole, 3 Le aiuole, 4 I petardi della
-  sagra), la spiaggia (sabbia; 5 Il castello di sabbia, 6 Le onde, 7 Il faro, 8 La
-  barriera corallina), il bosco d'autunno (venature; 9 La grande quercia, 10 I
-  funghi, 11 Il sentiero nascosto, 12 La tana del tasso), gli uffici della Tari
-  (faldoni e casseforti; 13 Lo sportello, 14 Le pile di bollette, 15 L'archivio, 16
-  L'ufficio del capo, con la scritta TARI in mattoncini da tre colpi).
+  vicini, a catena), `?` sorpresa (lascia sempre un potenziamento). 4 mondi da 5
+  livelli (4 normali e il boss), ognuno con colori, cornice e disegnino dei mattoncini
+  propri: il prato (fiorellini; 1 Il prato fiorito, 2 Il girasole, 3 Le aiuole, 4 I
+  petardi della sagra, 5 La ronda dell'agente), la spiaggia (sabbia; 6 Il castello di
+  sabbia, 7 Le onde, 8 Il faro, 9 La barriera corallina, 10 L'agente del timbro), il
+  bosco d'autunno (venature; 11 La grande quercia, 12 I funghi, 13 Il sentiero
+  nascosto, 14 La tana del tasso, 15 La squadra della Tari), gli uffici della Tari
+  (faldoni e casseforti; 16 Lo sportello, 17 Le pile di bollette, 18 L'archivio, 19
+  L'ufficio del capo, con la scritta TARI in mattoncini da tre colpi, 20 Il capo della
+  Tari).
+- **Boss** (tabelle `BOSS`, `COPPIA`, `ARRABBIATO`, `BOLLETTE` in cima a `gioco.js`;
+  campo `boss` del livello): gli scagnozzi alla fine dei primi tre mondi, l'ispettore
+  capo alla fine del quarto. Sono i disegni di `assets/agenti-tari/` (non si specchiano),
+  camminano avanti e indietro sopra le prime 8 righe (lasciate vuote nella mappa), con
+  sotto due righe di mattoncini che li riparano; la ghianda rimbalza sul loro corpo e
+  toglie un colpo (2 con la ghianda di fuoco, un terzo coi semini della fionda; dopo un
+  colpo 0,25 s di pausa). Si vince quando sono tutti KO (cadono all'indietro), anche se
+  restano mattoncini; bonus 2000 per mondo. Barre della vita in alto a destra. Sotto
+  metà vita si arrabbiano (sbuffi, barra rossa): velocità ×1,35, attacchi più spessi.
+  - Agente col retino (mondo 1, 12 colpi): ogni 6 s alza la rete per 1,6 s (cerchio
+    giallo e "!"); se la ghianda la tocca, la tiene 0,45 s e la ributta giù più forte
+    verso la parte del campo lontana dall'asse.
+  - Agente col timbro (mondo 2, 14 colpi): ogni 3,4 s lancia una bolletta verso l'asse,
+    ogni 9 s timbra 3 mattoncini nuovi (bollette "TARI", un colpo) nei buchi delle due
+    righe sotto di lui, vicino a dove si trova.
+  - La squadra (mondo 3): retino e timbro insieme, uno per metà campo, col 60% della vita.
+  - Ispettore capo (mondo 4, 20 colpi, più grande): ogni 5,2 s due bollette a ventaglio
+    col megafono (tre da arrabbiato), ogni 10 s timbra 4 mattoncini.
+  - Bollette: cadono a 230 px/s ondeggiando; se prendono l'asse la bloccano per 0,7 s
+    (stelline, Tino ferito, Gino trema). Si schivano o si colpiscono coi semini.
 - **Difficoltà** (tabelle `PALLA`, `ASSE`, `CADUTA` in cima a `gioco.js`, livello da 0):
+  il grado va da 0 al primo livello a 15 all'ultimo (`grado()`, boss compresi);
   velocità al lancio 430 → 625, massima 650 → 940 (cresce dell'1,2% a ogni rimbalzo
   sull'asse e dello 0,4% a ogni mattoncino), asse larga 108 → 80, potenziamenti dal
   13% al 10% dei mattoncini.
@@ -693,35 +716,39 @@ anteprima della home). I fondali sono quelli di Tino Bum (`../tino-bum/fondali/`
   livello, cade ruotato a fine partita. Il personaggio segue l'asse con un po' di
   ritardo, si inclina quando corre e si schiaccia a ogni rimbalzo.
 - **Partita dimostrativa**: nel menu il computer gioca i primi livelli sbloccati
-  (giocatore simulato `pilotaIA`, che prevede dove arriva la ghianda e mira a un
-  mattoncino rompibile con `sceltaMira`).
+  (giocatore simulato `pilotaIA`, che prevede dove arriva la ghianda, mira a un
+  mattoncino rompibile con `sceltaMira` e schiva le bollette che arrivano prima della
+  ghianda con `schivaBollette`).
 - **Difficoltà tarata** con partite simulate (vite infinite, 8 partite per livello e per
   giocatore; giocatori con ritardo, errore che cresce con la velocità e l'angolo della
   ghianda, velocità dell'asse e mira: principiante 0,22 s / 16 px / 1300 px/s / mira 30%,
   medio 0,16 / 12 / 1800 / 60%, bravo 0,11 / 8 / 2600 / 85%). Vite perse per livello
-  (principiante / medio / bravo): mondo 1 da 0,1 / 0 / 0 a 1,1 / 1 / 0,4; mondo 2 da 0,9
-  / 0,8 / 0,4 a 3,5 / 1 / 0,6; mondo 3 da 1,4 / 1 / 0,3 a 5,1 / 3,5 / 0,8 (il sentiero
-  nascosto, col varco nel muro, è il più duro); mondo 4 da 3,6 / 2,4 / 1,4 a 6 / 4,4 /
-  2,1 (l'archivio). Il bravo perde ~10 vite in tutto il gioco e ne guadagna ~9 coi punti,
-  quindi lo finisce; il medio arriva al mondo 3 e poi riparte dal livello raggiunto.
-  Un livello dura 1,5-5 minuti (~200 s in media), 7000-20000 punti.
+  con i boss (principiante / medio / bravo): mondo 1 da 0,1 / 0,1 / 0 a 0,9 / 0,5 / 0
+  (boss 0,6 / 0,1 / 0,1); mondo 2 da 0,6 / 0,1 / 0 a 3,5 / 1,3 / 0,5 (boss 2,3 / 0,8 /
+  0,8); mondo 3 da 0,9 / 1,1 / 0,3 a 4,9 / 2,9 / 0,8 (il sentiero nascosto, col varco nel
+  muro; boss 2,9 / 0,6 / 1,1); mondo 4 da 2,5 / 1 / 0,5 a 5,9 / 4,6 / 1,9 (l'archivio e
+  l'ufficio del capo); il capo è il più duro: 7,6 / 5,5 / 2,8 vite e 13-16 storditure
+  (prima della ritaratura, con 30 colpi, ventaglio da 3 ogni 3,8 s e 0,9 s di blocco,
+  il bravo ne perdeva 11). Il bravo perde ~15 vite in tutto il gioco e ne guadagna
+  ~12 coi punti; il medio arriva al mondo 3 e poi riparte dal livello raggiunto.
+  Un livello dura 1,5-5 minuti (boss 1,5-4), 7000-30000 punti.
 - **Prove automatiche**: `window.ghiandeEMattoncini` (`stato`, `iniziaPartita(n)`,
   `caricaLivello`, `aggiorna`, `azione`, `prendi(id)`, `nuovaCapsula`, tabelle); con
   `stato.test = true` il gioco non avanza da solo, non suona, non apre pannelli e non va
-  in pausa, e con `stato.iaGioca = true` (e `stato.parametriIA`) l'asse la guida il
+  in pausa (`stato.statistiche.storditi` conta le bollette prese), e con `stato.iaGioca = true` (e `stato.parametriIA`) l'asse la guida il
   giocatore simulato; a livello finito `stato.fase` diventa `superato`. I copioni non
   sono nel repository: per ogni livello `iniziaPartita(n)`, `stato.vite = 999`, poi
   `aggiorna(1 / 120)` fino a `superato` (o 600 s), contando le vite perse.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `livelli.js`, `gioco.js` (con `ASSETS = 'assets/'`,
-  `FONDALI = 'fondali/'` e `leggi('sbloccati', 16)` per aprire tutti i livelli),
-  `ghianda.svg`, `fondali/` (da Tino Bum), `assets/tino/` e `assets/gino/`; si pubblica
+  `FONDALI = 'fondali/'` e `leggi('sbloccati', 20)` per aprire tutti i livelli),
+  `ghianda.svg`, `fondali/` (da Tino Bum), `assets/tino/`, `assets/gino/` e
+  `assets/agenti-tari/`; si pubblica
   con `files` e `root`.
-- **Stato**: prima versione giocabile (4 mondi, 16 livelli, 10 potenziamenti, musica).
-  Possibili seguiti, non ancora decisi: un livello col capo della Tari che si muove e
-  lancia bollette, mattoncini che si muovono o che ricrescono, classifica dei punti,
-  differenze di gioco tra Tino e Gino.
+- **Stato**: giocabile (4 mondi, 20 livelli con 4 boss, 10 potenziamenti, musica).
+  Possibili seguiti, non ancora decisi: mattoncini che si muovono o che ricrescono,
+  classifica dei punti, differenze di gioco tra Tino e Gino.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;

@@ -12,6 +12,12 @@
  *   *        petardo: quando si rompe fa saltare gli otto vicini (e i petardi a catena)
  *   ?        sorpresa: quando si rompe lascia sempre cadere un potenziamento
  *
+ * L'ultimo livello di ogni mondo ha un boss (campo `boss`: 'retino', 'timbro',
+ * 'capo'; le tabelle sono in BOSS in gioco.js): si vince quando i boss sono KO,
+ * anche se restano mattoncini. Le prime 8 righe vanno lasciate vuote (lì
+ * cammina il boss); nelle due righe sotto, il timbro e il capo timbrano
+ * mattoncini nuovi dove ci sono buchi.
+ *
  * Regola per i livelli nuovi: ogni mattoncino che si può rompere deve essere
  * raggiungibile dalla ghianda (varchi larghi almeno un mattoncino).
  */
@@ -117,6 +123,24 @@ window.GM_LIVELLI = [
       '##....####....##',
     ],
   },
+  {
+    mondo: 0, nome: 'La ronda dell\'agente',
+    boss: ['retino'],
+    mappa: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      'aaaaaaaaaaaaaaaa',
+      'b?bbbbbbbbbbbb?b',
+      '................',
+      '..##........##..',
+    ],
+  },
   // ------------------------------------------------------------ mondo 2, la spiaggia
   {
     mondo: 1, nome: 'Il castello di sabbia',
@@ -181,6 +205,24 @@ window.GM_LIVELLI = [
       'eeeeeeeeeeeeeeee',
       'e?ee2ee?ee2ee?ee',
       'eeeeeeeeeeeeeeee',
+    ],
+  },
+  {
+    mondo: 1, nome: 'L\'agente del timbro',
+    boss: ['timbro'],
+    mappa: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      'cccccccccccccccc',
+      'c?cc2cccccc2cc?c',
+      '................',
+      '#..............#',
     ],
   },
   // ------------------------------------------------------------ mondo 3, il bosco d'autunno
@@ -251,6 +293,24 @@ window.GM_LIVELLI = [
       '###....##....###',
     ],
   },
+  {
+    mondo: 2, nome: 'La squadra della Tari',
+    boss: ['retino', 'timbro'],
+    mappa: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      'aaaaaaaaaaaaaaaa',
+      '2?2222222222?222',
+      '................',
+      '...##......##...',
+    ],
+  },
   // ------------------------------------------------------------ mondo 4, gli uffici della Tari
   {
     mondo: 3, nome: 'Lo sportello',
@@ -307,6 +367,24 @@ window.GM_LIVELLI = [
       '#?##..####..##?#',
       '................',
       'ffff*ffffff*ffff',
+    ],
+  },
+  {
+    mondo: 3, nome: 'Il capo della Tari',
+    boss: ['capo'],
+    mappa: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '2222222222222222',
+      'e?eeeeeeeeeeee?e',
+      '................',
+      '##....####....##',
     ],
   },
 ];
