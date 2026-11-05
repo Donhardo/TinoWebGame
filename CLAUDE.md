@@ -381,8 +381,8 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
   capo: disegni SVG, non si specchiano per via della scritta, animati come Gino;
   nella scheda si vede la testa). Tappe 3, 5 e 6 con Gino alleato al computer
   (squadra 0); più giocatori per parte a 120 px l'uno dall'altro; con più di due
-  giocatori le schede sono piccole e impilate. L'ispettore capo ha 1600 di vita
-  (`vitaMax` per giocatore). Si vince se resta in piedi qualcuno della squadra di Tino.
+  giocatori le schede sono piccole e impilate. La vita massima è per giocatore
+  (`vitaMax`). Si vince se resta in piedi qualcuno della squadra di Tino.
   Livelli degli agenti 2, 3, 5, 4, 3, 6; nella tappa 5 i tre agenti hanno 550 di vita
   (con 1000 tirano troppo spesso e la tappa era quasi impossibile), l'ispettore capo
   1550. Tarata con Tino al computer (livello 6): vince ~58%, ~67%, ~60%, ~70%, ~59%,
@@ -393,7 +393,8 @@ potenza e tiene conto del vento. File: `index.html`, `stile.css`, `mezzi.js`
 - **Provarlo su Claude**: come per l'avventura, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `mezzi.js`, `terreno.js`, `gioco.js` (con
-  `BASE = 'assets/'`), `fondali/` e `assets/tino/`, `assets/gino/`; si pubblica
+  `BASE = 'assets/'` e `tappaCampagna = Math.max(6, ...)` per sbloccare tutte le
+  tappe), `fondali/` e `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica
   con `files` e `root`. Le partite simulate (computer contro computer a vari
   livelli, con `stato.test = true`) si fanno girare con Playwright; i copioni
   non sono nel repository.
