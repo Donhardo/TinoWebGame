@@ -39,4 +39,6 @@ e poi si visita http://localhost:8000.
   tra fiori, tronchi e nuvole, dal prato al bosco fino al cielo. Un solo comando
   (Spazio, clic o tocco); vince la distanza più lunga, con il record salvato.
   Fondali, foglia-aliante e ostacoli sono dipinti (in `games/gino-volante/fondali/`
-  e `ostacoli/`).
+  e `ostacoli/`). Musica sintetizzata (si spegne a parte), tunnel di nuvole sempre più
+  lunghi e stretti nel cielo, e un negozio dove si spendono le ghiande: foglie con un
+  potere ciascuna e cappelli per Gino.

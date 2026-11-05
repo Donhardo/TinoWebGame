@@ -443,12 +443,15 @@ Lancio a distanza a tempismo che diventa un volo a colpi d'ala (meccaniche da
 classici del genere): Tino lancia Gino con un'altalena a bilico, Gino vola e poi
 apre una foglia. File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su
 canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home), disegni
-dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png`.
+dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png` (più
+`foglie/` e `cappelli/` del negozio, quando arrivano da Gemini).
 - **Decisioni prese**: titolo "Gino Volante"; Tino lancia Gino per gioco (niente
   agenti della Tari); altalena a bilico; la foglia dura finché non urta ma si
   sgualcisce (due urti); ambientazione che va dal prato al bosco fino al cielo;
   un solo comando per tutto (Spazio, Invio o ↑, clic, tocco). Si gioca anche con il
-  telefono in verticale (si vede meno avanti e più cielo).
+  telefono in verticale (si vede meno avanti e più cielo). Musica sintetizzata in
+  loop; negozio di foglie (con poteri) e cappelli (solo da guardare); tunnel di nuvole
+  nel cielo.
 - **Mondo**: x verso destra (0 = perno dell'altalena), h verso l'alto (0 = terreno),
   20 px = 1 m. Schermo logico alto 540 (largo 760-1400 secondo lo schermo; in
   verticale largo 560 e alto fino a 1100). La telecamera segue Gino di lato e sale
@@ -470,23 +473,72 @@ dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png`.
   ostacolo arriva solo dopo la planata. Ogni tocco dà una spinta verso l'alto, la
   gravità tira giù. Il primo urto strappa la foglia (1,3 s di invulnerabilità, colpi
   d'ala un po' più deboli), il secondo chiude il volo; toccare terra chiude il volo.
+  I valori del volo vengono da `parametri()`, che applica il potere della foglia
+  scelta (in `P`); gli urti si contano in `g.urti` (il volo finisce a `P.urti`).
 - **Ostacoli**: coppie sopra/sotto con un varco, sempre raggiungibile dal varco prima
   (salita chiesta al massimo 150 px/s, discesa 300). La difficoltà è nella tabella
   `CURVE` (curve a punti [metri, valore], lineari tra un punto e l'altro): fino a 700 m
-  cresce in fretta, poi più piano fino ai 2000 m, dove si ferma. Varco 245 → 175 → 158
-  px, distanza tra le coppie 560 → 360 → 310 px, velocità 240 → 340 → 380 px/s, ostacoli
-  che si muovono su e giù dai 300 m (44 px a 740 m, 50 a 2000); radure con la corrente
-  ogni 8 coppie all'inizio e ogni 12 a 2000 m, foglie nuove ogni 11 coppie all'inizio e
-  ogni 18 a 2000 m. Tappe: prato
+  cresce in fretta, poi più piano fino ai 2000 m e ancora più piano fino ai 4000 m, dove
+  si ferma. Varco 245 → 175 → 158 → 150 (3000 m) → 145 px, distanza tra le coppie
+  560 → 360 → 310 → 290 px, velocità 240 → 340 → 380 → 405 px/s, ostacoli che si
+  muovono su e giù dai 300 m (44 px a 740 m, 50 a 2000, 56 a 4000); radure con la
+  corrente ogni 8 coppie all'inizio, 12 a 2000 m, 14 a 4000 m; foglie nuove ogni 11
+  coppie all'inizio, 18 a 2000 m, 20 a 4000 m. Tappe: prato
   (0 m: fiori alti e rami), bosco (250 m: tronchi tagliati e rami col muschio), cielo
   (600 m: nuvoloni temporaleschi); colori e sfondi sfumano da una tappa all'altra.
+- **Tunnel di nuvole** (tabella `TUNNEL`, curve `tunnelOgni`, `tunnelLungo`,
+  `tunnelVarco`, funzione `colonnaTunnel`): nel cielo dai 1100 m. Colonne di nuvole
+  (`o.tunnel`, ferme) una dopo l'altra a 0,86 larghezze di ostacolo, senza spazio
+  libero, con il varco che sale e scende come un corridoio: la pendenza cambia piano
+  (`svolta`) e non supera 135 px/s in salita e 240 in discesa (Gino sale a più di 300 e
+  scende a 620); vicino ai bordi si gira verso il centro. Un tunnel ogni 14 coppie
+  normali a 1100 m, 11 a 2000, 8 a 3000, 6 a 4500; lungo 6 colonne a 1100 m, 9 a 2000,
+  13 a 3000, 18 a 4500; varco 192 → 178 → 166 → 158 px. Una ghianda ogni due colonne nel
+  corridoio; all'entrata il messaggio "Tunnel di nuvole!". Le nuvole di ogni ostacolo
+  si calcolano una volta (`nuvoleRel`, relative al centro del varco).
+- **Musica** (tabelle `MUSICA` e `BRANO`, funzioni `passoMusica`, `aggiornaMusica`):
+  tutta Web Audio, nessun file. 8 battute in Do (Do, Fa, Sol, Do, La minore, Fa, Sol,
+  Sol7) in sedicesimi: basso saltellante (triangolo più un filo di onda quadra), "pop"
+  elettronici (sinusoide che cade di tono in 25 ms) sui controtempi, melodia a onda
+  quadra dietro un filtro passa-basso. Tre livelli: menu (100 bpm, solo un colpetto di
+  cassa), lancio e volo libero (108 bpm, cassa e charleston), volo con la foglia (124
+  bpm, rullante, charleston fitto, più pop, filtro più aperto). Un timer ogni 50 ms
+  programma le note 0,2 s avanti. Tace (volume a zero) in pausa, con la scheda nascosta,
+  con i suoni spenti (M) o con la sola musica spenta (pulsante con la nota nella barra
+  o tasto N, `localStorage` `musica-spenta`); parte solo dopo il primo gesto.
+- **Negozio** (tabelle `FOGLIE` e `CAPPELLI` in cima a `gioco.js`, pannello
+  `pannelloNegozio`, dal menu e dalla fine del volo): due schede, foglie e cappelli. Si
+  compra con le ghiande raccolte (`ghiande-totali`, che ora sono spendibili); i pezzi
+  con `traguardo` si sbloccano quando il record arriva a quei metri (a fine volo
+  compare "Sbloccato: …"). Scelte e acquisti in `localStorage` `foglia`, `cappello`,
+  `foglie`, `cappelli`. In cima al negozio Gino con la foglia e il cappello scelti.
+  - Foglie (potere = moltiplicatori su `FOGLIA`): quercia (gratis, equilibrata), acero
+    150 (gravità ×0,92, colpo ×0,88: plana più a lungo), castagno 300 (colpo ×1,08,
+    gravità ×1,12), ginkgo 450 (attira le ghiande entro 110 px, slancio ×0,6), pioppo
+    650 (slancio ×1,5 che dura ×1,5, da strappata colpo ×0,85), fico 900 (3 urti,
+    colpo ×0,91, gravità ×1,18, protezione 0,6 s), felce a 1500 m (protezione 1,9 s,
+    gravità ×1,07), foglia d'oro a 2500 m (ghiande ×2, colpo ×0,94). La planata sopra
+    il tetto segue la gravità. Con il fico la foglia nuova toglie un urto alla volta.
+  - Cappelli (solo da guardare): nessuno, aviatore 100, elica 200, paglia 350, bombetta
+    500, mago 750, esploratore a 1000 m (è `assets/tino/accessori/cappello.svg`, quello
+    di Tino), corona di ghiande a 2000 m, casco con le alette a 3000 m. Si appoggiano
+    alla foto di Gino con la `posa` (centro del bordo basso, larghezza e rotazione in
+    pixel della foto 381 × 470), come gli accessori di Tino nell'avventura; seguono
+    rotazione e schiacciamento di Gino.
+  - Grafica: per ora disegni provvisori nel codice (`fogliaCodice`, `cappelloCodice`,
+    disegnati una volta su una tela a parte). Quando ci sono, il gioco usa i PNG
+    dipinti `foglie/<id>.png`, `foglie/<id>-strappata.png` (la quercia è l'aliante) e
+    `cappelli/<id>.png` (bordo basso del cappello in fondo, al centro); i prompt per
+    Gemini seguono lo stile dell'aliante (sfondo magenta, manubrio al centro del bordo
+    basso), e si preparano come l'aliante.
 - **Aiuti e premi**: ghiande nei varchi e tra le coppie; ogni 8 coppie una radura con
   una corrente d'aria che spinge in alto (fin sotto il tetto) e una fila di ghiande;
   ogni 11 coppie una foglia nuova che ripara quella strappata (se è integra, +3
   ghiande).
 - **Punteggio**: distanza totale in metri (lancio + foglia); `localStorage`
-  `gino-volante:record`, `record-ghiande` (più ghiande in un volo), `ghiande-totali`,
-  `lanci`, `muto`.
+  `gino-volante:record`, `record-ghiande` (più ghiande in un volo), `ghiande-totali`
+  (da spendere nel negozio), `lanci`, `muto`, `musica-spenta`, `foglia`, `cappello`,
+  `foglie`, `cappelli`.
 - **Espressioni**: Tino arrabbiato (concentrato) mentre salta e se il lancio è corto,
   normale e saltellante se il lancio è buono, ko se manca l'asse. Gino ruota in volo,
   si schiaccia ai rimbalzi, si inclina ai colpi d'ala, trema negli urti, saltella
@@ -500,6 +552,18 @@ dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png`.
   entrambe le mosse sono sicure): 16 voli su 16 fino a 3000 m senza strappi. Il
   copione semplice che mira solo al varco invece cade ogni tanto oltre i 1900 m. Le
   persone vere reagiscono peggio dei copioni, quindi si arriva meno lontano.
+  Con i tunnel e le curve oltre i 2000 m (copioni riscritti, che sul gioco di prima
+  davano ~540, ~1370, ~2420 m): principiante ~540 m, medio ~1350 m, bravo ~2035 m; il
+  pianificatore arriva ancora a 3000 m in 16 voli su 16 senza strappi (7 tunnel per
+  volo) e anche fino a 4500 m (13 tunnel, fino a 17 colonne).
+  Con le foglie del negozio (principiante / medio / bravo, 30 voli; ±10-15% di rumore):
+  quercia 540 / 1350 / 2035, acero 510 / 1545 / 2115, castagno 470 / 1310 / 2150,
+  ginkgo 515 / 1210 / 1930 (ma ~40% di ghiande in più), pioppo 510 / 1280 / 2285, fico
+  420 / 1125 / 2325 (più pesante: aiuta chi è bravo, l'urto in più conta per chi sbaglia
+  poco), felce 490 / 1400 / 2170, oro 440 / 1405 / 2200 (ghiande doppie). Prima della
+  ritaratura acero e felce davano +15-20% e il fico +47% al bravo. Il pianificatore
+  arriva a 3000 m senza strappi (16 voli su 16) con acero, castagno e ginkgo; pioppo,
+  fico, felce e oro in prova.
 - **Disegni dipinti** (fatti con Gemini, ci sono già; se un file mancasse resterebbe
   la grafica disegnata nel codice): `fondali/prato.png`, `fondali/bosco.png`,
   `fondali/cielo.png` (uno per tappa, 16:9, es. 1600 × 900) e `aliante.png`,
@@ -539,19 +603,31 @@ dipinti in `fondali/`, `ostacoli/`, `aliante.png` e `aliante-strappato.png`.
   pianificatore arriva ancora sempre a 3000 m (16 su 16, senza strappi); i fusti sottili
   perdonano un po' di più: bravo ~2250 m, medio ~1350 m, principiante ~580 m.
 - **Prove automatiche**: `window.ginoVolante` (`stato`, `avvia(seme)`, `premi`,
-  `aggiorna`, `centroOstacolo`, `urtaOstacolo`, tabelle); con `stato.test = true` il
-  gioco non avanza da solo e non apre pannelli. I copioni non sono nel repository.
+  `aggiorna`, `centroOstacolo`, `urtaOstacolo`, `parametri()` (i valori del volo con
+  la foglia scelta), `provaFoglia(id)` e `provaCappello(id)` (scelgono senza comprare),
+  `regalaGhiande(n)`, `compra`, `posseduto`, `musica`, tabelle); con `stato.test = true`
+  il gioco non avanza da solo, non apre pannelli e non suona. I copioni non sono nel
+  repository: il pianificatore decide ogni 4 fotogrammi (dt 1/120) se battere,
+  simulando 1,2 s avanti in profondità (memo su passi, quota e velocità arrotondate)
+  con la fisica di `voloFoglia` e i valori di `parametri()`, con margine (terra a
+  raggio + 8, urti provati anche a ±5 px); i giocatori semplici guardano lo stato con
+  un ritardo, mirano al centro del varco con un errore che cambia a ogni ostacolo,
+  battono solo se scendono e saltano qualche colpo (principiante ritardo 0,15 s, errore
+  16 px, 4% persi; medio 0,12 s, 12 px, 2%; bravo 0,1 s, 7,5 px, 0,9%).
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
-  `foglia.svg`, i disegni dipinti (`fondali/`, `ostacoli/`, `aliante*.png`) e
-  `assets/tino/`, `assets/gino/`; si
-  pubblica con `files` e `root`.
-- **Stato**: completo, con grafica dipinta (fondali, aliante, ostacoli). Possibili
-  seguiti, non ancora decisi: fondali più grandi (quelli di Gemini sono da 1024 px, un
-  po' sfocati sul telefono in verticale), cappelli o foglie diverse da comprare con le
-  ghiande, una musica di sottofondo, altre tappe oltre il cielo, restringere un po' i
-  varchi lontani se risulta troppo facile.
+  `foglia.svg`, i disegni dipinti (`fondali/`, `ostacoli/`, `aliante*.png`, e
+  `foglie/`, `cappelli/` quando ci sono) e `assets/tino/` (con `accessori/cappello.svg`,
+  il cappello da esploratore), `assets/gino/`; si pubblica con `files` e `root`. Per
+  provare il negozio, nella copia di `gioco.js` si parte con 5000 ghiande
+  (`leggi('ghiande-totali', 5000)`) e i traguardi sono aperti (`if (x.traguardo)
+  return true;` in `posseduto`).
+- **Stato**: completo, con grafica dipinta (fondali, aliante, ostacoli), musica,
+  negozio e tunnel di nuvole. Mancano i disegni dipinti delle foglie e dei cappelli del
+  negozio (prompt per Gemini già passati; per ora disegni provvisori nel codice).
+  Possibili seguiti, non ancora decisi: fondali più grandi (quelli di Gemini sono da
+  1024 px, un po' sfocati sul telefono in verticale), altre tappe oltre il cielo.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
