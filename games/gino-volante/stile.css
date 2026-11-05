@@ -60,8 +60,8 @@ body {
 .barra-btn:focus-visible { outline: 2px solid #ffd59a; }
 .barra-btn svg { width: 22px; height: 22px; fill: currentColor; }
 .barra-btn .ico-off { display: none; }
-.muto .barra-btn .ico-on { display: none; }
-.muto .barra-btn .ico-off { display: block; }
+.muto .barra-btn .ico-on, .senza-musica #btn-musica .ico-on { display: none; }
+.muto .barra-btn .ico-off, .senza-musica #btn-musica .ico-off { display: block; }
 
 .palco {
   position: relative;

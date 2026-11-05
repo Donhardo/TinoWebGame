@@ -76,14 +76,32 @@
 
   // Difficoltà: ogni voce è una curva [metri, valore], lineare tra un punto e
   // l'altro e ferma dopo l'ultimo. Fino a 700 m cresce in fretta, poi più piano
-  // fino ai 2000 m, dove si ferma (sempre battibile: provato con voli simulati).
+  // fino ai 2000 m e ancora più piano fino ai 4000 m, dove si ferma (sempre
+  // battibile: provato con voli simulati).
   const CURVE = {
-    velocita: [[0, 240], [700, 340], [2000, 380]],   // px/s in avanti con la foglia
-    varco: [[0, 245], [700, 175], [2000, 158]],      // spazio libero tra sopra e sotto
-    distanza: [[0, 560], [700, 360], [2000, 310]],   // tra una coppia e l'altra
-    ampiezza: [[0, 0], [300, 0], [740, 44], [2000, 50]], // movimento su e giù degli ostacoli
-    raduraOgni: [[0, 8], [2000, 12]],                // coppie tra una radura con la corrente e l'altra
-    fogliaOgni: [[0, 11], [2000, 18]],               // coppie tra una foglia nuova e l'altra
+    velocita: [[0, 240], [700, 340], [2000, 380], [4000, 405]],  // px/s in avanti con la foglia
+    varco: [[0, 245], [700, 175], [2000, 158], [3000, 150], [4000, 145]], // spazio libero tra sopra e sotto
+    distanza: [[0, 560], [700, 360], [2000, 310], [4000, 290]],  // tra una coppia e l'altra
+    ampiezza: [[0, 0], [300, 0], [740, 44], [2000, 50], [4000, 56]], // movimento su e giù degli ostacoli
+    raduraOgni: [[0, 8], [2000, 12], [4000, 14]],    // coppie tra una radura con la corrente e l'altra
+    fogliaOgni: [[0, 11], [2000, 18], [4000, 20]],   // coppie tra una foglia nuova e l'altra
+    // tunnel di nuvole (solo nel cielo, da TUNNEL.da)
+    tunnelOgni: [[0, 14], [1100, 14], [2000, 11], [3000, 8], [4500, 6]], // coppie normali tra un tunnel e l'altro
+    tunnelLungo: [[0, 6], [1100, 6], [2000, 9], [3000, 13], [4500, 18]], // colonne di nuvole di un tunnel
+    tunnelVarco: [[0, 192], [1100, 192], [2000, 178], [3000, 166], [4500, 158]], // varco dentro il tunnel
+  };
+
+  // Tunnel di nuvole: colonne fitte una dopo l'altra (si toccano), con il varco
+  // che sale e scende come un corridoio. La pendenza non supera salita e discesa
+  // (px/s alla velocità del tunnel), ben sotto quello che Gino riesce a fare
+  // (sale a più di 300 px/s e scende a 620), e il varco resta largo almeno il
+  // doppio dell'oscillazione dei colpi d'ala (64 px) più Gino.
+  const TUNNEL = {
+    da: 1100,                  // metri del primo tunnel
+    passo: 0.86,               // distanza tra le colonne, in larghezze di ostacolo
+    salita: 135,
+    discesa: 240,
+    svolta: 0.45,              // quanto può cambiare la pendenza da una colonna all'altra
   };
   function curva(punti, m) {
     if (m <= punti[0][0]) return punti[0][1];
@@ -258,6 +276,7 @@
     risultato: null,
   };
   let muto = leggi('muto', false);
+  let musicaSpenta = leggi('musica-spenta', false);
   let record = leggi('record', 0);
   let recordGhiande = leggi('record-ghiande', 0);
   let ghiandeTotali = leggi('ghiande-totali', 0);
@@ -282,11 +301,15 @@
 
   // ---------------------------------------------------------------- audio
   let audio = null;
+  function contesto() {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+    return audio;
+  }
   function suono(freq, durata = 0.08, tipo = 'square', volume = 0.06, freqFine = null, ritardo = 0) {
     if (muto || stato.test) return;
     try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
+      contesto();
       const t = audio.currentTime + ritardo;
       const osc = audio.createOscillator();
       const g = audio.createGain();
@@ -319,6 +342,160 @@
     fine: () => [523, 440, 523].forEach((f, i) => suono(f, 0.14, 'triangle', 0.05, null, i * 0.12)),
     via: () => suono(660, 0.08, 'triangle', 0.06),
   };
+
+  // ---------------------------------------------------------------- musica
+  // Musichetta in loop, tutta sintetizzata: basso saltellante, "pop" elettronici
+  // sugli accordi, melodia a onda quadra. Tre livelli: menu (calma), lancio (con
+  // la cassa), volo con la foglia (più veloce, con rullante, charleston e più pop).
+  // Si programma un po' in anticipo con un timer; tace in pausa, con la scheda
+  // nascosta, con i suoni spenti (M) o con la sola musica spenta (N o pulsante).
+  const MUSICA = {
+    bpm: [100, 108, 124],      // menu, lancio, foglia
+    volume: 0.3,
+    anticipo: 0.2,             // secondi programmati in anticipo
+  };
+  const NOTA = (n) => {
+    const m = /^([A-G])(#?)(\d)$/.exec(n);
+    return 12 * (+m[3] + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] ? 1 : 0);
+  };
+  // 8 battute da 16 sedicesimi: accordo (fondamentale e tipo) e melodia ('-' = pausa)
+  const BRANO = [
+    ['C3', 'M', 'C5 - E5 - G5 - E5 - C6 - - - G5 - - -'],
+    ['F3', 'M', 'A5 - - F5 - - A5 - C6 - A5 - G5 - F5 -'],
+    ['G3', 'M', 'G5 - B4 - D5 - G5 - F5 - E5 - D5 - - -'],
+    ['C3', 'M', 'E5 - C5 - E5 G5 - - C6 - - - - - - -'],
+    ['A2', 'm', 'A5 - - E5 - - A5 - C6 - B5 - A5 - E5 -'],
+    ['F3', 'M', 'F5 - A5 - C6 - A5 - F5 - - - A5 - C6 -'],
+    ['G3', 'M', 'B5 - - G5 - - D6 - B5 - G5 - A5 - B5 -'],
+    ['G3', '7', 'C6 - - - G5 - - - D5 - E5 - F5 - G5 -'],
+  ].map(([radice, tipo, mel]) => ({
+    radice: NOTA(radice),
+    accordo: { M: [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 10] }[tipo],
+    melodia: mel.split(' ').map((n) => (n === '-' ? null : NOTA(n))),
+  }));
+  const BASSO = { 0: 0, 3: 0, 4: 7, 8: 12, 10: 7, 11: 0, 12: 7, 14: 12 }; // sedicesimo → intervallo
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const musica = { passo: 0, prossimo: 0, suona: false, uscita: null, filtro: null, rumore: null };
+
+  function suonaMusica() {
+    return !!audio && audio.state === 'running' && !muto && !musicaSpenta && !stato.test
+      && stato.fase !== 'pausa' && !document.hidden;
+  }
+  function livelloMusica() {
+    if (stato.fase === 'foglia') return 2;
+    return inGioco() ? 1 : 0;
+  }
+  function preparaMusica() {
+    if (musica.uscita) return;
+    const a = audio;
+    musica.uscita = a.createGain();
+    musica.uscita.gain.value = 0;
+    const comp = a.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.ratio.value = 4;
+    musica.uscita.connect(comp).connect(a.destination);
+    // la melodia passa da un filtro che si apre durante il volo
+    musica.filtro = a.createBiquadFilter();
+    musica.filtro.type = 'lowpass';
+    musica.filtro.frequency.value = 1600;
+    musica.filtro.connect(musica.uscita);
+    const buf = a.createBuffer(1, a.sampleRate * 0.5, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    musica.rumore = buf;
+  }
+  // una nota: onda, frequenza (con eventuale scivolata), volume, durata
+  function notaMusica(t, tipo, f, vol, dur, verso = musica.uscita, fFine = null, tFine = 0.03) {
+    const a = audio;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.type = tipo;
+    o.frequency.setValueAtTime(f, t);
+    if (fFine) o.frequency.exponentialRampToValueAtTime(fFine, t + tFine);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(verso);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  function rumoreMusica(t, vol, dur, tipoFiltro, freq) {
+    const a = audio;
+    const s = a.createBufferSource();
+    s.buffer = musica.rumore;
+    const f = a.createBiquadFilter();
+    f.type = tipoFiltro; f.frequency.value = freq;
+    const g = a.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f).connect(g).connect(musica.uscita);
+    s.start(t, Math.random() * 0.3);
+    s.stop(t + dur + 0.02);
+  }
+  // "pop" elettronico: una sinusoide che parte alta e cade subito sulla nota
+  const pop = (t, m, vol) => notaMusica(t, 'sine', hz(m) * 2.2, vol, 0.11, musica.uscita, hz(m), 0.025);
+
+  function passoMusica(n, t, liv, durata) {
+    const battuta = BRANO[Math.floor(n / 16) % BRANO.length];
+    const i = n % 16;
+    const acc = battuta.accordo.map((x) => battuta.radice + 24 + x); // pop un paio di ottave sopra
+    // basso
+    if (BASSO[i] !== undefined) {
+      const m = battuta.radice - 12 + BASSO[i];
+      notaMusica(t, 'triangle', hz(m), 0.32, durata * 1.6);
+      notaMusica(t, 'square', hz(m), 0.05, durata * 0.9);
+    }
+    // pop sui controtempi (e su tutti i sedicesimi dispari nel volo)
+    if (i % 4 === 2) pop(t, acc[(i >> 2) % 3] + 12, 0.16);
+    if (liv === 2 && i % 2 === 1) pop(t, acc[(n >> 1) % 3] + 24, 0.07);
+    if (liv >= 1 && i === 15) pop(t, acc[2] + 24, 0.1);
+    // melodia
+    const mel = battuta.melodia[i];
+    if (mel !== null) {
+      const lunga = battuta.melodia.slice(i + 1).findIndex((x) => x !== null);
+      const dur = durata * Math.min(4, lunga < 0 ? 4 : lunga + 1) * 0.9;
+      notaMusica(t, 'square', hz(mel), liv === 0 ? 0.07 : 0.09, dur, musica.filtro);
+      notaMusica(t, 'triangle', hz(mel + 12), 0.04, dur * 0.6, musica.filtro);
+    }
+    // batteria
+    if (liv >= 1 && (i === 0 || i === 8 || (liv === 2 && i === 10))) notaMusica(t, 'sine', 150, 0.55, 0.16, musica.uscita, 45, 0.12);
+    if (liv === 0 && i === 0) notaMusica(t, 'sine', 120, 0.25, 0.12, musica.uscita, 50, 0.1);
+    if (liv === 2 && (i === 4 || i === 12)) rumoreMusica(t, 0.22, 0.12, 'bandpass', 1800);
+    if (liv >= 1 && i % 2 === 0 && (liv === 2 || i % 4 === 2)) rumoreMusica(t, liv === 2 ? 0.07 : 0.05, 0.035, 'highpass', 7000);
+  }
+
+  function aggiornaMusica() {
+    if (!audio) return;
+    const on = suonaMusica();
+    const t = audio.currentTime;
+    if (on !== musica.suona) {
+      musica.suona = on;
+      if (on) { preparaMusica(); musica.prossimo = t + 0.08; }
+      if (musica.uscita) {
+        musica.uscita.gain.cancelScheduledValues(t);
+        musica.uscita.gain.setTargetAtTime(on ? MUSICA.volume : 0, t, on ? 0.15 : 0.04);
+      }
+    }
+    if (!on) return;
+    const liv = livelloMusica();
+    musica.filtro.frequency.setTargetAtTime(liv === 2 ? 3600 : liv === 1 ? 2400 : 1500, t, 0.3);
+    if (musica.prossimo < t) musica.prossimo = t + 0.03; // il timer è rimasto indietro
+    const durata = 60 / MUSICA.bpm[liv] / 4;
+    while (musica.prossimo < t + MUSICA.anticipo) {
+      try { passoMusica(musica.passo, musica.prossimo, liv, durata); } catch (e) { musica.errore = e; }
+      musica.prossimo += durata;
+      musica.passo = (musica.passo + 1) % (16 * BRANO.length);
+    }
+  }
+  setInterval(aggiornaMusica, 50);
+  document.addEventListener('visibilitychange', aggiornaMusica);
+  // l'audio parte solo dopo il primo gesto (clic, tocco o tasto)
+  function sbloccaAudio() {
+    if (stato.test) return;
+    try { contesto(); } catch (e) { return; }
+    aggiornaMusica();
+  }
+  window.addEventListener('pointerdown', sbloccaAudio, true);
+  window.addEventListener('keydown', sbloccaAudio, true);
 
   // ---------------------------------------------------------------- schermo
   let scala = 1;
@@ -363,6 +540,7 @@
       return;
     }
     if (e.code === 'KeyM') { cambiaAudio(); return; }
+    if (e.code === 'KeyN') { cambiaMusica(); return; }
     if (['Space', 'Enter', 'ArrowUp', 'KeyW'].includes(e.code)) {
       if (pannelloAperto()) return; // il bottone del pannello fa da sé
       e.preventDefault();
@@ -622,6 +800,15 @@
     scrivi('muto', muto);
     document.body.classList.toggle('muto', muto);
     if (!muto) suoni.via();
+    aggiornaMusica();
+  }
+  // spegne o riaccende solo la musica (con i suoni spenti, la riaccende insieme ai suoni)
+  function cambiaMusica() {
+    if (muto) { musicaSpenta = true; cambiaAudio(); }
+    musicaSpenta = !musicaSpenta;
+    scrivi('musica-spenta', musicaSpenta);
+    document.body.classList.toggle('senza-musica', musicaSpenta);
+    aggiornaMusica();
   }
 
   function mostraMessaggio(testo, durata, colore = '#2f6b26') {
@@ -658,6 +845,7 @@
     const gen = stato.gen;
     gen.n += 1;
     const metri = gen.x / PX_M;
+    if (gen.tunnel) { colonnaTunnel(); return; }
     // radura con la corrente d'aria e una fila di ghiande
     gen.finoRadura -= 1;
     if (gen.finoRadura <= 0) {
@@ -705,6 +893,51 @@
     }
     gen.centro = centro;
     gen.x += spazio;
+    // nel cielo, ogni tanto, comincia un tunnel di nuvole
+    if (tappa === 2 && metri >= TUNNEL.da) {
+      if (gen.finoTunnel === undefined) gen.finoTunnel = 2;
+      gen.finoTunnel -= 1;
+      if (gen.finoTunnel <= 0) {
+        gen.finoTunnel = Math.round(curva(CURVE.tunnelOgni, metri));
+        gen.tunnel = { resto: Math.round(curva(CURVE.tunnelLungo, metri)), pend: 0, primo: true };
+      }
+    }
+  }
+
+  // Una colonna del tunnel di nuvole: subito dopo la precedente, con il varco
+  // che si sposta di poco (pendenza limitata, che cambia piano).
+  function colonnaTunnel() {
+    const gen = stato.gen;
+    const tu = gen.tunnel;
+    const metri = gen.x / PX_M;
+    const forma = formaOstacolo(2);
+    const passo = forma.w * TUNNEL.passo;
+    const dt = passo / crociera(metri);
+    const varco = curva(CURVE.tunnelVarco, metri);
+    const su = TUNNEL.salita * dt, giu = TUNNEL.discesa * dt;
+    const minC = OSTACOLI.margineBasso + varco / 2;
+    const maxC = FOGLIA.tetto - OSTACOLI.margineAlto - varco / 2;
+    let pend = tu.primo ? 0 : clamp(tu.pend + tra(-1, 1) * TUNNEL.svolta * (su + giu), -giu, su);
+    // vicino ai bordi la pendenza si gira verso il centro
+    if (gen.centro + pend * 3 > maxC) pend = Math.min(pend, -giu * tra(0.2, 0.8));
+    if (gen.centro + pend * 3 < minC) pend = Math.max(pend, su * tra(0.2, 0.8));
+    const centro = clamp(gen.centro + pend, Math.max(minC, gen.centro - giu), Math.min(maxC, gen.centro + su));
+    tu.pend = centro - gen.centro;
+    const o = {
+      x: gen.x, ...forma, centro, varco, ampiezza: 0, periodo: 3, fase: 0,
+      tappa: 2, seme: Math.floor(tra(0, 1e6)), passato: false, tunnel: true, entrata: tu.primo,
+    };
+    stato.ostacoli.push(o);
+    // una scia di ghiande lungo il corridoio
+    if (gen.n % 2 === 0) stato.oggetti.push({ tipo: 'ghianda', x: o.x + o.w / 2, dh: 0, ostacolo: o });
+    tu.primo = false;
+    tu.resto -= 1;
+    gen.centro = centro;
+    gen.x += passo;
+    if (tu.resto <= 0) {
+      gen.tunnel = null;
+      gen.x += curva(CURVE.distanza, metri) * 0.6;
+    }
   }
 
   function centroOstacolo(o, tempo) {
@@ -750,7 +983,19 @@
 
   // Le nuvole di un ostacolo del cielo: sotto il varco fino alle chiome, sopra
   // fino in cima. Ognuna è un'ellisse per gli urti; v = quale disegno, giro = specchiata.
+  // Le nuvole relative al centro del varco si calcolano una volta per ostacolo
+  // (h relativa a c = 0) e si spostano con il centro.
+  function nuvoleRel(o) {
+    const n = nuvolePronte().length;
+    if (o.nuv && o.nuvN === n) return o.nuv;
+    o.nuv = calcolaNuvole(o, 0, -60 - FOGLIA.tetto - 80, 1600);
+    o.nuvN = n;
+    return o.nuv;
+  }
   function nuvoleDi(o, c) {
+    return nuvoleRel(o).map((q) => ({ ...q, h: q.h + c }));
+  }
+  function calcolaNuvole(o, c, giu, su) {
     const disegni = nuvolePronte();
     const n = Math.max(1, disegni.length);
     const lista = [];
@@ -766,14 +1011,14 @@
     };
     // sotto: la prima nuvola tocca il bordo basso del varco
     let h = c - o.varco / 2;
-    for (let i = 0; h > -60 && i < 20; i++) {
+    for (let i = 0; h > giu && i < 20; i++) {
       const q = fai(i, false, 0);
       q.h = h - q.ry;
       lista.push(q);
       h = q.h - q.hh * (NUVOLE.passo - NUVOLE.ry);
     }
     h = c + o.varco / 2;
-    for (let i = 0; h < 1600 && i < 30; i++) {
+    for (let i = 0; h < su && i < 30; i++) {
       const q = fai(i, true, 0);
       q.h = h + q.ry;
       lista.push(q);
@@ -801,9 +1046,10 @@
     }
     if (o.forma === 'nuvole') {
       const rr = r - tol;
-      for (const q of nuvoleDi(o, c)) {
-        if (Math.abs(g.h - q.h) > q.ry + rr) continue;
-        const dx = (g.x - q.x) / (q.rx + rr), dh = (g.h - q.h) / (q.ry + rr);
+      const gh = g.h - c;
+      for (const q of nuvoleRel(o)) {
+        if (Math.abs(gh - q.h) > q.ry + rr) continue;
+        const dx = (g.x - q.x) / (q.rx + rr), dh = (gh - q.h) / (q.ry + rr);
         if (dx * dx + dh * dh < 1) return true;
       }
       return false;
@@ -943,6 +1189,10 @@
 
     // ostacoli davanti
     while (stato.gen && stato.gen.x < g.x + larg * 1.2) generaProssimo();
+    for (const o of stato.ostacoli) {
+      if (o.x > g.x + 420) break;
+      if (o.entrata && !o.annunciato) { o.annunciato = true; mostraMessaggio('Tunnel di nuvole!', 1.4, '#1f4f6b'); suoni.tappa(); }
+    }
 
     // tappe
     const tp = tappaDi(metri);
@@ -1368,8 +1618,8 @@
         disegnaSprite(coppia.basso, x + o.w / 2, yBasso, yTerra);
         disegnaSprite(coppia.alto, x + o.w / 2, yAlto, yTerra);
       } else if (o.forma === 'nuvole') {
-        for (const q of nuvoleDi(o, c)) {
-          const y = sy(q.h);
+        for (const q of nuvoleRel(o)) {
+          const y = sy(q.h + c);
           if (y < -q.hh || y > alt + q.hh || !q.im) continue;
           ctx.save();
           ctx.translate(sx(q.x), y);
@@ -1794,7 +2044,7 @@
         <li><b>Foglia:</b> ${az} mentre Gino vola per aprire la foglia: in cima al volo è meglio.</li>
         <li><b>Colpi d'ala:</b> ogni ${touch ? 'tocco' : 'colpo'} lo fa salire. Il primo urto strappa la foglia, il secondo chiude il volo. Le foglie nuove la riparano, le correnti d'aria lo spingono su.</li>
       </ol>
-      ${touch ? '' : '<p><kbd>P</kbd> pausa · <kbd>M</kbd> suoni</p>'}
+      ${touch ? '' : '<p><kbd>P</kbd> pausa · <kbd>M</kbd> tutti i suoni · <kbd>N</kbd> solo la musica</p>'}
     </div>`;
   }
 
@@ -1882,9 +2132,11 @@
     else pausa();
   });
   $('#btn-audio').addEventListener('click', (e) => { e.currentTarget.blur(); cambiaAudio(); });
+  $('#btn-musica').addEventListener('click', (e) => { e.currentTarget.blur(); cambiaMusica(); });
 
   // ---------------------------------------------------------------- avvio
   document.body.classList.toggle('muto', muto);
+  document.body.classList.toggle('senza-musica', musicaSpenta);
   ridimensiona();
   vaiAlMenu();
 
@@ -1900,7 +2152,7 @@
 
   // utile per le prove automatiche
   window.ginoVolante = {
-    stato, avvia, premi, aggiorna, finisci, superficie, centroOstacolo, urtaOstacolo, nuvoleDi, sagoma, crociera,
+    stato, avvia, premi, aggiorna, musica, finisci, superficie, centroOstacolo, urtaOstacolo, nuvoleDi, sagoma, crociera,
     ALTALENA, TINO, LANCIO, VOLO, FOGLIA, OSTACOLI, CURVE, curva, CORRENTE, PX_M,
   };
 })();
