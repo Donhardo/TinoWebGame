@@ -1392,22 +1392,40 @@
 
   // Un ostacolo dipinto: la parte bella intera, poi la riga 'ripeti' allungata
   // fino a terra (verso 'su') o fino in cima allo schermo (verso 'giu').
+  // Striscia di fusto da ripetere: una riga presa a metà della parte liscia (lontano
+  // dai bordi trasparenti), copiata 64 volte su una tela a parte. Stirare una riga
+  // sola direttamente dal PNG la faceva venire mezza trasparente sugli schermi densi.
+  function strisciaFusto(nome) {
+    const S = SPRITE[nome];
+    if (S.striscia) return S.striscia;
+    const im = IMG_OST[nome];
+    const riga = Math.round(S.h * (S.verso === 'su' ? 0.72 : 0.25));
+    const c = document.createElement('canvas');
+    c.width = S.w; c.height = 64;
+    const k = c.getContext('2d');
+    for (let y = 0; y < 64; y++) k.drawImage(im, 0, riga, S.w, 1, 0, y, S.w, 1);
+    S.striscia = c;
+    return c;
+  }
+
   function disegnaSprite(nome, cx, yBordo, yTerra) {
     const S = SPRITE[nome];
     const im = IMG_OST[nome];
     const k = S.largo / S.w;
     const x0 = cx - S.largo / 2;
+    const fusto = strisciaFusto(nome);
+    const passo = 64 * k;
     ctx.save();
     if (S.verso === 'su') {
       ctx.beginPath(); ctx.rect(x0 - 10, -10, S.largo + 20, yTerra + 10); ctx.clip();
       const yS = yBordo + S.ripeti * k;
+      for (let y = yS - 1; y < yTerra; y += passo - 1) ctx.drawImage(fusto, x0, y, S.largo, passo);
       ctx.drawImage(im, 0, 0, S.w, S.ripeti, x0, yBordo, S.largo, S.ripeti * k);
-      if (yTerra > yS) ctx.drawImage(im, 0, S.ripeti - 1, S.w, 2, x0, yS - 0.5, S.largo, yTerra - yS + 0.5);
     } else {
       const hb = (S.h - S.ripeti) * k;
       const yS = yBordo - hb;
+      for (let y = yS + 1 - passo; y > -passo; y -= passo - 1) ctx.drawImage(fusto, x0, y, S.largo, passo);
       ctx.drawImage(im, 0, S.ripeti, S.w, S.h - S.ripeti, x0, yS, S.largo, hb);
-      if (yS > -10) ctx.drawImage(im, 0, S.ripeti - 1, S.w, 2, x0, -10, S.largo, yS + 10.5);
     }
     ctx.restore();
   }

@@ -522,8 +522,11 @@ canvas), `ghianda.svg` (premi e barra), `foglia.svg` (anteprima della home).
   `ostacoli/`: `girasole.png` + `ramo.png` (prato), `tronco.png` + `muschio.png`
   (bosco), `nuvola.png` (+ `nuvola2.png`, `nuvola3.png` se ci sono) per il cielo.
   Tabella `SPRITE` in `gioco.js`: per ogni disegno la parte bella (in cima per girasole
-  e tronco, in fondo per ramo e muschio) si disegna intera e la riga `ripeti` si allunga
-  fino a terra o in cima allo schermo, così l'ostacolo è alto quanto serve. Gli urti
+  e tronco, in fondo per ramo e muschio) si disegna intera e sotto (o sopra) si ripete
+  una striscia di fusto (`strisciaFusto`: una riga presa a metà della parte liscia,
+  copiata 64 volte su una tela a parte) fino a terra o in cima allo schermo, così
+  l'ostacolo è alto quanto serve. Stirare una riga sola presa al confine della parte
+  bella la faceva venire mezza trasparente sui telefoni (schermi densi). Gli urti
   seguono la sagoma: 14 fasce ricavate dai pixel non trasparenti della parte bella più
   il fusto (`sagoma`). Il cielo non ha colonne: ogni ostacolo è un mucchio di nuvole
   sciolte (tabella `NUVOLE`), sfalsate a destra e a sinistra e di misure diverse, dal
