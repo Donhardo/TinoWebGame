@@ -241,3 +241,22 @@ kbd {
   .ritratti { height: 90px; }
   .riquadro { padding: 16px 14px 18px; }
 }
+
+/* ---------- Tappa 2: speciali, potenziamenti, robivecchi ---------- */
+.poteri { list-style: none; margin: 0; padding: 0; text-align: left; font-size: 0.92rem; }
+.poteri li { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.poteri img { width: 30px; height: 30px; flex: none; }
+.collezione { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.collezione img, .collezione .manca {
+  width: 38px; height: 38px; padding: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 0 #cbbfa9;
+}
+.collezione .manca { display: grid; place-items: center; color: #c9bba0; font-weight: 700; }
+.robi { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.robi img { width: 36px; height: 36px; }
+.robi.mancato { opacity: 0.75; }
+.robi.mancato img { filter: grayscale(0.8); }
+.sopratitolo { font-size: 0.9rem; opacity: 0.75; margin: 0; }
+.ritratti .bolla-grande { width: 96px; height: 96px; max-width: none; }

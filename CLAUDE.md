@@ -766,104 +766,184 @@ anteprima della home). I fondali sono quelli di Tino Bum (`../tino-bum/fondali/`
 Gioco a bolle (meccaniche da classico del genere): Tino spara bolle verso l'alto con
 una canna di bambù, Gino gli tiene la bolla dopo. Tre o più bolle uguali che si
 toccano scoppiano; quelle rimaste staccate dal ramo cadono. File: `index.html`,
-`stile.css`, `livelli.js` (mondi e mappe), `gioco.js` (tutta la logica, su canvas). Il
-fondale del prato è quello di Tino Bum (`../tino-bum/fondali/`).
+`stile.css`, `livelli.js` (mondi e mappe), `gioco.js` (tutta la logica, su canvas). I
+fondali sono quelli di Tino Bum (`../tino-bum/fondali/`: prato, spiaggia, autunno, uffici).
 - **Decisioni prese**: titolo "Sparabolle"; dentro le bolle ghiande, bacche e fiori
   (sei tipi: ghianda, fragolina, mirtillo, fiore giallo, violetta, uva spina, ognuno
   con un colore e un disegno, così si distinguono anche senza i colori); modalità
   avventura, infinito e due giocatori a campi affiancati; un boss a fine mondo. Piano in
-  tre tappe: 1 motore e primi livelli (fatta), 2 bolle speciali, mondi e boss, 3
+  tre tappe: 1 motore e primi livelli (fatta), 2 bolle speciali, mondi e boss (fatta), 3
   rifinitura, suoni e taratura. Sul telefono si gioca in verticale, in due in
   orizzontale (altrimenti compare l'invito a girarlo e il gioco va in pausa).
 - **Campo**: logico 480 × 780 per giocatore (in due 1000 × 780, con 40 px tra i campi);
   muri di 20 px, bolle di raggio 20 su una griglia a nido d'ape di 11 colonne (righe
   "spostate" da 10, che dipendono da `fase`: quando arriva una riga dall'alto la fase si
   inverte). Il ramo parte a y = 58, la linea dei fiori è dopo 13 righe; perno della
-  canna a y = 640.
+  canna a y = 640. Le mappe hanno al massimo 8-9 righe: con 9 righe nei mondi difficili
+  bastavano 2-3 discese per perdere (accorciate a 8).
 - **Tiro** (tabella `TIRO`): 1300 px/s a passi di 5 px (la stessa funzione `passo` serve
   al tiro, alla linea di mira e al computer, quindi danno lo stesso risultato); la bolla
-  si ferma sul ramo o a meno di 0,8 diametri da un'altra e si attacca alla casella libera
-  più vicina attaccata a qualcosa (`trovaCella`). La bolla in canna e quella dopo sono
-  sempre di un tipo ancora in campo (`controllaColori`).
+  si ferma sul ramo, a meno di 0,8 diametri da un'altra (si ricorda quale ha toccato, per
+  la jolly) o contro un agente, e si attacca alla casella libera più vicina attaccata a
+  qualcosa (`trovaCella`). La bolla in canna e quella dopo sono sempre di un tipo ancora
+  in campo (`controllaColori`; jolly e miele restano).
 - **Controlli**: mouse (la canna segue il puntatore, clic tira, clic sulla bolla di Gino
   scambia), ← → (o A D) e Spazio / ↑, ↓ scambia; sul telefono si trascina il dito e si
   tira alzandolo (sotto la canna il tiro si annulla), toccando la bolla di Gino si
   scambia. In due: Tino A D, W, S; Gino ← →, ↑ (o Invio), ↓; sul telefono un dito per
   campo. P o Esc pausa, M suoni, N musica.
 - **Avventura** (`livelli.js`, legenda in cima: righe a caratteri, spazi ignorati;
-  `calo`, `guida`, `par`): il ramo scende di una riga ogni `calo` tiri a vuoto (che non
-  fanno scoppiare niente; si sommano per tutto il livello, non si azzerano: azzerandoli
-  il ramo non scendeva quasi mai); le ghiandine appese in cima contano i tiri che
-  mancano e il ramo trema all'ultimo. Si perde se una bolla supera la linea dei fiori.
-  Stelle per livello: 3 con al massimo `par` tiri, 2 con `par` × 1,35; 100 punti per ogni
-  tiro sotto il par. `guida`: Infinity = linea di mira fino all'arrivo con la bolla
-  fantasma (livelli 1-3), altrimenti lunghezza in px. Dopo 3 sconfitte nello stesso
-  livello si può riprovare con l'aiuto (il ramo scende dopo 3 tiri in più, guida intera).
-  `localStorage` `sparabolle:sbloccati`, `stelle`.
-- **Livelli fatti** (mondo 1, il prato): 1 "Il primo raccolto" (3 tipi), 2 "La siepe di
-  fragole" (4), 3 "Il girotondo" (4), 4 "Le violette" (5), 5 "Il cesto del contadino" (5);
-  `calo` 8, 7, 6, 6, 6. Il boss del prato arriva nella tappa 2.
+  `calo`, `guida`, `par`, `robivecchio`, `novita`, `bollette`, `boss`): il ramo scende
+  di una riga ogni `calo` tiri a vuoto (che non fanno scoppiare, cadere, scongelare o
+  aprire niente; si sommano per tutto il livello); le ghiandine in cima contano i tiri
+  che mancano e il ramo trema all'ultimo. Si perde se una bolla supera la linea dei
+  fiori. Si vince quando non restano bolle colorate né arcobaleni (`daPulire`): sassi,
+  bollette e speciali rimaste cadono da sole; nei livelli con il boss si vince quando
+  gli agenti sono tutti KO. Stelle: 3 con al massimo `par` tiri, 2 con `par` × 1,35; 100
+  punti per ogni tiro sotto il par. `guida`: Infinity = fino all'arrivo con la bolla
+  fantasma, un numero = lunghezza in px, `'sponda'` = fino al primo rimbalzo (senza
+  rimbalzi fino all'arrivo, ma senza bolla fantasma). Dopo 3 sconfitte nello stesso
+  livello si può riprovare con l'aiuto (tabella `AIUTO`: il ramo scende dopo 3 tiri in
+  più, guida intera, agenti con 3/4 della vita che attaccano 1,5 volte più di rado).
+  Prima di un livello con una novità mai vista c'è il pannello che la presenta
+  (`NOVITA`, viste in `localStorage` `novita`). `localStorage` `sparabolle:sbloccati`,
+  `stelle`, `robivecchi`, `novita`.
+- **Bolle speciali** (lettere in `livelli.js`; in griglia ogni casella è `{ t, s, gelo,
+  chiuso, nuova }`, t = -1 per le speciali senza colore; le caselle non si modificano
+  mai, si sostituiscono). Le regole stanno tutte in `risolvi(c, r, k, t, tocca)`, che
+  cambia solo `c.righe` (niente effetti): il gioco la usa e poi mostra gli effetti
+  (`mostraRisultato`), il computer la prova su una copia delle righe (`valuta`).
+  - `p` ghianda petardo (bolla scura con la miccia): scatta se il tiro si attacca
+    accanto o se scoppia una bolla vicina; colpisce le sei vicine, a catena.
+  - `a` arcobaleno: prende il tipo del tiro che si attacca accanto.
+  - `z` fulmine: scatta come il petardo e colpisce tutta la sua riga.
+  - `1`-`6` gelate (ghianda … uva spina): il primo scoppio del loro gruppo, o
+    un'esplosione, le scongela soltanto; se restano staccate cadono lo stesso.
+  - `o` sasso: non scoppia, cade se staccato; le esplosioni lo rompono.
+  - `k` chiave e `G R M F V U` col lucchetto: le chiuse non fanno gruppo; una chiave
+    toccata (o caduta, o esplosa) apre tutti i lucchetti; un'esplosione apre solo quello
+    che colpisce.
+  - `t` bolletta della Tari: grigia, non scoppia; ogni `bollette` tiri ne spunta un'altra
+    accanto a una a caso (mai a meno di 2 righe dai fiori; numero dei tiri che mancano in
+    alto a sinistra). Le bollette appese direttamente al ramo non si possono più far
+    cadere e si moltiplicano per sempre: nelle mappe stanno dalla riga 2 in giù.
+  - `$` robivecchio (oggetto del campo `robivecchio`, disegni di
+    `assets/oggetti/robivecchi/`, 20 su 21: la carta di credito scaduta non c'è): bolla
+    di vetro; si prende facendola cadere o con un'esplosione (+250); se a fine livello è
+    ancora appeso vola via. Uno per livello normale; collezione nel menu.
+  - Esplosioni (tabella `ESPLOSIONE`): il petardo prende anche un agente entro 62 px, il
+    fulmine gli agenti sulla sua riga.
+- **Potenziamenti** (tabella `POTERI`, al massimo uno per tiro, nell'ordine): bomba di
+  miele (9 bolle cadute in un tiro: la bolla dopo è un vasetto di miele che si porta via
+  tutto entro 86 px, sassi e gelate comprese), soffio di Gino (3 tiri di fila che fanno
+  cadere: il ramo sale di una riga, o se non è mai sceso riparte il conto dei tiri; in
+  infinito e in due la riga nuova arriva più tardi), bolla jolly (gruppo di 9: la bolla
+  dopo è un arcobaleno, `ARC`), mira lunga (tiro di sponda che fa cadere 3 bolle: 5 tiri
+  con la guida intera, la scritta sotto la canna li conta). Jolly e miele prendono il
+  posto della bolla dopo (se è già speciale, vanno in coda, `c.coda`). Con soglie più
+  basse (gruppo di 6, 8 cadute) il computer ne prendeva 3-5 per livello; ora ~1-2 jolly,
+  ~0,5 miele, ~0,5 mira, ~0,2 soffi per livello.
+- **Boss** (tabelle `BOSS` e `ARRABBIATO`, campo `boss` del livello): gli agenti della
+  Tari (`assets/agenti-tari/`, non si specchiano) camminano avanti e indietro (con soste)
+  in un corridoio di due righe vuote (righe 2 e 3, `riga: 2.5`) tra il soffitto di bolle e
+  un muro di tre righe, tenuto su da tre pilastri; si disegnano dietro le bolle. Il tiro
+  li colpisce se ci arriva (`passo` ne controlla la sagoma, raggio `r`): bisogna aprire un
+  varco nel muro, o tagliare i pilastri. Sotto metà vita si arrabbiano (sbuffi, barra
+  rossa): velocità ×1,35, attacchi più fitti. Le barre della vita sono in cima; KO:
+  cadono all'indietro e cadono tutte le bolle (+1000 a testa; +150 per colpo).
+  - Agente col retino (prato, 6 colpi): ogni 5,5 s alza la rete per 1,7 s (prima si
+    illumina di giallo, poi "!"): il tiro che la prende va perso (vale come tiro a vuoto).
+  - Agente col timbro (spiaggia, 7 colpi): ogni 4 tiri timbra 3 bolle nuove nei buchi
+    vicino a sé (righe del corridoio e quella sotto).
+  - La squadra (bosco): retino a sinistra e timbro a destra, ognuno nella sua metà, con
+    il 65% della vita.
+  - Ispettore capo (uffici, 9 colpi, più grande): ogni 7 s lancia una bolletta che cade
+    dritta ondeggiando; se tocca una bolla ci si attacca come bolletta grigia, se trova la
+    strada libera arriva a Tino (multa: due tiri a vuoto, Tino ferito). Un tiro che la
+    incontra la para (+50). Con la tabella di prima (bollette ogni 4,2 s e 2 bollette
+    timbrate ogni 5 tiri) il bravo vinceva il 25% e il medio mai.
+- **Mondi e livelli** (tabella `SB_MONDI`: nome, fondale, velo, legno, foglie, colore del
+  terreno in fondo e della barra): 4 mondi da 6 livelli, l'ultimo col boss.
+  1. *Il prato* (guida intera): 1 "Il primo raccolto" (robivecchio), 2 "La siepe di
+     fragole", 3 "Il girotondo" (petardo), 4 "Le violette", 5 "Il cesto del contadino",
+     6 "La ronda dell'agente" (retino). 3-5 tipi, `calo` 8, 7, 6, 6, 6, 7.
+  2. *La spiaggia* (guida fino alla sponda): 7 "Il castello di sabbia" (arcobaleno), 8
+     "Le onde", 9 "Il faro" (fulmine), 10 "La barriera corallina", 11 "Il molo", 12
+     "L'agente del timbro". 5 tipi, `calo` 6, 6, 6, 5, 5, 6.
+  3. *Il bosco in autunno*: 13 "La grande quercia" (gelate), 14 "I funghi", 15 "Il
+     sentiero dei sassi" (sassi), 16 "La tana del tasso", 17 "Le lucciole", 18 "La squadra
+     della Tari". 5-6 tipi, guida fino alla sponda (13-15) e poi di 420 px, `calo` 6, 6, 5,
+     6, 6, 6.
+  4. *Gli uffici della Tari* (guida di 340 px, 6 tipi): 19 "Lo sportello" (chiavi e
+     lucchetti), 20 "Le pile di pratiche", 21 "L'archivio" (bollette, ogni 7 tiri), 22 "Il
+     timbro rosso" (bollette ogni 8), 23 "L'ufficio del capo" (tutto, bollette ogni 7), 24
+     "Il capo della Tari". `calo` 5, 6, 7, 6, 6, 6.
+  Fine del gioco: pannello con il capo KO ("ghiande, bacche e fiori sono di nuovo liberi").
 - **Infinito** (tabella `INFINITO`): 5 righe all'inizio, poi una riga nuova dall'alto ogni
   12 s, che scende di 0,18 s per riga fino a 4,5 s (barra in cima, le bolle tremano negli
   ultimi 2 s); 4 tipi, 5 dalla 10ª riga, 6 dalla 26ª. Campo ripulito: +1000 e 5 righe
-  nuove. Record in `record-infinito`.
+  nuove. Record in `record-infinito`. Niente bolle speciali, ma i potenziamenti sì.
 - **Due giocatori** (tabella `DUE`): stesse 6 righe all'inizio per tutti e due, 5 tipi,
   una riga ogni 15 s (fino a 6 s). Le bolle in più di un tiro (cadute + scoppiate oltre
   le prime 3) diventano attacchi: prima parano quelli in arrivo, poi vanno all'altro
   (ghiandine rosse in cima); ogni 7 attacchi è una riga nuova, che arriva dopo il primo
   tiro a vuoto. Ripulire il campo manda 2 righe all'altro e ne fa arrivare 5 a sé (prima
   vinceva subito chi ripuliva e le partite duravano 10 s). Vince chi resta in piedi;
-  vittorie della sessione nella barra.
-- **Punti** (tabella `PUNTI`): 10 per bolla che scoppia, 20 per bolla che cade ×
-  la catena (tiri di fila che fanno cadere), 50 per ogni sponda di un tiro che fa
-  scoppiare, 1000 per il campo ripulito.
+  vittorie della sessione nella barra. Anche qui ci sono i potenziamenti.
+- **Punti** (tabella `PUNTI`): 10 per bolla che scoppia (anche nelle esplosioni), 20 per
+  bolla che cade × la catena (tiri di fila che fanno cadere), 50 per ogni sponda di un
+  tiro che fa scoppiare, 250 per il robivecchio, 150 per colpo a un agente e 1000 per il
+  KO, 50 per una bolletta del capo parata, 1000 per il campo ripulito.
 - **Espressioni**: Tino arrabbiato quando il ramo sta per scendere o è appena sceso, con
-  le bolle a due righe dai fiori e negli ultimi 2 s prima di una riga nuova; ferito
-  quando gli arrivano righe d'attacco; ko quando perde. Gino (aiutante) saltella quando
-  scoppia qualcosa, trema quando il ramo scende, cade ruotato quando si perde. In due
-  Gino è il giocatore di destra.
+  le bolle a due righe dai fiori, negli ultimi 2 s prima di una riga nuova e mentre cade
+  una bolletta del capo; ferito quando gli arrivano righe d'attacco o una multa; ko quando
+  perde; saltella quando colpisce un agente. Gino (aiutante) saltella quando scoppia
+  qualcosa e quando dà un potenziamento, trema quando il ramo scende e alle multe, cade
+  ruotato quando si perde. In due Gino è il giocatore di destra.
 - **Suoni e musica**: Web Audio come negli altri giochi (scoppi che salgono sulla
-  pentatonica di Sol, caduta, ramo che scende, riga nuova, attacco, scambio); musichetta
-  in Sol in loop (menu 98 bpm, partita 120, più tesa con le bolle vicine ai fiori).
+  pentatonica di Sol, caduta, ramo che scende, riga nuova, attacco, scambio; petardo,
+  fulmine, ghiaccio, chiave, robivecchio, potenziamento, soffio, miele, agente colpito e
+  KO, rete, timbro, lancio, multa, parata, bolletta); musichetta in Sol in loop (menu 98
+  bpm, partita 120, più tesa con le bolle vicine ai fiori).
 - **Disegni**: bolle disegnate nel codice una volta su tele a parte (`spriteBolla`,
-  `disegnaContenuto`), canna di bambù sul ceppo, ramo con foglie e soffitto di assi,
-  linea dei fiori (rossa quando le bolle sono vicine).
+  `disegnaContenuto`, `disegnaSpeciale`; ghiaccio e lucchetto sopra con `spriteSopra`;
+  il robivecchio è una bolla di vetro con il disegno dell'oggetto sopra), canna di bambù
+  sul ceppo, ramo con foglie e soffitto di assi, linea dei fiori (rossa quando le bolle
+  sono vicine). Esplosioni con una vampata e una piccola scossa dello schermo, il fulmine
+  con un lampo lungo la riga. Il petardo rosso si confondeva con la fragolina: ora è una
+  bolla scura con la ghianda arancione.
 - **Difficoltà tarata** con partite simulate (giocatori simulati che provano tutti gli
   angoli con la stessa fisica, `cercaTiri`/`scegliTiroIA`, con errore sull'angolo e una
   probabilità di non scegliere il tiro migliore: principiante 3,5° / 40%, medio 2° / 70%,
-  bravo 0,7° / 95%). Livelli vinti (principiante / medio / bravo, 16-20 partite): 1-3
-  sempre; 4 94% / 100% / 100%; 5 55% / 100% / 100% (con l'aiuto si allarga). Il par è la
-  mediana dei tiri del bravo. Infinito: principiante ~4,5 min, medio ~5 min, il bravo
-  simulato regge a lungo (le persone sono più lente). In due una partita dura ~30-90 s.
+  bravo 0,7° / 95%; con la guida corta l'errore si moltiplica per `ERRORE_GUIDA`: 1,1
+  guida lunga senza fantasma, 1,25 fino alla sponda, 1,45 corta). Con gli agenti il
+  computer pensa prima e poi mira dove l'agente sarà 0,75 s dopo, e lascia perdere i
+  tiri sulla rete. Livelli vinti (principiante / medio / bravo, 24 partite; tra
+  parentesi il principiante con l'aiuto): prato 1-3 100 / 100 / 100, 4 88 / 100 / 100,
+  5 46 / 100 / 100 (79), 6 92 / 100 / 100; spiaggia 79-100 / 100 / 100, boss 12 54 /
+  100 / 100 (88); bosco 13 88 / 96 / 100, 14 54 / 96 / 100, 15 42 / 92 / 100, 16 17 / 88
+  / 100 (67), 17 63 / 96 / 100, 18 17 / 71 / 100 (63); uffici 19 54 / 96 / 100, 20 38 /
+  83 / 100, 21 13 / 75 / 100 (46), 22 29 / 67 / 100 (38), 23 13 / 58 / 100 (63), 24 13 /
+  58 / 100 (54). Robivecchi presi dal medio: 96-100% (71% nel 22). Il par è la mediana
+  dei tiri del bravo (6-38). Infinito: medio ~4-6 min. In due una partita dura ~30-90 s.
 - **Prove automatiche**: `window.sparabolle` (`stato`, `iniziaAvventura(n, { silenzio,
   aiuto })`, `iniziaInfinito`, `iniziaDue({ ia: [IA.x, IA.y] })`, `aggiorna`, `spara`,
-  `scambia`, `mira`, `simula`, `cercaTiri`, `scegliTiroIA`, tabelle); con `stato.test =
-  true` il gioco non avanza da solo, non suona e non apre pannelli; mettendo
-  `stato.campi[0].ia = IA.medio` gioca il computer. I copioni (Playwright, `aggiorna(1 / 60)`
-  fino a `stato.fase === 'finita'`) non sono nel repository.
+  `scambia`, `mira`, `simula`, `cercaTiri`, `scegliTiroIA`, `risolvi`, `daiPotere(c, id)`,
+  `daPulire`, tabelle); con `stato.test = true` il gioco non avanza da solo, non suona,
+  non apre pannelli e non salva i robivecchi; mettendo `stato.campi[0].ia = IA.medio`
+  gioca il computer; a fine partita `stato.fine.esito`, e nel campo `tiri`, `robi`
+  (`'preso'`), `statPoteri`, `boss[i].vita`. I copioni (Playwright, `aggiorna(1 / 60)`
+  fino a `stato.fase === 'finita'`, 6 pagine in parallelo: tutti i livelli con 24 partite
+  per giocatore in ~1 minuto) non sono nel repository.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `livelli.js`, `gioco.js` (con `ASSETS = 'assets/'`,
-  `FONDALI = 'fondali/'` e `leggi('sbloccati', 5)`), `fondali/prato.png` (da Tino Bum),
-  `assets/tino/`, `assets/gino/`; si pubblica con `files` e `root`.
-- **Tappa 2 (da fare)**, come da proposta approvata:
-  - Bolle speciali, una nuova per mondo (con lettere nuove in `livelli.js`): ghianda
-    petardo (scoppia con le vicine), bolla arcobaleno (prende il tipo della prima che
-    tocca), bolla fulmine (fa scoppiare la sua riga), bolla gelata (due colpi: il primo
-    la scongela), sasso (non scoppia, cade solo se staccato), chiave e lucchetto (le
-    bolle col lucchetto si aprono facendo scoppiare la chiave), bolletta della Tari
-    (grigia, ogni 5 tiri ne spunta un'altra accanto), robivecchio dentro una bolla
-    (premio da collezione, si prende facendolo cadere).
-  - Potenziamenti guadagnati con le combinazioni: mira lunga (5 tiri con la guida
-    intera), bomba di miele (scoppia un'area), soffio di Gino (il ramo sale di una riga),
-    bolla jolly (la prossima è arcobaleno).
-  - Altri tre mondi da 6 livelli (spiaggia, bosco in autunno, uffici della Tari, con i
-    fondali di Tino Bum); il prato arriva a 6 con il boss. Colori da 4 a 6, guida che si
-    accorcia (intera, fino al primo rimbalzo, corta), ramo più svelto.
-  - Boss all'ultimo livello di ogni mondo: un agente della Tari (`assets/agenti-tari/`)
-    si muove dietro le bolle e va colpito quando resta scoperto; il capo, nell'ultimo
-    mondo, lancia bollette che diventano bolle grigie (Tino ferito se lo colpiscono).
-  - Poi la tappa 3: rifinitura, suoni e taratura con i giocatori simulati.
+  `FONDALI = 'fondali/'` e `leggi('sbloccati', 24)`), `fondali/` (i quattro di Tino Bum),
+  `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`, `assets/oggetti/robivecchi/`;
+  si pubblica con `files` e `root`.
+- **Tappa 3 (da fare)**: rifinitura, suoni e taratura con persone vere (i giocatori
+  simulati sono più rapidi); possibili aggiunte: bolle speciali anche nell'infinito,
+  classifica dei tempi, un mondo bonus.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
