@@ -846,6 +846,24 @@ fondale del prato è quello di Tino Bum (`../tino-bum/fondali/`).
   `css/sito.css`, `stile.css`, `livelli.js`, `gioco.js` (con `ASSETS = 'assets/'`,
   `FONDALI = 'fondali/'` e `leggi('sbloccati', 5)`), `fondali/prato.png` (da Tino Bum),
   `assets/tino/`, `assets/gino/`; si pubblica con `files` e `root`.
+- **Tappa 2 (da fare)**, come da proposta approvata:
+  - Bolle speciali, una nuova per mondo (con lettere nuove in `livelli.js`): ghianda
+    petardo (scoppia con le vicine), bolla arcobaleno (prende il tipo della prima che
+    tocca), bolla fulmine (fa scoppiare la sua riga), bolla gelata (due colpi: il primo
+    la scongela), sasso (non scoppia, cade solo se staccato), chiave e lucchetto (le
+    bolle col lucchetto si aprono facendo scoppiare la chiave), bolletta della Tari
+    (grigia, ogni 5 tiri ne spunta un'altra accanto), robivecchio dentro una bolla
+    (premio da collezione, si prende facendolo cadere).
+  - Potenziamenti guadagnati con le combinazioni: mira lunga (5 tiri con la guida
+    intera), bomba di miele (scoppia un'area), soffio di Gino (il ramo sale di una riga),
+    bolla jolly (la prossima è arcobaleno).
+  - Altri tre mondi da 6 livelli (spiaggia, bosco in autunno, uffici della Tari, con i
+    fondali di Tino Bum); il prato arriva a 6 con il boss. Colori da 4 a 6, guida che si
+    accorcia (intera, fino al primo rimbalzo, corta), ramo più svelto.
+  - Boss all'ultimo livello di ogni mondo: un agente della Tari (`assets/agenti-tari/`)
+    si muove dietro le bolle e va colpito quando resta scoperto; il capo, nell'ultimo
+    mondo, lancia bollette che diventano bolle grigie (Tino ferito se lo colpiscono).
+  - Poi la tappa 3: rifinitura, suoni e taratura con i giocatori simulati.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
