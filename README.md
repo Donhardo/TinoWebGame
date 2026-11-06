@@ -65,7 +65,9 @@ e poi si visita http://localhost:8000.
 - **Tino Pro Skate** (`games/tino-pro-skate/`): Tino corre sullo skate per le strade di
   Firenze per recuperare lo skate di Gino, rubato dall'ispettore capo della Tari. Salti,
   trick in aria (Giglio, presa, frontflip e backflip con ← →: bisogna atterrare dritti),
-  scivolate su panchine e ringhiere, manual e combo, half pipe da cui si esce tenendo →;
+  scivolate su panchine e ringhiere, manual e combo (anche atterrando un po' storti),
+  accucciata con ↓ per passare sotto le transenne alte e prendere velocità, half pipe da
+  cui si esce tenendo →;
   si abbattono gli agenti della Tari saltandoci in testa. La Grinta (3 tacche) si
   carica con i trick: una tacca per lo Sfondamento, tre per la Botta di Grinta che
   stordisce tutti. Per ora corsa infinita alle Cascine (anche con Gino), con grafica a

@@ -29,6 +29,10 @@
     rampaMin: 520,
     larg: 36,                  // ingombro di Tino (larghezza, altezza)
     alt: 90,
+    altAccucciato: 50,         // tenendo ↓ a terra Tino si accuccia: passa sotto le transenne alte
+    slancioMax: 0.15,          // accucciato prende velocità: fino a +15%
+    slancioSu: 0.3,            // per secondo, accucciato
+    slancioGiu: 0.1,           // per secondo, in piedi o in aria (torna piano)
     gradino: 14,               // quanto sale da solo (rampe)
     margine: 8,                // gli urti perdonano qualche pixel
   };
@@ -73,6 +77,8 @@
     spinta: 60,                // rad/s² tenendo premuto
     smorza: 18,                // per secondo, rilasciando
     tolleranza: 0.62,          // ~35°
+    manual: 0.785,             // da 35° a 45° si atterra in manual (avanti di punta, indietro sulle ruote dietro)
+    manualMin: 0.5,            // secondi di manual anche senza tenere ← →
   };
 
   // La half pipe: una conca a U scavata nella strada. Tino ci entra, risale le
@@ -334,6 +340,9 @@
       giro: 0,                 // giro della tavola (giglio)
       schiacciaVis: 0,         // schiacciamento disegnato
       saltello: 0,             // Gino saltella
+      accucciato: false,       // ↓ a terra
+      slancio: 0,              // velocità in più presa stando accucciato
+      manualForzato: 0,        // atterrato un po' storto: manual per un attimo anche senza tenere
       v: 0,
     };
   }
@@ -760,7 +769,11 @@
     if (!t || t.ruolo !== 'gesto') return;
     const p = puntoLogico(e);
     if (t.risolto === 'manual') {
-      if (stato.tino.terra && !stato.tino.pipe) return;
+      if (stato.tino.terra && !stato.tino.pipe) {
+        // trascinando in giù a terra ci si accuccia
+        if (p.y - t.y0 > 30 && p.y - t.y0 > Math.abs(p.x - t.x0)) { premi('indietro', false); t.risolto = 'giu'; premi('giu', true); }
+        return;
+      }
       // si è saltato col dito ancora giù: da qui il dito gira
       premi('indietro', false);
       t.risolto = null; t.x0 = p.x; t.y0 = p.y; t.t0 = performance.now();
@@ -1076,7 +1089,7 @@
     for (let i = 0; i < 8; i++) {
       stato.particelle.push({
         tipo: 'pezzo', x: o.x + vis(0, o.w), h: vis(4, o.h), vx: vis(-80, 260), vy: vis(200, 520),
-        t: 0, dur: 1.1, colore: o.tipo === 'transenna' ? (i % 2 ? '#e8463a' : '#fff') : (i % 3 ? '#b07a44' : '#f5a623'),
+        t: 0, dur: 1.1, colore: o.tipo === 'transenna' || o.tipo === 'sbarra' ? (i % 2 ? '#e8463a' : '#fff') : (i % 3 ? '#b07a44' : '#f5a623'),
         r: vis(4, 8), rot: vis(0, 6), vr: vis(-12, 12),
       });
     }
@@ -1147,10 +1160,12 @@
     cassonetto: { w: 112, h: 84, solido: true, piano: true },
     cassette: { w: 50, h: 52, solido: true, rompibile: true },
     transenna: { w: 24, h: 64, solido: true, rompibile: true },
+    sbarra: { w: 56, h: 230, basso: 56, solido: true, rompibile: true }, // transenna alta: si passa sotto accucciati
     rampa: { w: 132, h: 46, rampa: true },
     banco: { w: 236, h: 128, piano: true, unaVia: true },
     halfpipe: { w: 2 * PIPE.raggio + PIPE.piano, h: 0, halfpipe: true },
   };
+  const altezza = (t) => (t.accucciato ? FISICA.altAccucciato : FISICA.alt);
   function ostacolo(tipo, x, extra = {}) {
     const o = Object.assign({ tipo, x, rotto: false, colpito: false }, FORME[tipo], extra);
     stato.ostacoli.push(o);
@@ -1211,6 +1226,11 @@
       return d + 28;
     } },
     { id: 'transenna', da: 250, peso: 1.5, crea: (x, v) => { ostacolo('transenna', x); arco(x + 12, v); return 24; } },
+    { id: 'sbarra', da: 180, peso: 1.6, crea: (x) => {
+      ostacolo('sbarra', x);
+      for (let k = 0; k < 4; k++) stato.ghiande.push({ x: x - 50 + k * 48, h: 24, tipo: 'ghianda' });
+      return 56;
+    } },
     { id: 'banco', da: 300, peso: 1.2, crea: (x) => {
       const o = ostacolo('banco', x);
       ostacolo('cassette', x + 70);
@@ -1312,6 +1332,11 @@
         muoviNemici(dt);
         muoviBollette(dt);
         prendiGhiande();
+        // la prima transenna alta: si spiega come passarci sotto
+        if (!stato.sbarraVista && stato.ostacoli.some((o) => o.tipo === 'sbarra' && o.x - stato.tino.x < 560 && o.x > stato.tino.x)) {
+          stato.sbarraVista = true;
+          messaggio(touch ? 'Transenna alta! Trascina giù a destra per accucciarti' : 'Transenna alta! Tieni ↓ per accucciarti', 2.4, '#ffd23f', true);
+        }
       }
       aggiornaCamera(dt);
       generaStrada();
@@ -1355,7 +1380,7 @@
     const ko = stato.fase === 'ko';
     // velocità
     t.mod = Math.min(1, t.mod + VITA.ripresa * dt);
-    let v = curva(CURVE.velocita, stato.metri) * t.mod;
+    let v = curva(CURVE.velocita, stato.metri) * t.mod * (1 + t.slancio);
     if (t.sfondamento > 0) v *= GRINTA.velSfondamento;
     if (t.caduta > 0) v *= 0.75;
     if (ko) v = Math.max(0, (t.v || 0) - 500 * dt);
@@ -1370,7 +1395,7 @@
     t.sfondamento = Math.max(0, t.sfondamento - dt);
     t.saltello = Math.max(0, t.saltello - dt);
     t.schiacciaVis *= Math.exp(-dt * 10);
-    if (t.pipe) { muoviPipe(dt); return; }
+    if (t.pipe) { t.accucciato = false; muoviPipe(dt); return; }
 
     const hPrima = t.h;
     t.hPrima = hPrima;
@@ -1427,6 +1452,9 @@
       aggiornaTerra(dt);
     }
     if (ko) { t.rot += dt * 4; return; }
+    // accucciato (↓ a terra): più basso e prende velocità
+    t.accucciato = t.terra && stato.input.giu && t.caduta <= 0 && !t.botta;
+    t.slancio = t.accucciato ? Math.min(FISICA.slancioMax, t.slancio + FISICA.slancioSu * dt) : Math.max(0, t.slancio - FISICA.slancioGiu * dt);
 
     // urti con gli ostacoli
     for (const o of stato.ostacoli) {
@@ -1440,6 +1468,10 @@
       }
       if (!o.solido) continue;
       if (t.h >= o.h - FISICA.margine) continue; // sopra
+      if (o.basso && t.h + altezza(t) <= o.basso + FISICA.margine) { // sotto (accucciato)
+        if (!o.passato) { o.passato = true; stato.statistiche.sbarre = (stato.statistiche.sbarre || 0) + 1; }
+        continue;
+      }
       if (o.rompibile && (t.sfondamento > 0 || t.botta)) { rompi(o, false); continue; }
       if (o.rompibile && t.schiaccia && hPrima >= o.h - 34) {
         rompi(o, true);
@@ -1470,10 +1502,13 @@
     return { n, resto: t.ang - pend - n * Math.PI * 2 };
   }
   // all'atterraggio: tavola dritta e trick finito, altrimenti si cade. Dà i giri fatti.
-  function controllaAtterraggio(pend) {
+  function controllaAtterraggio(pend, conManual = true) {
     const t = stato.tino;
     const { n, resto } = restoGiro(pend);
     let ok = Math.abs(resto) <= GIRO.tolleranza;
+    // un po' storti (fino a 45°): si atterra su due ruote, in manual
+    const salvo = conManual && !ok && Math.abs(resto) <= GIRO.manual;
+    if (salvo) ok = true;
     const tr = t.trick;
     if (tr) {
       if (tr.tipo === 'presa' || tr.dur - tr.t > TRICK.pelo) ok = false;
@@ -1482,6 +1517,15 @@
       t.prossimo = null;
     }
     if (ok && n !== 0) flipFatti(n);
+    if (ok && salvo) {
+      // girato in avanti: sulle ruote davanti (di punta); all'indietro: sulle ruote dietro
+      t.manualPunta = resto > 0;
+      t.manual = 0.0001;
+      t.manualForzato = GIRO.manualMin;
+      t.manualFinito = false;
+      aggiungi(t.manualPunta ? TRICK.manual.nomePunta : TRICK.manual.nome, 30);
+      scritta('Salvato in manual!', t.x, t.h + 150, '#9ee7ff');
+    }
     t.ang = 0;
     t.vang = 0;
     return ok;
@@ -1541,7 +1585,7 @@
   // atterrando da un salto dentro la conca
   function atterraPipe(k, sp) {
     const t = stato.tino;
-    const ok = controllaAtterraggio(0);
+    const ok = controllaAtterraggio(0, false); // nella conca non c'è il manual
     t.vy = 0;
     entraPipe(k, 1);
     t.pipe.s = sp;
@@ -1596,7 +1640,7 @@
     giraAria(dt);
     if (t.vy < 0 && t.h <= 0) {
       const v = Math.abs(t.vy);
-      const ok = controllaAtterraggio(0);
+      const ok = controllaAtterraggio(0, false); // nella conca non c'è il manual
       t.verso = -t.verso;
       p.aria = false;
       t.terra = true;
@@ -1696,6 +1740,7 @@
     if (t.botta) { onda(); return; }
     if (t.caduta > 0) { t.grazia = 0; return; }
     if (o && o.grind) {
+      t.manual = 0; t.manualForzato = 0;
       t.grind = 0.0001;
       aggiungi(o.tipo === 'panchina' ? 'Panchina' : 'Ringhiera', 40);
       suoni.grindInizio();
@@ -1721,9 +1766,10 @@
       return;
     }
     t.grind = 0;
-    const tieni = stato.input.indietro || stato.input.avanti;
+    t.manualForzato = Math.max(0, (t.manualForzato || 0) - dt);
+    const tieni = stato.input.indietro || stato.input.avanti || (t.manual > 0 && t.manualForzato > 0);
     if (!tieni) t.manualFinito = false;
-    const puoManual = tieni && !t.manualFinito && t.caduta <= 0 && !t.botta;
+    const puoManual = tieni && !t.manualFinito && t.caduta <= 0 && !t.botta && !t.accucciato;
     if (puoManual) {
       if (t.manual === 0) {
         t.manualPunta = !stato.input.indietro;
@@ -1793,7 +1839,7 @@
       // il pestone perdona di più dell'urto: basta scendere sulla testa, anche di striscio
       if (t.vy < 0 && t.hPrima >= top - 42 && t.h < top && dx < AGENTI.pestone) pestone(e);
       else if (dx < FISICA.larg / 2 + AGENTI.larg / 2 - 8) {
-        if (t.h + FISICA.alt > e.base + 6 && t.h < top) {
+        if (t.h + altezza(t) > e.base + 6 && t.h < top) {
           if (e.stato === 'stordito') { /* si passa */ }
           else if (t.sfondamento > 0 || t.botta) koNemico(e, true);
           else urto(e.tipo);
@@ -1802,7 +1848,7 @@
       // la rete: davanti all'agente, all'altezza del corpo
       if (e.stato === 'attivo' && e.rete > AGENTI.rete[0] && e.rete < AGENTI.rete[0] + AGENTI.rete[1]) {
         const x2 = e.x - AGENTI.larg / 2 + 4, x1 = x2 - AGENTI.portataRete;
-        if (t.x + FISICA.larg / 2 > x1 && t.x - FISICA.larg / 2 < x2 && t.h < e.base + AGENTI.altRete && t.h + FISICA.alt > e.base) {
+        if (t.x + FISICA.larg / 2 > x1 && t.x - FISICA.larg / 2 < x2 && t.h < e.base + AGENTI.altRete && t.h + altezza(t) > e.base) {
           if (t.sfondamento > 0 || t.botta) koNemico(e, true); else urto('rete');
         }
       }
@@ -1841,7 +1887,7 @@
       if (b.via) continue;
       b.x -= AGENTI.bolletta * dt;
       b.rot += dt * 7;
-      if (Math.abs(b.x - t.x) < FISICA.larg / 2 + 12 && b.h + 10 > t.h && b.h - 10 < t.h + FISICA.alt) {
+      if (Math.abs(b.x - t.x) < FISICA.larg / 2 + 12 && b.h + 10 > t.h && b.h - 10 < t.h + altezza(t)) {
         b.via = true;
         if (t.sfondamento > 0 || t.botta) { coriandoli(b.x, b.h, '#fff', 6); stato.punti += 30; }
         else if (urto(b.h > 80 ? 'bolletta alta' : 'bolletta bassa')) coriandoli(b.x, b.h, '#fff', 6);
@@ -2239,6 +2285,8 @@
   function disegnaOstacoli(davanti) {
     if (davanti) return;
     const y0 = yStrada();
+    // prima i muri delle half pipe (sono larghi: stanno dietro a tutto il resto)
+    for (const o of stato.ostacoli) if (o.halfpipe) disegnaMuroPipe(o, sx(o.x));
     for (const o of stato.ostacoli) {
       const x = sx(o.x);
       if (x > larg + 50 || x + o.w < -50 || o.rotto) continue;
@@ -2342,6 +2390,7 @@
           break;
         }
         case 'halfpipe': disegnaPipe(o, x); break;
+        case 'sbarra': disegnaSbarra(o, x, y0); break;
         case 'banco': {
           // il banco del mercato del martedì: tavolo con la merce e tendone a righe
           ctx.fillStyle = '#6b4a2e';
@@ -2431,24 +2480,28 @@
   // conca) e la conca in sezione. La conca è divisa a metà: le due pareti si
   // appoggiano ai bordi (il bordo esterno della curva, con il tubo, sta sul
   // bordo della pipe) e in mezzo si allunga il fondo.
+  // il muro coi murales: la riga 247 del disegno sta a terra (sotto, il disegno
+  // fa già da conca e si copre); si vede anche nella parte aperta della conca
+  function disegnaMuroPipe(o, x) {
+    const M = disegni.muro;
+    if (!pronta(M) || !pronta(disegni.conca)) return;
+    const y0 = sy(0), k = 150 / 247, w = M.naturalWidth * k, h = M.naturalHeight * k;
+    const xm = x + o.w / 2 - w / 2;
+    if (xm > larg + 10 || xm + w < -10) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(xm, y0 - 150, w, 136);
+    ctx.rect(x, y0 - 14, o.w, 60);
+    ctx.clip();
+    ctx.drawImage(M, xm, y0 - 150, w, h);
+    ctx.restore();
+    ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(xm, y0 - 14); ctx.lineTo(xm, y0 - 150); ctx.moveTo(xm + w, y0 - 150); ctx.lineTo(xm + w, y0 - 14); ctx.stroke();
+  }
   function disegnaPipeDipinta(o, x) {
-    const C = disegni.conca, M = disegni.muro;
+    const C = disegni.conca;
     if (!pronta(C)) return false;
     const R = PIPE.raggio, x1 = x + o.w, y0 = sy(0);
-    if (pronta(M)) {
-      // la riga 247 del muro (sotto, i murales fanno da conca: si coprono) sta a terra
-      const k = 150 / 247, w = M.naturalWidth * k, h = M.naturalHeight * k;
-      const xm = x + o.w / 2 - w / 2;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(xm, y0 - 150, w, 136);
-      ctx.rect(x, y0 - 14, o.w, 60);
-      ctx.clip();
-      ctx.drawImage(M, xm, y0 - 150, w, h);
-      ctx.restore();
-      ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(xm, y0 - 14); ctx.lineTo(xm, y0 - 150); ctx.moveTo(xm + w, y0 - 150); ctx.lineTo(xm + w, y0 - 14); ctx.stroke();
-    }
     const W = C.naturalWidth, H = C.naturalHeight;
     const kx = R / (0.38 * W), ky = R / (0.81 * H);
     const top = y0 - 0.07 * H * ky, hh = H * ky;
@@ -2469,6 +2522,42 @@
     ctx.fillStyle = Q.terra || Q.erba;
     ctx.fillRect(x - fuori, top + hh - 2, o.w + 2 * fuori, alt + 200);
     return true;
+  }
+
+  // la transenna alta del cantiere: due pali, due assi a strisce (la più bassa a
+  // 56 px: sotto si passa solo accucciati) e il cartello in cima
+  function disegnaSbarra(o, x, y0) {
+    const nero = '#1c1f27';
+    ctx.lineJoin = 'round';
+    const palo = (px) => {
+      ctx.fillStyle = nero; ctx.fillRect(px - 4, sy(o.h - 8), 8, y0 - sy(o.h - 8) + 1);
+      ctx.fillStyle = '#9aa3b2'; ctx.fillRect(px - 2, sy(o.h - 8) + 2, 4, y0 - sy(o.h - 8) - 3);
+      ctx.fillStyle = nero; ctx.fillRect(px - 10, y0 - 5, 20, 6);
+    };
+    palo(x + 6); palo(x + o.w - 6);
+    const asse = (h0, h1) => {
+      const y = sy(h1), hh = sy(h0) - y;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x - 8, y, o.w + 16, hh); ctx.clip();
+      ctx.fillStyle = '#fff'; ctx.fillRect(x - 8, y, o.w + 16, hh);
+      ctx.fillStyle = '#e8463a';
+      for (let k = -2; k < 8; k++) { ctx.beginPath(); ctx.moveTo(x + k * 16, y + hh); ctx.lineTo(x + k * 16 + 8, y + hh); ctx.lineTo(x + k * 16 + 8 + hh, y); ctx.lineTo(x + k * 16 + hh, y); ctx.fill(); }
+      ctx.restore();
+      ctx.strokeStyle = nero; ctx.lineWidth = 3; ctx.strokeRect(x - 8, y, o.w + 16, hh);
+    };
+    asse(o.basso, o.basso + 28);
+    asse(o.basso + 46, o.basso + 74);
+    // il cartello giallo
+    const yc = sy(o.h), hc = sy(o.basso + 86) - yc;
+    ctx.fillStyle = 'rgba(28,31,39,0.35)'; ctx.fillRect(x - 10 + 4, yc + 4, o.w + 20, hc);
+    ctx.fillStyle = '#ffd23f'; ctx.fillRect(x - 10, yc, o.w + 20, hc);
+    ctx.strokeStyle = nero; ctx.lineWidth = 3; ctx.strokeRect(x - 10, yc, o.w + 20, hc);
+    ctx.fillStyle = nero;
+    ctx.beginPath(); ctx.moveTo(x + o.w / 2, yc + 10); ctx.lineTo(x + o.w / 2 + 15, yc + 36); ctx.lineTo(x + o.w / 2 - 15, yc + 36); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd23f'; ctx.font = `20px ${FUMETTO}`; ctx.textAlign = 'center'; ctx.fillText('!', x + o.w / 2, yc + 34);
+    ctx.fillStyle = nero; ctx.font = `15px ${FUMETTO}`;
+    ctx.fillText('LAVORI', x + o.w / 2, yc + 56);
+    ctx.fillText('IN CORSO', x + o.w / 2, yc + 72);
   }
 
   // la half pipe vista di lato: muro di fondo coi graffiti, il cemento sotto la
@@ -2775,11 +2864,14 @@
     } else if (!t.terra && !t.pipe && Math.abs(t.vang) < 0.5 && Math.abs(restoGiro().resto) < 0.3) {
       extra = clamp(-t.vy / 4500, -0.12, 0.14);
     }
+    if (t.accucciato) { sqx *= 1.1; sqy *= 0.56; tavY += 1; }
     const s = t.schiacciaVis;
     if (s > 0) { sqx *= 1 + s * 0.12; sqy *= 1 - s * 0.16; } else if (s < 0) { sqx *= 1 + s * 0.08; sqy *= 1 - s * 0.12; }
 
     // in aria: la tavola si illumina di rosso se si atterrerebbe storti
-    const storto = !t.terra && t.vy < 0 && Math.abs(restoGiro().resto) > GIRO.tolleranza;
+    const resto = Math.abs(restoGiro().resto);
+    const storto = !t.terra && t.vy < 0 && resto > GIRO.manual;
+    const quasi = !storto && !t.terra && t.vy < 0 && resto > GIRO.tolleranza; // si atterra in manual
 
     ctx.translate(x, y);
     if (t.verso < 0) ctx.scale(-1, 1);
@@ -2811,6 +2903,7 @@
     ctx.translate(0, -11 + tavY);
     ctx.rotate(tavRot);
     if (storto) { ctx.shadowColor = 'rgba(255,40,40,0.95)'; ctx.shadowBlur = 14; }
+    else if (quasi) { ctx.shadowColor = 'rgba(255,210,60,0.95)'; ctx.shadowBlur = 12; }
     tavola(ctx, Math.abs(giro) < 0.12 ? 0.12 * Math.sign(giro || 1) : giro);
     ctx.restore();
 
@@ -3095,13 +3188,13 @@
     if (touch) {
       return `<div class="comandi">
         <p><b>Metà sinistra:</b> salto (tieni premuto per saltare più in alto).</p>
-        <p><b>Metà destra:</b> in aria un tocco è il Giglio, tenendo premuto la presa, trascinando a destra o a sinistra Tino gira (frontflip, backflip), trascinando in giù la schiacciata; a terra tenendo premuto il manual. Nella half pipe trascina a destra per uscire.</p>
+        <p><b>Metà destra:</b> in aria un tocco è il Giglio, tenendo premuto la presa, trascinando a destra o a sinistra Tino gira (frontflip, backflip), trascinando in giù la schiacciata; a terra tenendo premuto il manual, trascinando in giù ti accucci (sotto le transenne alte). Nella half pipe trascina a destra per uscire.</p>
         <p><b>Pulsanti in alto:</b> SFONDA (1 tacca di Grinta) e BOTTA (3 tacche).</p>
       </div>`;
     }
     return `<div class="comandi">
       <p><kbd>Spazio</kbd> o <kbd>↑</kbd> salto (tieni premuto: più alto) · in aria <kbd>←</kbd> <kbd>→</kbd> backflip e frontflip: atterra con la tavola dritta! · <kbd>X</kbd> Giglio, tenendolo premuto la presa</p>
-      <p><kbd>←</kbd> a terra manual (<kbd>→</kbd> di punta) · <kbd>↓</kbd> in aria schiacciata (sfonda le cassette) · nella half pipe tieni <kbd>→</kbd> per uscire · <kbd>E</kbd> Sfondamento (1 tacca) · <kbd>Q</kbd> Botta di Grinta (3 tacche)</p>
+      <p><kbd>←</kbd> a terra manual (<kbd>→</kbd> di punta) · <kbd>↓</kbd> a terra ti accucci (passi sotto le transenne alte e prendi velocità), in aria schiacciata (sfonda le cassette) · nella half pipe tieni <kbd>→</kbd> per uscire · <kbd>E</kbd> Sfondamento (1 tacca) · <kbd>Q</kbd> Botta di Grinta (3 tacche)</p>
       <p>Mouse: tasto sinistro salto, destro trick · <kbd>P</kbd> pausa · <kbd>M</kbd> suoni · <kbd>N</kbd> musica</p>
     </div>`;
   }

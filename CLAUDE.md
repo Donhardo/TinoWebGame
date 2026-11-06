@@ -1007,7 +1007,9 @@ logica, su canvas), `ghianda.svg`.
     rampa al 93% della larghezza, tendone del banco in cima, buco del tombino dal 14% al 60%).
   - **Half pipe** (`disegnaPipeDipinta`): il muro coi murales è alto 150 sopra la strada (la riga
     247 del disegno sta a terra: sotto il disegno fa già da conca e si copre), largo ~1250, e si
-    vede anche nella parte aperta della conca; la conca è divisa a metà, le pareti hanno il
+    vede anche nella parte aperta della conca; si disegna in un passaggio a parte prima degli
+    altri ostacoli e si accende in base alla sua larghezza (prima, legato alla sola conca,
+    compariva e spariva a metà schermo e copriva gli ostacoli vicini); la conca è divisa a metà, le pareti hanno il
     bordo esterno della curva (col tubo) sul bordo della pipe e in mezzo si ripete il pezzo
     centrale del fondo (dal 40% al 60%), dritto e specchiato (stirare una colonna sola faceva
     strisciate).
@@ -1036,7 +1038,9 @@ logica, su canvas), `ghianda.svg`.
 - **Comandi**: Spazio / ↑ / W salto (tenere = più alto); in aria ← → (o A D) girano
   all'indietro / in avanti, a terra fanno il manual (← sulle ruote dietro, → "di punta",
   max 3 s); X / K Giglio in aria (tenendo premuto diventa la presa "Il Lampredotto");
-  ↓ / S schiacciata in aria (sfonda cassette e transenne dall'alto e rimbalza); E /
+  ↓ / S a terra accucciato (finché si tiene: alto 50 invece di 90, passa sotto le transenne
+  alte e prende velocità, fino a +15% in 0,5 s, che poi torna piano; niente manual), in aria
+  schiacciata (sfonda cassette e transenne dall'alto e rimbalza); E /
   Maiusc Sfondamento; Q / Invio Botta di Grinta; mouse: sinistro salto, destro trick. Se
   si salta tenendo ← o → (dal manual) non si gira finché non si lasciano
   (`bloccaGiro`). Telefono: metà sinistra salto; metà destra: tocco = Giglio (dopo 0,11
@@ -1046,7 +1050,10 @@ logica, su canvas), `ghianda.svg`.
 - **Rotazione** (tabella `GIRO`, `giraAria`, `controllaAtterraggio`): tenendo ← o → la
   velocità di rotazione sale (60 rad/s²) fino a 12 rad/s; lasciando si smorza (×e^-18t).
   All'atterraggio la tavola deve essere dritta rispetto alla superficie (le rampe sono
-  inclinate) entro 0,62 rad (~35°) e il trick finito, altrimenti Tino cade; ogni giro
+  inclinate) entro 0,62 rad (~35°) e il trick finito, altrimenti Tino cade; tra 35° e 45°
+  (`GIRO.manual`) atterra in manual (girato in avanti di punta, all'indietro sulle ruote
+  dietro), che dura almeno 0,5 s anche senza tenere ← → (non nella half pipe: lì vale ancora
+  il limite di 35°); in discesa la tavola è gialla in quella fascia e rossa oltre. Ogni giro
   intero vale un Frontflip o un Backflip (`flipFatti`: 250 punti e 30 di Grinta a giro,
   Doppio / Triplo con ×1,3). In discesa, se l'angolo è sbagliato la tavola si illumina di
   rosso. Un flip sulla strada riesce col salto lungo lasciando la freccia dopo ~0,55 s
@@ -1074,7 +1081,11 @@ logica, su canvas), `ghianda.svg`.
   coni, transenna (rompibile), banco del mercato del martedì (tendone su cui si sale, con
   le cassette sotto), agente col timbro (davanti 860 px liberi: lancia da lontano), due
   cassonetti, due agenti col retino (il secondo dove si ricade dopo il pestone sul primo,
-  e non alza la rete), cono e agente, agente col timbro sul cassonetto, half pipe (dai
+  e non alza la rete), cono e agente, agente col timbro sul cassonetto, transenna alta (dai
+  180 m: `sbarra`, larga 56, solida da 56 a 230 px con `basso: 56`, quindi non si salta: si
+  passa sotto accucciati, con 4 ghiande basse; la prima volta compare l'avviso; si sfonda
+  con la Grinta; disegnata nel codice, due assi a strisce e il cartello LAVORI IN CORSO),
+  half pipe (dai
   60 m). Ghiande lungo i
   salti e sui grind (10 punti l'una, sommate in `ghiande-totali` per il negozio futuro).
 - **Half pipe** (tabella `PIPE`, `puntoPipe`, `muoviPipe`, `lanciaPipe`, `esciPipe`,
@@ -1130,7 +1141,11 @@ logica, su canvas), `ghianda.svg`.
   `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli. Lo stato
   contiene solo dati (anche il seme del generatore, `stato.rng`), quindi copiandolo si
   prova il futuro; le particelle usano `Math.random` per non toccare la strada.
-  `stato.statistiche.cause` conta gli urti per causa. I copioni non sono nel repository.
+  `stato.statistiche.cause` conta gli urti per causa, `stato.statistiche.sbarre` le transenne
+  alte passate da sotto. I copioni non sono nel repository: il pianificatore prova per ogni
+  tratto da 0,15 s quattro mosse (niente, salto corto, salto tenuto, ↓ tenuto) per 5 tratti
+  avanti; con l'accucciata e il manual nuovi arriva a 3000 m senza urti in 8 corse su 8 (4-9
+  transenne alte a corsa); senza la mossa ↓ sbatte sempre contro le transenne.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
