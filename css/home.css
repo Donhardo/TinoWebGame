@@ -269,6 +269,37 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
   100% { top: 40%; left: 62%; }
 }
 
+/* Anteprima di Tino Pro Skate: Tino sullo skate salta un cono sul viale */
+.anteprima-skate {
+  background:
+    linear-gradient(transparent 70%, #c9c2b2 70% 72%, #5a5e66 72% 90%, #c9c2b2 90% 92%, #6fae4d 92%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0 22px, transparent 22px 44px) 0 83% / 100% 2px no-repeat,
+    linear-gradient(transparent 52%, #3f7d36 52% 70%),
+    radial-gradient(circle at 20% 42%, #4a8a3d 0 12%, transparent 12.5%),
+    radial-gradient(circle at 62% 38%, #5c9d48 0 14%, transparent 14.5%),
+    linear-gradient(#6fb7ea, #cfeafc);
+}
+.ap-strada { position: absolute; left: 0; right: 0; bottom: 16%; height: 2px; background: repeating-linear-gradient(90deg, #fff 0 22px, transparent 22px 44px); animation: ap-strada 0.5s linear infinite; }
+@keyframes ap-strada { from { background-position: 0 0; } to { background-position: -44px 0; } }
+.ap-cono {
+  position: absolute; bottom: 24%; width: 5%; aspect-ratio: 0.8;
+  background: linear-gradient(transparent 38%, #fff 38% 58%, transparent 58%), #ff7a1a;
+  clip-path: polygon(35% 0, 65% 0, 100% 100%, 0 100%);
+  animation: ap-cono 1.8s linear infinite;
+}
+@keyframes ap-cono { from { left: 105%; } to { left: -10%; } }
+.ap-rider { position: absolute; left: 22%; bottom: 24%; width: 14%; animation: ap-salto 1.8s ease-in-out infinite; }
+.ap-tino-s { display: block; width: 70%; margin: 0 auto -6%; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25)); }
+.ap-tavola { display: block; height: 9px; border-radius: 6px; background: #d8342c; box-shadow: 0 3px 0 -1px #1c1f27; position: relative; }
+.ap-tavola::before, .ap-tavola::after { content: ""; position: absolute; bottom: -7px; width: 8px; height: 8px; border-radius: 50%; background: #f3e9c6; }
+.ap-tavola::before { left: 16%; }
+.ap-tavola::after { right: 16%; }
+@keyframes ap-salto {
+  0%, 30%, 75%, 100% { translate: 0 0; rotate: 0deg; }
+  45% { translate: 0 -70%; rotate: -12deg; }
+  58% { translate: 0 -55%; rotate: 8deg; }
+}
+
 .piede { text-align: center; padding: 16px; font-size: 0.95rem; opacity: 0.75; }
 
 @media (max-width: 520px) {

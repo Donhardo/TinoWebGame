@@ -945,6 +945,139 @@ fondali sono quelli di Tino Bum (`../tino-bum/fondali/`: prato, spiaggia, autunn
   simulati sono più rapidi); possibili aggiunte: bolle speciali anche nell'infinito,
   classifica dei tempi, un mondo bonus.
 
+### Tino Pro Skate (`games/tino-pro-skate/`)
+Corsa a scorrimento orizzontale sullo skate (meccaniche da classici del genere): Tino va
+avanti da solo, salta, fa trick, scivola su panchine e ringhiere e abbatte gli agenti
+della Tari saltandoci in testa. File: `index.html`, `stile.css`, `gioco.js` (tutta la
+logica, su canvas), `ghianda.svg`.
+- **Decisioni prese**: titolo "Tino Pro Skate"; ambientazione a Firenze in quartieri che
+  si susseguono (le Cascine, Novoli, i cantieri della tramvia, il centro); storia: hanno
+  rubato lo skate di Gino ("Papà… mi hanno rubato lo skate!" "Sì, figlio mio: ci penso
+  io!"), l'ispettore capo l'ha pignorato per una bolletta non pagata; modalità storia
+  (quartieri con inseguimento dell'ispettore alla fine) e corsa infinita; Grinta a 3
+  tacche (1 tacca Sfondamento, 3 tacche Botta di Grinta); negozio con le ghiande (tavole
+  con piccoli poteri, caschi e adesivi da guardare); Gino giocabile nell'infinito (scelta
+  nel menu, `localStorage` `personaggio`); musica punk rock sintetizzata. Sul telefono si
+  gioca in orizzontale (in verticale compare l'invito a girarlo e il gioco va in pausa).
+  Dopo la prima prova: manual con ← (non più con ↓), inclinazione in aria con ← → per
+  backflip e frontflip (la Cupola è stata tolta), half pipe da cui si esce tenendo →
+  (oppure da soli quando lo slancio è finito).
+- **Tappe**: 1 motore (fatta: corsa, salti, trick, combo, grind, manual, schiacciata,
+  Grinta, agenti col retino e col timbro, quartiere delle Cascine, corsa infinita,
+  musica punk, Gino giocabile); 2 contenuti (da fare: Novoli, cantieri della tramvia e
+  centro con ostacoli propri, modalità storia con gli inseguimenti dell'ispettore capo,
+  potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
+  all'olio, lampredotto, ruota sgonfia; negozio); 3 rifinitura (fondali dipinti con
+  Gemini a strati, suoni, taratura con persone vere).
+- **Mondo**: x verso destra, h verso l'alto (0 = strada), 40 px = 1 m. Schermo logico
+  alto 540, largo 760-1300 secondo lo schermo; Tino sta a 0,26 della larghezza.
+- **Fisica** (tabella `FISICA`): gravità 2300, ollie 780 (~132 px; tenendo premuto la
+  gravità scende a 1350 per 0,28 s, ~200 px). Velocità e pause tra i pezzi nelle curve
+  `CURVE` ([metri, valore]): 340 → 395 (400 m) → 465 (1200) → 535 (2500) → 585 px/s
+  (4000 m); strada libera tra i pezzi 1,5 s → 0,72 s.
+- **Comandi**: Spazio / ↑ / W salto (tenere = più alto); in aria ← → (o A D) girano
+  all'indietro / in avanti, a terra fanno il manual (← sulle ruote dietro, → "di punta",
+  max 3 s); X / K Giglio in aria (tenendo premuto diventa la presa "Il Lampredotto");
+  ↓ / S schiacciata in aria (sfonda cassette e transenne dall'alto e rimbalza); E /
+  Maiusc Sfondamento; Q / Invio Botta di Grinta; mouse: sinistro salto, destro trick. Se
+  si salta tenendo ← o → (dal manual) non si gira finché non si lasciano
+  (`bloccaGiro`). Telefono: metà sinistra salto; metà destra: tocco = Giglio (dopo 0,11
+  s), tenuta = presa in aria / manual a terra, trascinata a destra o a sinistra = gira
+  (e nella half pipe a destra esce), trascinata in giù = schiacciata; pulsanti SFONDA e
+  BOTTA disegnati in alto a destra.
+- **Rotazione** (tabella `GIRO`, `giraAria`, `controllaAtterraggio`): tenendo ← o → la
+  velocità di rotazione sale (60 rad/s²) fino a 12 rad/s; lasciando si smorza (×e^-18t).
+  All'atterraggio la tavola deve essere dritta rispetto alla superficie (le rampe sono
+  inclinate) entro 0,62 rad (~35°) e il trick finito, altrimenti Tino cade; ogni giro
+  intero vale un Frontflip o un Backflip (`flipFatti`: 250 punti e 30 di Grinta a giro,
+  Doppio / Triplo con ×1,3). In discesa, se l'angolo è sbagliato la tavola si illumina di
+  rosso. Un flip sulla strada riesce col salto lungo lasciando la freccia dopo ~0,55 s
+  (finestra di ~0,1 s); con le rampe e la half pipe c'è più tempo.
+- **Trick e combo** (tabella `TRICK`): Giglio 0,36 s / 100 punti, flip (vedi sopra),
+  presa 260 al secondo, grind 200 al secondo, manual 110 al secondo, Pestone 150
+  (Superpestone doppio se si arriva con la schiacciata), Sfasciata 120. Un trick a metà
+  quando si tocca terra fa cadere (si perdonano gli ultimi 0,07 s): niente ruota persa,
+  ma combo persa, velocità dimezzata e 20 di Grinta in meno. La combo è la somma dei punti
+  × il numero di azioni; si chiude toccando terra (0,14 s di grazia per passare al
+  manual, che la tiene viva), si perde con un urto o una caduta.
+- **Grinta** (tabella `GRINTA`): 3 tacche da 100, si carica con trick, grind, manual,
+  pestoni e combo. Sfondamento (1 tacca): 1 s a velocità ×1,5 che sfonda cassette e
+  transenne, butta via agenti e bollette. Botta di Grinta (3 tacche): salto e schianto a
+  terra, onda d'urto che stordisce per 4 s tutti gli agenti sullo schermo, sfonda gli
+  ostacoli rompibili e spazza le bollette, poi 2,5 s di Sfondamento; nella musica uno
+  stacco di un battito e si riparte dal ritornello.
+- **Vita** (tabella `VITA`): 3 ruote, ogni urto ne toglie una (1,6 s di invulnerabilità,
+  velocità dimezzata che torna piano); a zero Tino è KO. Ogni ~650 m, se manca una ruota,
+  ne compare una di scorta in alto (da prendere saltando).
+- **Strada** (tabelle `FORME` e `PEZZI`, generatore `generaStrada`): pezzi scelti a caso
+  con un peso e un metro da cui compaiono, mai due uguali di fila: cono, panchina (grind),
+  cassette (rompibili), buca col tombino aperto, cassonetto (ci si sale), agente col
+  retino, ringhiera (grind) con un cono sotto, rampa (lancia a 700 + 0,4 × velocità), due
+  coni, transenna (rompibile), banco del mercato del martedì (tendone su cui si sale, con
+  le cassette sotto), agente col timbro (davanti 860 px liberi: lancia da lontano), due
+  cassonetti, due agenti col retino (il secondo dove si ricade dopo il pestone sul primo,
+  e non alza la rete), cono e agente, agente col timbro sul cassonetto, half pipe (dai
+  60 m). Ghiande lungo i
+  salti e sui grind (10 punti l'una, sommate in `ghiande-totali` per il negozio futuro).
+- **Half pipe** (tabella `PIPE`, `puntoPipe`, `muoviPipe`, `lanciaPipe`, `esciPipe`,
+  `disegnaPipe`): conca a U scavata nella strada (due quarti di cerchio di raggio 130 e
+  fondo piatto di 200, larga 460), con muro di fondo coi graffiti e tubi sui bordi;
+  vicino alla conca la telecamera scende di 112 px (`stato.cam.h`, che entra in `sy`) e
+  mentre Tino è dentro la inquadra ferma. Tino ci entra dal bordo sinistro (o ci atterra
+  da un salto) e la percorre lungo la curva con una velocità che dipende solo dalla quota
+  (quella di lancio del passaggio, più quanto è sceso), così arriva sempre al bordo
+  (prima, con la gravità lungo la curva, entrando lento o atterrando in fondo restava a
+  dondolare senza uscire); a ogni bordo vola dritto in
+  su a 960 × 0,9^passaggi px/s (~200 px al primo, ~6 voli), con base della tavola
+  verticale; in volo gira e fa i trick, e all'atterraggio si gira (specchiato, `verso`).
+  Ogni volo è un'azione "Aria" (50 punti) e la combo resta aperta per tutta la conca.
+  Tenendo → quando arriva al bordo destro esce e riprende la corsa; se lo slancio è sotto
+  560 esce da solo (~9 s), comunque dopo 10 voli. Il salto sulla parete "pompa" (una
+  volta per passaggio, toglie 1,5 passaggi: il volo dopo è più alto). Una caduta dentro la conca toglie la combo e due passaggi.
+  Ghiande in colonna sopra i bordi. Mentre Tino è dentro gli agenti aspettano e le
+  bollette spariscono; la Botta di Grinta non si può usare.
+- **Agenti** (tabella `AGENTI`, disegni di `assets/agenti-tari/`, non si specchiano): col
+  retino cammina verso Tino e a 215 px alza la rete (0,2 s di avviso, poi 0,38 s in cui
+  prende davanti a sé fino a 76 px d'altezza); col timbro lancia bollette ogni 1,9 → 1,25
+  s, basse (44, da saltare) o alte (118, non bisogna saltare). Il pestone vale se si
+  scende sulla testa entro 50 px dal centro; di lato è un urto.
+- **Quartieri** (tabella `QUARTIERI`, per ora solo `cascine`): fondale disegnato nel
+  codice a strati che scorrono a velocità diverse: nuvole, colline con i cipressi, l'Arno
+  con il ponte all'Indiano, filari di platani con i lampioni e la piramide (l'antica
+  ghiacciaia), siepe con la cancellata, viale d'asfalto con la pista ciclabile.
+- **Musica** (tabelle `MUSICA` e `BRANO`): punk rock in Mi, tutto Web Audio: power chord
+  a dente di sega distorti (WaveShaper), basso a ottavi, cassa, rullante e charleston.
+  16 battute: strofa Mi Mi Do Re con la chitarra stoppata, ritornello La Do Sol Re con
+  accordi aperti e melodia (più forte con la Grinta piena o la combo lunga). Menu 150
+  bpm, in corsa da 168 a 186 bpm con la velocità. Suoni continui: rotolio delle ruote e
+  stridio del grind. M tutti i suoni, N solo la musica (`muto`, `musica-spenta`).
+- **Espressioni**: Tino arrabbiato con la Grinta piena, con l'ultima ruota e durante la
+  Botta; ferito quando urta o cade; ko a fine corsa (la tavola vola via). Gino (solo la
+  testa) saltella quando chiude una combo, trema quando urta, rotola quando cade.
+- **Punteggio**: punti delle combo + 10 per ghianda + 50 per ogni cosa sfondata;
+  `localStorage` `tino-pro-skate:record-metri`, `record-punti`, `ghiande-totali`,
+  `storia-vista` (il dialogo della storia compare la prima volta).
+- **Difficoltà tarata** con corse simulate (Playwright, solo salti, senza trick né
+  Grinta): un giocatore che pianifica (ricerca in profondità sul futuro copiato con
+  `clona`/`rimetti`, 7 tratti da 0,15 s) arriva a 4500 m con 0-3 urti in 10 corse su 10;
+  ogni ostacolo ha una finestra di 0,3-0,6 s per il salto giusto. Giocatori "umani" che
+  saltano a metà della finestra con un errore (principiante 0,12 s e 3% di salti persi,
+  medio 0,08 s e 1,5%, bravo 0,05 s e 0,5%; 8 corse): ~1500, ~2700, ~5150 m di media. Le
+  cause di urto più frequenti sono la rete, le bollette alte e il cassonetto. Con la half
+  pipe (6 corse, ±20%): pianificatore 0-1 urti fino a 4000 m in 6 corse su 6, umani
+  ~1800, ~3000, ~4500 m (la conca è una pausa senza ostacoli).
+- **Prove automatiche**: `window.tinoProSkate` (`stato` (getter), `nuovaCorsa(seme)`,
+  `aggiorna`, `premi(azione, giu)` con azione `salto`, `trick`, `giu`, `avanti`,
+  `indietro`, `sfondamento`, `botta`, `clona()`, `rimetti(s)`, `supporto`, `curva`, tabelle); con
+  `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli. Lo stato
+  contiene solo dati (anche il seme del generatore, `stato.rng`), quindi copiandolo si
+  prova il futuro; le particelle usano `Math.random` per non toccare la strada.
+  `stato.statistiche.cause` conta gli urti per causa. I copioni non sono nel repository.
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
+  `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
+  `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e `root`.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)
