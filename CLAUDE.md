@@ -1044,7 +1044,9 @@ logica, su canvas), `ghianda.svg`.
   proprietario; tolte solo le perline e lo sfondo bianco sopra il tetto); turista F6 (la
   persona), non l'orsetto F6b; lo scavo C9 è tagliato sotto i bordi in prospettiva (i tubi sui
   bordi sono disegnati nel codice); del fango C6 resta solo la pozza (via l'asfalto, tenuti i
-  pixel marroni). File: `fondali/<q>-lontano|medio|vicino.png` per `novoli`, `cantieri`,
+  pixel marroni). I lontani di Gemini (anche quello delle Cascine) avevano in fondo una fascia
+  bianca, tagliata: nel centro si vedeva sotto gli archi del Ponte Vecchio, che ora ha dietro
+  l'acqua dell'Arno disegnata nel codice. File: `fondali/<q>-lontano|medio|vicino.png` per `novoli`, `cantieri`,
   `centro`, `fondali/ponte-vecchio.png`; `elementi/` scalinata, corrimano, fioriera,
   monopattini, ruspa, benna, fango, binari, tram, sampietrini, turista, bancarella, bici;
   `pipe/scavo.png`, `pipe/muro-cantiere.png`; `mezzi/` ape, monopattino, carrello, golf

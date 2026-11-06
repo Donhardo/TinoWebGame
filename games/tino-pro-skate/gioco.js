@@ -2304,7 +2304,21 @@
     const yb = yStrada() - 30, w = c.w, p = stato.cam.x * 0.3;
     for (let k = Math.floor(p / w); k * w - p < larg + 20; k++) {
       const x = Math.floor(k * w - p);
-      if (pv && hash(k * 31 + 7) < 0.3) ctx.drawImage(pv.tela, x + (w - pv.w) / 2, yb - 150 + 8, pv.w, 150);
+      if (pv && hash(k * 31 + 7) < 0.3) {
+        // l'Arno: si vede sotto gli archi e ai lati del ponte
+        const g = ctx.createLinearGradient(0, yb - 64, 0, yb + 20);
+        g.addColorStop(0, '#7fb3ad'); g.addColorStop(1, '#4f8f8a');
+        ctx.fillStyle = g;
+        ctx.fillRect(x, yb - 64, w + 0.5, 84);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2;
+        for (let i = 0; i < 9; i++) {
+          const xx = x + hash(k * 13 + i) * w, yy = yb - 56 + hash(k * 17 + i) * 50;
+          ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx + 16 + hash(k + i) * 16, yy); ctx.stroke();
+        }
+        ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x, yb - 64); ctx.lineTo(x + w, yb - 64); ctx.stroke();
+        ctx.drawImage(pv.tela, x + (w - pv.w) / 2, yb - 150 + 8, pv.w, 150);
+      }
       else ctx.drawImage(c.tela, x, yb - 182, w + 0.5, 182);
     }
   }
