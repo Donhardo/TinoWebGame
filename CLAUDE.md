@@ -1027,6 +1027,19 @@ logica, su canvas), `ghianda.svg`.
   - **Controllo**: le corse simulate danno lo stesso identico stato di prima (8 semi, 3000 m,
     impronta di tutto lo stato tranne particelle e messaggi; va fissata la larghezza dello
     schermo, perché la strada si genera fino a un po' oltre il bordo destro).
+- **Tappa 2, immagini**: i prompt sono in `disegni/prompt-tappa-2.md`, 60 riquadri già
+  completi (stile comune + immagine, da incollare così come sono su Nano Banana Pro con
+  `cascine-lontano.png` allegato come riferimento), con un codice ciascuno: Novoli N1-N7,
+  cantieri C1-C11 (lo scavo C9 al posto della half pipe col suo muro C10; la ruspa in due
+  pezzi, corpo C4 e braccio C5, per animare la benna), centro F1-F8 (F6 turista persona, F6b
+  variante orsetto: se ne usa una), mezzi dell'ispettore I1-I4 (senza guidatore: l'ispettore
+  SVG ci va sopra), icone dei potenziamenti P1-P7, negozio (tavole T1-T6, caschi K1-K5,
+  adesivi A1-A6), vignette della storia V1-V4, transenna alta dipinta S1. Proporzioni dei
+  pezzi nuovi proposte nei prompt: le sagome si adattano ai disegni quando arrivano.
+  Vantaggi e svantaggi delle tavole nei prompt sono solo una proposta.
+  **Stato**: il proprietario ha generato le immagini da N1 a T4 (da caricare nella prossima
+  sessione in uno zip); mancano T5, T6, K1-K5, A1-A6, V1-V4 e S1 (crediti finiti, li fa
+  dopo). Il codice della tappa 2 non è ancora cominciato.
 - **Altri quartieri** (tappa 2): fondali a tre strati con lo stesso schema; nomi
   `fondali/<quartiere>-lontano|medio|vicino.png` (`fondale(Q.id)`).
 - **Mondo**: x verso destra, h verso l'alto (0 = strada), 40 px = 1 m. Schermo logico
