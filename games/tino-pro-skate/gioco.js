@@ -164,6 +164,7 @@
   // un'ombra piena (sfalsata in basso a destra). hRif è l'altezza a cui si
   // disegnano di solito (la copia è fatta al doppio, per gli schermi densi).
   const CONTORNO = { spessore: 3, ombra: 4, colore: '#1c1f27', alfaOmbra: 0.32 };
+  const CONTORNO_TINO = { spessore: 0, ombra: 4, colore: '#1c1f27', alfaOmbra: 0.32, chiave: 'senza' }; // Tino: solo l'ombra, senza contorno nero
   const CONTORNO_GHIANDA = { spessore: 2, ombra: 2, colore: '#fff8e0', alfaOmbra: 0, chiave: 'chiaro' };
   const contornate = new Map();
   function contornata(im, hRif, C = CONTORNO) {
@@ -196,7 +197,7 @@
     k.globalAlpha = C.alfaOmbra;
     k.drawImage(gr, o, o);
     k.globalAlpha = 1;
-    k.drawImage(gr, 0, 0);
+    if (r > 0) k.drawImage(gr, 0, 0);
     k.drawImage(im, pad, pad, w, h);
     c = { tela, q, pad, w, h };
     contornate.set(chiave, c);
@@ -2828,12 +2829,12 @@
         } else if (ko) {
           const hh = 58, w = hh * im.naturalWidth / im.naturalHeight;
           ctx.translate(x, y);
-          fumetto(ctx, im, 94, -w / 2, -hh, w, hh);
+          fumetto(ctx, im, 94, -w / 2, -hh, w, hh, CONTORNO_TINO);
         } else {
           ctx.translate(x, y - 6);
           ctx.rotate(-1.25);
           const hh = 88, w = hh * im.naturalWidth / im.naturalHeight;
-          fumetto(ctx, im, 94, -w / 2, -hh + 26, w, hh);
+          fumetto(ctx, im, 94, -w / 2, -hh + 26, w, hh, CONTORNO_TINO);
         }
         ctx.restore();
       }
@@ -2923,7 +2924,7 @@
         fumetto(ctx, im, 62, -w / 2, -hh, w, hh);
       } else {
         const hh = 94, w = hh * im.naturalWidth / im.naturalHeight;
-        fumetto(ctx, im, 94, -w / 2 - 2, -hh, w, hh);
+        fumetto(ctx, im, 94, -w / 2 - 2, -hh, w, hh, CONTORNO_TINO);
       }
       ctx.restore();
     }

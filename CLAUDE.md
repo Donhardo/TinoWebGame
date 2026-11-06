@@ -1013,9 +1013,9 @@ logica, su canvas), `ghianda.svg`.
     bordo esterno della curva (col tubo) sul bordo della pipe e in mezzo si ripete il pezzo
     centrale del fondo (dal 40% al 60%), dritto e specchiato (stirare una colonna sola faceva
     strisciate).
-  - **Aspetto a fumetto**: le foto di Tino, Gino e degli agenti si disegnano da una copia
+  - **Aspetto a fumetto**: le foto di Gino e degli agenti si disegnano da una copia
     preparata una volta (`contornata`, `fumetto`) con contorno nero di 3 px e ombra piena
-    sfalsata di 4 px; le ghiande hanno un contorno chiaro (si perdevano sugli alberi). Font
+    sfalsata di 4 px; Tino solo con l'ombra (`CONTORNO_TINO`: col contorno nero non piaceva); le ghiande hanno un contorno chiaro (si perdevano sugli alberi). Font
     Bangers (Google Fonts) per HUD, messaggi, scritte dei trick e titoli; onomatopee in una
     stella a punte (`botto`: POP! Giglio, WHOOSH! flip, SKRRR! grind, BAM! pestone, CRASH!
     cassette, SBAM! urto, SDENG! agente sfondato, VROOOM! Sfondamento, KA-BOOM! Botta); linee di
