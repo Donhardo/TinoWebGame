@@ -52,3 +52,8 @@ e poi si visita http://localhost:8000.
   ghiande, miele, ghianda di fuoco, fionda, lumaca, siepe, vita) e due dispetti (asse
   corta, vespa). Suoni e musica sintetizzati. I livelli si modificano in
   `games/ghiande-e-mattoncini/livelli.js`.
+- **Sparabolle** (`games/sparabolle/`): Tino spara bolle di ghiande, bacche e fiori
+  con una canna di bambù, Gino gli prepara la bolla dopo. Tre bolle uguali vicine
+  scoppiano, quelle rimaste staccate dal ramo cadono. Avventura a livelli (il ramo
+  scende ogni tot tiri a vuoto), infinito (righe nuove a tempo) e due giocatori a
+  campi affiancati, con gli attacchi che mandano righe all'avversario.

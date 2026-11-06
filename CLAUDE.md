@@ -762,6 +762,91 @@ anteprima della home). I fondali sono quelli di Tino Bum (`../tino-bum/fondali/`
   Possibili seguiti, non ancora decisi: mattoncini che si muovono o che ricrescono,
   classifica dei punti, differenze di gioco tra Tino e Gino.
 
+### Sparabolle (`games/sparabolle/`)
+Gioco a bolle (meccaniche da classico del genere): Tino spara bolle verso l'alto con
+una canna di bambù, Gino gli tiene la bolla dopo. Tre o più bolle uguali che si
+toccano scoppiano; quelle rimaste staccate dal ramo cadono. File: `index.html`,
+`stile.css`, `livelli.js` (mondi e mappe), `gioco.js` (tutta la logica, su canvas). Il
+fondale del prato è quello di Tino Bum (`../tino-bum/fondali/`).
+- **Decisioni prese**: titolo "Sparabolle"; dentro le bolle ghiande, bacche e fiori
+  (sei tipi: ghianda, fragolina, mirtillo, fiore giallo, violetta, uva spina, ognuno
+  con un colore e un disegno, così si distinguono anche senza i colori); modalità
+  avventura, infinito e due giocatori a campi affiancati; un boss a fine mondo. Piano in
+  tre tappe: 1 motore e primi livelli (fatta), 2 bolle speciali, mondi e boss, 3
+  rifinitura, suoni e taratura. Sul telefono si gioca in verticale, in due in
+  orizzontale (altrimenti compare l'invito a girarlo e il gioco va in pausa).
+- **Campo**: logico 480 × 780 per giocatore (in due 1000 × 780, con 40 px tra i campi);
+  muri di 20 px, bolle di raggio 20 su una griglia a nido d'ape di 11 colonne (righe
+  "spostate" da 10, che dipendono da `fase`: quando arriva una riga dall'alto la fase si
+  inverte). Il ramo parte a y = 58, la linea dei fiori è dopo 13 righe; perno della
+  canna a y = 640.
+- **Tiro** (tabella `TIRO`): 1300 px/s a passi di 5 px (la stessa funzione `passo` serve
+  al tiro, alla linea di mira e al computer, quindi danno lo stesso risultato); la bolla
+  si ferma sul ramo o a meno di 0,8 diametri da un'altra e si attacca alla casella libera
+  più vicina attaccata a qualcosa (`trovaCella`). La bolla in canna e quella dopo sono
+  sempre di un tipo ancora in campo (`controllaColori`).
+- **Controlli**: mouse (la canna segue il puntatore, clic tira, clic sulla bolla di Gino
+  scambia), ← → (o A D) e Spazio / ↑, ↓ scambia; sul telefono si trascina il dito e si
+  tira alzandolo (sotto la canna il tiro si annulla), toccando la bolla di Gino si
+  scambia. In due: Tino A D, W, S; Gino ← →, ↑ (o Invio), ↓; sul telefono un dito per
+  campo. P o Esc pausa, M suoni, N musica.
+- **Avventura** (`livelli.js`, legenda in cima: righe a caratteri, spazi ignorati;
+  `calo`, `guida`, `par`): il ramo scende di una riga ogni `calo` tiri a vuoto (che non
+  fanno scoppiare niente; si sommano per tutto il livello, non si azzerano: azzerandoli
+  il ramo non scendeva quasi mai); le ghiandine appese in cima contano i tiri che
+  mancano e il ramo trema all'ultimo. Si perde se una bolla supera la linea dei fiori.
+  Stelle per livello: 3 con al massimo `par` tiri, 2 con `par` × 1,35; 100 punti per ogni
+  tiro sotto il par. `guida`: Infinity = linea di mira fino all'arrivo con la bolla
+  fantasma (livelli 1-3), altrimenti lunghezza in px. Dopo 3 sconfitte nello stesso
+  livello si può riprovare con l'aiuto (il ramo scende dopo 3 tiri in più, guida intera).
+  `localStorage` `sparabolle:sbloccati`, `stelle`.
+- **Livelli fatti** (mondo 1, il prato): 1 "Il primo raccolto" (3 tipi), 2 "La siepe di
+  fragole" (4), 3 "Il girotondo" (4), 4 "Le violette" (5), 5 "Il cesto del contadino" (5);
+  `calo` 8, 7, 6, 6, 6. Il boss del prato arriva nella tappa 2.
+- **Infinito** (tabella `INFINITO`): 5 righe all'inizio, poi una riga nuova dall'alto ogni
+  12 s, che scende di 0,18 s per riga fino a 4,5 s (barra in cima, le bolle tremano negli
+  ultimi 2 s); 4 tipi, 5 dalla 10ª riga, 6 dalla 26ª. Campo ripulito: +1000 e 5 righe
+  nuove. Record in `record-infinito`.
+- **Due giocatori** (tabella `DUE`): stesse 6 righe all'inizio per tutti e due, 5 tipi,
+  una riga ogni 15 s (fino a 6 s). Le bolle in più di un tiro (cadute + scoppiate oltre
+  le prime 3) diventano attacchi: prima parano quelli in arrivo, poi vanno all'altro
+  (ghiandine rosse in cima); ogni 7 attacchi è una riga nuova, che arriva dopo il primo
+  tiro a vuoto. Ripulire il campo manda 2 righe all'altro e ne fa arrivare 5 a sé (prima
+  vinceva subito chi ripuliva e le partite duravano 10 s). Vince chi resta in piedi;
+  vittorie della sessione nella barra.
+- **Punti** (tabella `PUNTI`): 10 per bolla che scoppia, 20 per bolla che cade ×
+  la catena (tiri di fila che fanno cadere), 50 per ogni sponda di un tiro che fa
+  scoppiare, 1000 per il campo ripulito.
+- **Espressioni**: Tino arrabbiato quando il ramo sta per scendere o è appena sceso, con
+  le bolle a due righe dai fiori e negli ultimi 2 s prima di una riga nuova; ferito
+  quando gli arrivano righe d'attacco; ko quando perde. Gino (aiutante) saltella quando
+  scoppia qualcosa, trema quando il ramo scende, cade ruotato quando si perde. In due
+  Gino è il giocatore di destra.
+- **Suoni e musica**: Web Audio come negli altri giochi (scoppi che salgono sulla
+  pentatonica di Sol, caduta, ramo che scende, riga nuova, attacco, scambio); musichetta
+  in Sol in loop (menu 98 bpm, partita 120, più tesa con le bolle vicine ai fiori).
+- **Disegni**: bolle disegnate nel codice una volta su tele a parte (`spriteBolla`,
+  `disegnaContenuto`), canna di bambù sul ceppo, ramo con foglie e soffitto di assi,
+  linea dei fiori (rossa quando le bolle sono vicine).
+- **Difficoltà tarata** con partite simulate (giocatori simulati che provano tutti gli
+  angoli con la stessa fisica, `cercaTiri`/`scegliTiroIA`, con errore sull'angolo e una
+  probabilità di non scegliere il tiro migliore: principiante 3,5° / 40%, medio 2° / 70%,
+  bravo 0,7° / 95%). Livelli vinti (principiante / medio / bravo, 16-20 partite): 1-3
+  sempre; 4 94% / 100% / 100%; 5 55% / 100% / 100% (con l'aiuto si allarga). Il par è la
+  mediana dei tiri del bravo. Infinito: principiante ~4,5 min, medio ~5 min, il bravo
+  simulato regge a lungo (le persone sono più lente). In due una partita dura ~30-90 s.
+- **Prove automatiche**: `window.sparabolle` (`stato`, `iniziaAvventura(n, { silenzio,
+  aiuto })`, `iniziaInfinito`, `iniziaDue({ ia: [IA.x, IA.y] })`, `aggiorna`, `spara`,
+  `scambia`, `mira`, `simula`, `cercaTiri`, `scegliTiroIA`, tabelle); con `stato.test =
+  true` il gioco non avanza da solo, non suona e non apre pannelli; mettendo
+  `stato.campi[0].ia = IA.medio` gioca il computer. I copioni (Playwright, `aggiorna(1 / 60)`
+  fino a `stato.fase === 'finita'`) non sono nel repository.
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
+  `css/sito.css`, `stile.css`, `livelli.js`, `gioco.js` (con `ASSETS = 'assets/'`,
+  `FONDALI = 'fondali/'` e `leggi('sbloccati', 5)`), `fondali/prato.png` (da Tino Bum),
+  `assets/tino/`, `assets/gino/`; si pubblica con `files` e `root`.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)
