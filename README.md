@@ -55,5 +55,10 @@ e poi si visita http://localhost:8000.
 - **Sparabolle** (`games/sparabolle/`): Tino spara bolle di ghiande, bacche e fiori
   con una canna di bambù, Gino gli prepara la bolla dopo. Tre bolle uguali vicine
   scoppiano, quelle rimaste staccate dal ramo cadono. Avventura a livelli (il ramo
-  scende ogni tot tiri a vuoto), infinito (righe nuove a tempo) e due giocatori a
-  campi affiancati, con gli attacchi che mandano righe all'avversario.
+  scende ogni tot tiri a vuoto): 24 livelli in quattro mondi (prato, spiaggia, bosco in
+  autunno, uffici della Tari) con bolle speciali (petardi, arcobaleni, fulmini, gelate,
+  sassi, chiavi e lucchetti, bollette che si moltiplicano), robivecchi da collezionare,
+  potenziamenti guadagnati con le combinazioni e un agente della Tari da colpire alla
+  fine di ogni mondo. Poi infinito (righe nuove a tempo) e due giocatori a campi
+  affiancati, con gli attacchi che mandano righe all'avversario. I livelli si modificano
+  in `games/sparabolle/livelli.js`.
