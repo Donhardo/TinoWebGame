@@ -78,13 +78,15 @@
   // La half pipe: una conca a U scavata nella strada. Tino ci entra, risale le
   // pareti e vola sopra i bordi; a ogni passaggio perde slancio. Tenendo → mentre
   // risale la parete destra esce e riprende la corsa; quando lo slancio è poco
-  // esce da solo.
+  // esce da solo. Saltando sulla parete si "pompa" e lo slancio torna.
   const PIPE = {
     raggio: 130,               // le due pareti sono quarti di cerchio (profondità = raggio)
     piano: 200,                // fondo piatto
     lancio: 960,               // velocità verso l'alto al bordo, al primo passaggio (~200 px)
     calo: 0.9,                 // a ogni passaggio
     minimo: 560,               // sotto questa al bordo destro esce da solo
+    maxVoli: 10,               // dopo tanti voli esce da solo comunque
+    pompata: 1.5,              // il salto sulla parete "pompa": toglie passaggi (più slancio), una volta per passaggio
     camera: -112,              // la telecamera scende per far vedere la conca
   };
 
@@ -853,7 +855,8 @@
   // ---------------------------------------------------------------- azioni
   function salta() {
     const t = stato.tino;
-    if (!t.terra || t.botta || t.pipe) return;
+    if (t.pipe) { pompa(); return; }
+    if (!t.terra || t.botta) return;
     t.bloccaGiro = stato.input.avanti || stato.input.indietro;
     t.vy = FISICA.salto;
     t.terra = false;
@@ -1450,7 +1453,7 @@
     stato.bollette = [];
     if (!stato.pipeVista) {
       stato.pipeVista = true;
-      messaggio(touch ? 'Half pipe! Per uscire trascina a destra' : 'Half pipe! Tieni → per uscire', 2.2, '#9ee7ff', true);
+      messaggio(touch ? 'Half pipe! Salta per pompare, trascina a destra per uscire' : 'Half pipe! Spazio pompa, tieni → per uscire', 2.4, '#9ee7ff', true);
     }
     aggiornaPipeSuolo(o);
   }
@@ -1489,12 +1492,15 @@
     const o = stato.ostacoli[p.i];
     const L = lunghezzaPipe();
     if (!p.aria) {
-      const pt = puntoPipe(o, p.s);
-      p.vs -= FISICA.gravita * pt.dh * dt;
-      p.s += p.vs * dt;
+      // la velocità dipende solo dalla quota (come senza attrito, a partire dalla
+      // velocità di lancio di questo passaggio): così arriva sempre al bordo
       const vl = PIPE.lancio * Math.pow(PIPE.calo, p.passaggi);
+      const pt = puntoPipe(o, p.s);
+      const vel = Math.sqrt(vl * vl - 2 * FISICA.gravita * Math.min(0, pt.h));
+      p.vs = (p.vs < 0 ? -1 : 1) * vel;
+      p.s += p.vs * dt;
       if (p.s >= L) {
-        if (stato.input.avanti || vl < PIPE.minimo) { esciPipe(); return; }
+        if (stato.input.avanti || vl < PIPE.minimo || p.voli >= PIPE.maxVoli) { esciPipe(); return; }
         lanciaPipe('dx', vl);
       } else if (p.s <= 0) {
         lanciaPipe('sx', vl);
@@ -1526,6 +1532,8 @@
     p.aria = true;
     p.lato = lato;
     p.passaggi++;
+    p.voli = (p.voli || 0) + 1;
+    p.pompato = false;
     t.terra = false;
     t.vy = vl;
     t.h = 0;
@@ -1536,6 +1544,15 @@
     t.bloccaGiro = stato.input.avanti || stato.input.indietro;
     aggiungi('Aria', 50);
     caricaGrinta(6);
+    suoni.ollie();
+  }
+  // nella half pipe il salto sulla parete dà slancio: il prossimo volo è più alto
+  function pompa() {
+    const p = stato.tino.pipe;
+    if (p.aria || p.pompato) return;
+    p.pompato = true;
+    p.passaggi = Math.max(0, p.passaggi - PIPE.pompata);
+    stato.tino.schiacciaVis = 0.7;
     suoni.ollie();
   }
   function esciPipe() {
