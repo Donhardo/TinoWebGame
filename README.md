@@ -68,5 +68,6 @@ e poi si visita http://localhost:8000.
   scivolate su panchine e ringhiere, manual e combo, half pipe da cui si esce tenendo →;
   si abbattono gli agenti della Tari saltandoci in testa. La Grinta (3 tacche) si
   carica con i trick: una tacca per lo Sfondamento, tre per la Botta di Grinta che
-  stordisce tutti. Per ora corsa infinita alle Cascine (anche con Gino), con musica punk
-  sintetizzata; Novoli, i cantieri della tramvia, il centro e la storia arrivano dopo.
+  stordisce tutti. Per ora corsa infinita alle Cascine (anche con Gino), con grafica a
+  fumetto (fondali a tre strati ed elementi dipinti con Gemini in `disegni/`, contorni neri
+  attorno alle foto, onomatopee) e musica punk sintetizzata; Novoli, i cantieri della tramvia, il centro e la storia arrivano dopo.

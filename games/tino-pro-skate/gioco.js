@@ -142,7 +142,77 @@
     im.src = percorso;
     return im;
   }
-  const pronta = (im) => im.complete && im.naturalWidth > 0;
+  const pronta = (im) => !!im && im.complete && im.naturalWidth > 0;
+
+  // Disegni a fumetto (dipinti, sfondo già trasparente). Se un file manca resta
+  // il disegno fatto nel codice.
+  const DISEGNI = 'disegni/';
+  const disegni = {};
+  for (const n of ['cono', 'cassette', 'cassonetto', 'transenna', 'panchina', 'ringhiera', 'rampa', 'banco', 'tombino', 'tavola']) {
+    disegni[n] = carica(DISEGNI + 'elementi/' + n + '.png');
+  }
+  disegni.conca = carica(DISEGNI + 'pipe/conca.png');
+  disegni.muro = carica(DISEGNI + 'pipe/muro.png');
+  // Le foto dei personaggi restano quelle originali: per farle stare nel
+  // fumetto si prepara una volta una copia con un contorno nero spesso e
+  // un'ombra piena (sfalsata in basso a destra). hRif è l'altezza a cui si
+  // disegnano di solito (la copia è fatta al doppio, per gli schermi densi).
+  const CONTORNO = { spessore: 3, ombra: 4, colore: '#1c1f27', alfaOmbra: 0.32 };
+  const CONTORNO_GHIANDA = { spessore: 2, ombra: 2, colore: '#fff8e0', alfaOmbra: 0, chiave: 'chiaro' };
+  const contornate = new Map();
+  function contornata(im, hRif, C = CONTORNO) {
+    if (!pronta(im)) return null;
+    const chiave = im.src + (C.chiave || '');
+    let c = contornate.get(chiave);
+    if (c) return c;
+    const q = 2 * hRif / im.naturalHeight;
+    const w = Math.ceil(im.naturalWidth * q), h = Math.ceil(im.naturalHeight * q);
+    const r = C.spessore * 2, o = C.ombra * 2, pad = r + o + 2;
+    const sil = document.createElement('canvas');
+    sil.width = w; sil.height = h;
+    const ks = sil.getContext('2d');
+    ks.drawImage(im, 0, 0, w, h);
+    ks.globalCompositeOperation = 'source-in';
+    ks.fillStyle = C.colore;
+    ks.fillRect(0, 0, w, h);
+    // la sagoma ingrossata (contorno)
+    const gr = document.createElement('canvas');
+    gr.width = w + 2 * pad; gr.height = h + 2 * pad;
+    const kg = gr.getContext('2d');
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2;
+      kg.drawImage(sil, pad + Math.cos(a) * r, pad + Math.sin(a) * r);
+    }
+    kg.drawImage(sil, pad, pad);
+    const tela = document.createElement('canvas');
+    tela.width = gr.width; tela.height = gr.height;
+    const k = tela.getContext('2d');
+    k.globalAlpha = C.alfaOmbra;
+    k.drawImage(gr, o, o);
+    k.globalAlpha = 1;
+    k.drawImage(gr, 0, 0);
+    k.drawImage(im, pad, pad, w, h);
+    c = { tela, q, pad, w, h };
+    contornate.set(chiave, c);
+    return c;
+  }
+  // come drawImage(im, x, y, w, h), ma con la copia contornata se c'è
+  function fumetto(k, im, hRif, x, y, w, h, C) {
+    const c = contornata(im, hRif, C);
+    if (!c) { k.drawImage(im, x, y, w, h); return; }
+    const fx = w / c.w, fy = h / c.h;
+    k.drawImage(c.tela, x - c.pad * fx, y - c.pad * fy, c.tela.width * fx, c.tela.height * fy);
+  }
+
+  // i fondali dei quartieri, a tre strati (lontano, medio, vicino)
+  const fondali = {};
+  function fondale(id) {
+    if (!fondali[id]) {
+      fondali[id] = {};
+      for (const s of ['lontano', 'medio', 'vicino']) fondali[id][s] = carica(`${DISEGNI}fondali/${id}-${s}.png`);
+    }
+    return fondali[id];
+  }
 
   const $ = (s) => document.querySelector(s);
   const palco = $('#palco');
@@ -808,7 +878,8 @@
   function cambiaAudio() {
     muto = !muto;
     scrivi('muto', muto);
-    document.body.classList.toggle('muto', muto);
+    if (document.fonts && document.fonts.load) document.fonts.load('30px Bangers').catch(() => {});
+  document.body.classList.toggle('muto', muto);
     aggiornaMusica();
   }
   function cambiaMusica() {
@@ -850,6 +921,10 @@
   // scritta che sale da un punto del mondo (trick, punti)
   function scritta(testo, x, h, colore = '#fff') {
     stato.particelle.push({ tipo: 'scritta', testo, x, h, vx: 0, vy: 60, t: 0, dur: 0.9, colore });
+  }
+  // onomatopea a fumetto dentro una stella a punte (solo decorazione: usa Math.random)
+  function botto(testo, x, h, colore = '#e8463a', fondo = '#ffd23f', misura = 30) {
+    stato.particelle.push({ tipo: 'botto', testo, x, h, vx: 0, vy: 40, t: 0, dur: 0.7, colore, fondo, misura, rot: vis(-0.25, 0.25), seme: vis(0, 1000) });
   }
 
   // ---------------------------------------------------------------- azioni
@@ -894,6 +969,7 @@
     stato.statistiche.trick++;
     suoni.trickFatto(stato.combo ? stato.combo.azioni.length : 1);
     scritta(tr.nome, t.x, t.h + 120, '#ffe08a');
+    botto('POP!', t.x + 40, t.h + 60, '#ff7a1a', '#fff6c9', 24);
   }
 
   // ---------------------------------------------------------------- combo
@@ -946,6 +1022,7 @@
     stato.statistiche.sfondamenti++;
     suoni.sfondamento();
     messaggio('Sfondamento!', 0.9, '#ff9a3c');
+    botto('VROOOM!', t.x + 60, t.h + 90, '#e8463a', '#ffd23f', 28);
   }
 
   function bottaDiGrinta() {
@@ -990,6 +1067,7 @@
     suoni.botta();
     musica.stacco = 2;
     messaggio('BOTTA DI GRINTA!', 1.4, '#ff5a3c', true);
+    botto('KA-BOOM!', t.x + 70, t.h + 110, '#e8463a', '#ffd23f', 40);
     aggiungi('Botta di Grinta', 300);
   }
 
@@ -1004,6 +1082,7 @@
     }
     stato.punti += 50;
     suoni.sfascia();
+    botto('CRASH!', o.x + o.w / 2, o.h + 50, '#8a4b1f', '#ffe08a', 28);
     if (dallAlto) {
       const tr = TRICK.sfasciata;
       aggiungi(tr.nome, tr.punti);
@@ -1027,6 +1106,7 @@
     perdiCombo();
     stato.scossa = 0.3;
     suoni.urto();
+    botto('SBAM!', t.x + 30, t.h + 70, '#fff', '#e8463a', 30);
     if (t.terra && t.grind === 0) { t.terra = false; t.appoggio = -1; t.vy = 330; t.tenendo = false; }
     if (t.ruote <= 0) {
       stato.fase = 'ko';
@@ -1418,6 +1498,7 @@
     stato.statistiche.flip = (stato.statistiche.flip || 0) + k;
     suoni.trickFatto(stato.combo ? stato.combo.azioni.length + 2 : 3);
     scritta(nome + '!', t.x, t.h + 130, '#ffd23f');
+    botto(k > 1 ? 'WHOOOSH!' : 'WHOOSH!', t.x - 30, t.h + 70, '#2b7fd8', '#e6f6ff', 24);
   }
 
   // ---------------------------------------------------------------- half pipe
@@ -1619,6 +1700,7 @@
       aggiungi(o.tipo === 'panchina' ? 'Panchina' : 'Ringhiera', 40);
       suoni.grindInizio();
       scintille(t.x, t.h, 6);
+      botto('SKRRR!', t.x + 20, t.h + 80, '#1f63c4', '#dff4ff', 24);
       return;
     }
     suoni.atterra(0.5 + forte * 0.5);
@@ -1741,6 +1823,7 @@
     stato.statistiche.pestoni++;
     suoni.pestone();
     scritta(doppio ? 'Superpestone!' : 'Pestone!', e.x, e.base + 150, '#ffb36b');
+    botto(doppio ? 'SUPER BAM!' : 'BAM!', e.x + 30, e.base + 90, '#e8463a', '#ffd23f', doppio ? 34 : 32);
     stelline(e.x, e.base + AGENTI.alt);
   }
   function koNemico(e, sfondato) {
@@ -1749,7 +1832,7 @@
     e.ko = { x: 0, h: 0, vx: sfondato ? 380 : 120, vy: sfondato ? 600 : 300, rot: 0, vr: sfondato ? 9 : -5 };
     stato.punti += sfondato ? 100 : 0;
     suoni.ahia(e.tipo === 'retino');
-    if (sfondato) { suoni.sfascia(); scritta('Via!', e.x, e.base + 140, '#ffb36b'); }
+    if (sfondato) { suoni.sfascia(); scritta('Via!', e.x, e.base + 140, '#ffb36b'); botto('SDENG!', e.x, e.base + 80, '#e8463a', '#ffd23f', 28); }
   }
 
   function muoviBollette(dt) {
@@ -1830,7 +1913,7 @@
     for (const p of stato.particelle) {
       p.t += dt;
       if (p.tipo === 'onda' || p.tipo === 'luccichio') continue;
-      if (p.tipo === 'scritta') { p.h += p.vy * dt; continue; }
+      if (p.tipo === 'scritta' || p.tipo === 'botto') { p.h += p.vy * dt; continue; }
       p.x += p.vx * dt;
       p.h += p.vy * dt;
       if (p.tipo === 'pezzo' || p.tipo === 'scintilla') p.vy -= 1400 * dt;
@@ -1846,7 +1929,9 @@
   // il viale d'asfalto con la pista ciclabile.
   const QUARTIERI = {
     cascine: {
+      id: 'cascine',
       nome: 'Le Cascine',
+      velo: 'rgba(235,245,255,0.16)', // schiarisce lontano e medio: personaggi e ghiande si staccano
       cielo: ['#6fb7ea', '#cfeafc'],
       colline: ['#a8c98c', '#8fb877'],
       cipresso: '#3e6e3f',
@@ -1861,16 +1946,20 @@
     },
   };
   const Q = QUARTIERI.cascine;
+  const FUMETTO = 'Bangers, Fredoka, sans-serif'; // il font delle scritte a fumetto
   const yStrada = () => sy(0);
 
   function disegna() {
     ctx.save();
     if (stato.scossa > 0) ctx.translate((Math.random() - 0.5) * 14 * stato.scossa, (Math.random() - 0.5) * 10 * stato.scossa);
-    disegnaCielo();
-    disegnaColline();
-    disegnaArnoPonte();
-    disegnaPlatani();
-    disegnaSiepe();
+    const F = fondale(Q.id);
+    if (pronta(F.lontano)) disegnaLontano(F.lontano);
+    else { disegnaCielo(); disegnaColline(); disegnaArnoPonte(); }
+    if (pronta(F.medio)) striscia(F.medio, 0.3, yStrada() - 30, 182, true, Q.velo);
+    else disegnaPlatani();
+    if (Q.velo && !pronta(F.lontano)) { ctx.fillStyle = Q.velo; ctx.fillRect(-20, -20, larg + 40, yStrada() + 20); }
+    if (pronta(F.vicino)) striscia(F.vicino, 0.7, yStrada() - 12, 84, false);
+    else disegnaSiepe();
     disegnaStrada();
     disegnaOstacoli(false);
     disegnaGhiande();
@@ -1878,8 +1967,68 @@
     disegnaBollette();
     disegnaRider();
     disegnaParticelle();
+    disegnaVelocita();
     ctx.restore();
+    disegnaRetino();
     if (stato.fase !== 'menu') disegnaHud();
+  }
+
+  // uno strato del fondale: il disegno si ripete in orizzontale e scorre a
+  // `par` della telecamera; con `specchia` si alterna dritto e specchiato (così
+  // i bordi combaciano sempre). yBase è dove poggia il bordo basso.
+  // Per non scalare i disegni a ogni fotogramma (sul telefono costa) ogni strato
+  // si prepara una volta già alla misura dello schermo, con la copia specchiata
+  // accanto e il velo del quartiere sopra.
+  const strati = new Map();
+  function strato(im, h, specchia, velo) {
+    const S = Math.max(0.5, Math.round(ctx.getTransform().a * 4) / 4);
+    const chiave = im.src + '|' + h + '|' + S + '|' + velo;
+    let c = strati.get(chiave);
+    if (c) return c;
+    const w = h * im.naturalWidth / im.naturalHeight;
+    const pw = Math.round(w * S), ph = Math.round(h * S);
+    const tela = document.createElement('canvas');
+    tela.width = pw * (specchia ? 2 : 1); tela.height = ph;
+    const k = tela.getContext('2d');
+    k.drawImage(im, 0, 0, pw, ph);
+    if (specchia) { k.save(); k.translate(pw * 2, 0); k.scale(-1, 1); k.drawImage(im, 0, 0, pw, ph); k.restore(); }
+    if (velo) { k.globalCompositeOperation = 'source-atop'; k.fillStyle = velo; k.fillRect(0, 0, tela.width, ph); }
+    c = { tela, w: tela.width / S, h };
+    for (const [ch] of strati) if (ch.startsWith(im.src + '|')) strati.delete(ch); // una sola misura per disegno
+    strati.set(chiave, c);
+    return c;
+  }
+  function striscia(im, par, yBase, h, specchia, velo = null) {
+    const c = strato(im, h, specchia, velo);
+    const w = c.w, p = stato.cam.x * par;
+    for (let k = Math.floor(p / w); k * w - p < larg + 20; k++) {
+      ctx.drawImage(c.tela, Math.floor(k * w - p), yBase - h, w + 0.5, h);
+    }
+  }
+  // il colore della riga in cima a un disegno (per riempire il cielo sopra)
+  const cime = new Map();
+  function coloreCima(im) {
+    if (!cime.has(im)) {
+      let c = '#a9dcf5';
+      try {
+        const t = document.createElement('canvas');
+        t.width = 8; t.height = 1;
+        const k = t.getContext('2d');
+        k.drawImage(im, 0, 0, im.naturalWidth, 3, 0, 0, 8, 1);
+        const d = k.getImageData(0, 0, 8, 1).data;
+        let r = 0, g = 0, b = 0;
+        for (let i = 0; i < 8; i++) { r += d[i * 4]; g += d[i * 4 + 1]; b += d[i * 4 + 2]; }
+        c = `rgb(${Math.round(r / 8)},${Math.round(g / 8)},${Math.round(b / 8)})`;
+      } catch (e) { /* aperto da file: resta il colore di riserva */ }
+      cime.set(im, c);
+    }
+    return cime.get(im);
+  }
+  function disegnaLontano(im) {
+    const yb = yStrada() - 24, h = 400;
+    ctx.fillStyle = coloreCima(im);
+    ctx.fillRect(-20, -20, larg + 40, yb - h + 22);
+    striscia(im, 0.05, yb, h, true, Q.velo);
   }
 
   function disegnaCielo() {
@@ -2095,6 +2244,7 @@
       if (x > larg + 50 || x + o.w < -50 || o.rotto) continue;
       const yt = sy(o.h);
       ctx.save();
+      if (disegnaElemento(o, x, y0, yt)) { ctx.restore(); continue; }
       switch (o.tipo) {
         case 'cono': {
           if (o.colpito) { ctx.translate(x + 14, y0); ctx.rotate(1.3); ctx.translate(-14, 0); } else ctx.translate(x, y0);
@@ -2217,6 +2367,110 @@
     }
   }
 
+  // Gli elementi dipinti: ogni disegno si adatta alla sua sagoma (FORME),
+  // appoggiato a terra al centro in basso. Le misure in frazioni vengono dai
+  // disegni (dove sta la seduta della panchina, il tubo della ringhiera, …).
+  // Restituisce false se il disegno non c'è (resta quello nel codice).
+  function disegnaElemento(o, x, y0, yt) {
+    const im = disegni[o.tipo === 'buca' ? 'tombino' : o.tipo];
+    if (o.tipo === 'halfpipe') return disegnaPipeDipinta(o, x);
+    if (!pronta(im)) return false;
+    const r = im.naturalWidth / im.naturalHeight;
+    const piedi = (cx, h, w = h * r) => ctx.drawImage(im, cx - w / 2, y0 + 1 - h, w, h);
+    switch (o.tipo) {
+      case 'cono': {
+        ctx.translate(x + o.w / 2, y0 + 1);
+        if (o.colpito) ctx.rotate(1.3);
+        const h = o.h + 2, w = h * r;
+        ctx.drawImage(im, -w / 2, -h, w, h);
+        return true;
+      }
+      case 'cassette': piedi(x + o.w / 2, o.h + 2); return true;
+      case 'transenna': piedi(x + o.w / 2, o.h + 2); return true;
+      case 'panchina': piedi(x + o.w / 2, o.h / 0.47, o.w + 4); return true; // seduta al 53% dall'alto
+      case 'rampa': ctx.drawImage(im, x, y0 + 1 - (o.h + 2), o.w / 0.93, o.h + 2); return true; // la cima al 93%
+      case 'banco': piedi(x + o.w / 2, o.h / 0.95, o.w + 10); return true; // tendone in cima
+      case 'buca': {
+        // il tombino aperto sulla strada: il buco (dal 14% al 60% del disegno) sopra la buca
+        const w = (o.w + 10) / 0.46, h = 42;
+        ctx.drawImage(im, x + o.w / 2 - 0.37 * w, y0 + 8 - h / 2, w, h);
+        return true;
+      }
+      case 'cassonetto': {
+        // due bidoni affiancati (il disegno è più alto che largo)
+        const h = o.h + 4, w = h * r;
+        ctx.save();
+        ctx.translate(x + o.w - w / 2, 0); ctx.scale(-1, 1);
+        ctx.drawImage(im, -w / 2, y0 + 1 - h + 2, w, h);
+        ctx.restore();
+        ctx.drawImage(im, x, y0 + 1 - h, w, h);
+        return true;
+      }
+      case 'ringhiera': {
+        // testa (curva e primo piede), tratti di tubo con un piede, testa specchiata
+        const h = o.h / 0.98, k = h / im.naturalHeight;
+        const iw = im.naturalWidth, top = y0 + 1 - h;
+        const testa = 0.45 * iw * k, x0 = x - 4, x1 = x + o.w + 4;
+        ctx.drawImage(im, 0, 0, 0.45 * iw, im.naturalHeight, x0, top, testa, h);
+        const mezzo = x1 - x0 - 2 * testa;
+        const n = Math.max(1, Math.round(mezzo / (0.5 * iw * k)));
+        for (let i = 0; i < n; i++) {
+          ctx.drawImage(im, 0.45 * iw, 0, 0.5 * iw, im.naturalHeight, x0 + testa + i * mezzo / n - 0.5, top, mezzo / n + 1, h);
+        }
+        ctx.save();
+        ctx.translate(x1, 0); ctx.scale(-1, 1);
+        ctx.drawImage(im, 0, 0, 0.45 * iw, im.naturalHeight, 0, top, testa, h);
+        ctx.restore();
+        return true;
+      }
+      default: return false;
+    }
+  }
+
+  // la half pipe dipinta: il muro coi murales dietro (sopra la strada e dentro la
+  // conca) e la conca in sezione. La conca è divisa a metà: le due pareti si
+  // appoggiano ai bordi (il bordo esterno della curva, con il tubo, sta sul
+  // bordo della pipe) e in mezzo si allunga il fondo.
+  function disegnaPipeDipinta(o, x) {
+    const C = disegni.conca, M = disegni.muro;
+    if (!pronta(C)) return false;
+    const R = PIPE.raggio, x1 = x + o.w, y0 = sy(0);
+    if (pronta(M)) {
+      // la riga 247 del muro (sotto, i murales fanno da conca: si coprono) sta a terra
+      const k = 150 / 247, w = M.naturalWidth * k, h = M.naturalHeight * k;
+      const xm = x + o.w / 2 - w / 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(xm, y0 - 150, w, 136);
+      ctx.rect(x, y0 - 14, o.w, 60);
+      ctx.clip();
+      ctx.drawImage(M, xm, y0 - 150, w, h);
+      ctx.restore();
+      ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(xm, y0 - 14); ctx.lineTo(xm, y0 - 150); ctx.moveTo(xm + w, y0 - 150); ctx.lineTo(xm + w, y0 - 14); ctx.stroke();
+    }
+    const W = C.naturalWidth, H = C.naturalHeight;
+    const kx = R / (0.38 * W), ky = R / (0.81 * H);
+    const top = y0 - 0.07 * H * ky, hh = H * ky;
+    const fuori = 0.12 * W * kx; // i blocchi di pietra ai lati
+    ctx.drawImage(C, 0, 0, W / 2, H, x - fuori, top, W / 2 * kx, hh);
+    // il fondo: il pezzo centrale (dal 40% al 60%) ripetuto, dritto e specchiato
+    const pezzo = 0.2 * W * kx, n = Math.max(1, Math.round((o.w - 2 * R) / pezzo)), lp = (o.w - 2 * R) / n;
+    for (let i = 0; i < n; i++) {
+      const xx = x + R + i * lp;
+      if (i & 1) {
+        ctx.save(); ctx.translate(xx + lp, 0); ctx.scale(-1, 1);
+        ctx.drawImage(C, 0.4 * W, 0, 0.2 * W, H, -0.5, top, lp + 1, hh);
+        ctx.restore();
+      } else ctx.drawImage(C, 0.4 * W, 0, 0.2 * W, H, xx - 0.5, top, lp + 1, hh);
+    }
+    ctx.drawImage(C, W / 2, 0, W / 2, H, x1 - R, top, W / 2 * kx, hh);
+    // sotto, la terra
+    ctx.fillStyle = Q.terra || Q.erba;
+    ctx.fillRect(x - fuori, top + hh - 2, o.w + 2 * fuori, alt + 200);
+    return true;
+  }
+
   // la half pipe vista di lato: muro di fondo coi graffiti, il cemento sotto la
   // curva, i tubi di metallo sui bordi
   function disegnaPipe(o, x) {
@@ -2297,7 +2551,8 @@
         ctx.restore();
         continue;
       }
-      if (pronta(immagini.ghianda)) ctx.drawImage(immagini.ghianda, x - 11, y - 13, 22, 26);
+      // contorno chiaro: le ghiande si staccano dagli alberi e dal muro
+      if (pronta(immagini.ghianda)) fumetto(ctx, immagini.ghianda, 26, x - 11, y - 13, 22, 26, CONTORNO_GHIANDA);
     }
   }
 
@@ -2321,7 +2576,7 @@
       // camminata: un saltello
       let sal = 0;
       if (e.tipo === 'retino' && e.stato === 'attivo') sal = Math.abs(Math.sin(e.t * 9)) * 3;
-      ctx.drawImage(im, -110 * s, -302 * s - sal, w, hh);
+      fumetto(ctx, im, hh, -110 * s, -302 * s - sal, w, hh);
       ctx.restore();
       if (e.stato === 'stordito') {
         // stelline che girano sopra la testa
@@ -2336,7 +2591,7 @@
           ctx.fillStyle = '#ffd23f';
           ctx.strokeStyle = '#1c1f27';
           ctx.lineWidth = 3;
-          ctx.font = '700 30px Fredoka, sans-serif';
+          ctx.font = `34px ${FUMETTO}`;
           ctx.textAlign = 'center';
           ctx.strokeText('!', x, sy(h + AGENTI.alt + 16));
           ctx.fillText('!', x, sy(h + AGENTI.alt + 16));
@@ -2383,9 +2638,11 @@
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(Math.sin(b.rot) * 0.35);
+      ctx.fillStyle = 'rgba(20,22,30,0.4)';
+      ctx.fillRect(-11, -7, 28, 20);
       ctx.fillStyle = '#fff';
-      ctx.strokeStyle = '#8a8f99';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#1c1f27';
+      ctx.lineWidth = 2.5;
       ctx.fillRect(-14, -10, 28, 20);
       ctx.strokeRect(-14, -10, 28, 20);
       ctx.fillStyle = '#d8342c';
@@ -2396,7 +2653,7 @@
       ctx.fillRect(-9, 3, 18, 2);
       ctx.restore();
       // scia
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.strokeStyle = 'rgba(28,31,39,0.55)';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(x + 18, y - 4); ctx.lineTo(x + 40, y - 4); ctx.moveTo(x + 18, y + 4); ctx.lineTo(x + 32, y + 4); ctx.stroke();
     }
@@ -2406,6 +2663,13 @@
   function tavola(k, giro = 1) {
     k.save();
     k.scale(1, giro);
+    const im = disegni.tavola;
+    if (pronta(im)) {
+      const w = 90, h = w * im.naturalHeight / im.naturalWidth;
+      k.drawImage(im, -w / 2, -4, w, h);
+      k.restore();
+      return;
+    }
     // ruote e carrelli
     k.fillStyle = '#8d939c';
     k.fillRect(-27, 2, 10, 4); k.fillRect(17, 2, 10, 4);
@@ -2452,7 +2716,7 @@
     // ombra sulla strada (o sul piano)
     const sotto = supporto(t.x, t.h + 1).top;
     if (!t.pipe && sotto > -1e8) {
-      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillStyle = 'rgba(20,22,30,0.34)';
       const dist = clamp((t.h - sotto) / 200, 0, 1);
       ctx.beginPath(); ctx.ellipse(x, sy(sotto) + 2, 30 * (1 - dist * 0.5), 5, 0, 0, Math.PI * 2); ctx.fill();
     }
@@ -2471,16 +2735,16 @@
           ctx.translate(x, y - 28);
           ctx.rotate(ko ? t.rot : 1.2 + Math.sin(stato.tempo * 30) * 0.1);
           const hh = 58, w = hh * im.naturalWidth / im.naturalHeight;
-          ctx.drawImage(im, -w / 2, -hh / 2, w, hh);
+          fumetto(ctx, im, 62, -w / 2, -hh / 2, w, hh);
         } else if (ko) {
           const hh = 58, w = hh * im.naturalWidth / im.naturalHeight;
           ctx.translate(x, y);
-          ctx.drawImage(im, -w / 2, -hh, w, hh);
+          fumetto(ctx, im, 94, -w / 2, -hh, w, hh);
         } else {
           ctx.translate(x, y - 6);
           ctx.rotate(-1.25);
           const hh = 88, w = hh * im.naturalWidth / im.naturalHeight;
-          ctx.drawImage(im, -w / 2, -hh + 26, w, hh);
+          fumetto(ctx, im, 94, -w / 2, -hh + 26, w, hh);
         }
         ctx.restore();
       }
@@ -2554,7 +2818,6 @@
       ctx.save();
       ctx.translate(0, -13 + corpoY);
       ctx.scale(sqx, sqy);
-      ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 2;
       if (gino) {
         // Gino: solo la testa, animata (saltello, tremito, inclinazione)
         const hh = 62, w = hh * im.naturalWidth / im.naturalHeight;
@@ -2564,10 +2827,10 @@
         if (!t.terra && !t.pipe) r = clamp(t.vy / 3000, -0.2, 0.2);
         ctx.translate(dx, dy);
         ctx.rotate(r);
-        ctx.drawImage(im, -w / 2, -hh, w, hh);
+        fumetto(ctx, im, 62, -w / 2, -hh, w, hh);
       } else {
         const hh = 94, w = hh * im.naturalWidth / im.naturalHeight;
-        ctx.drawImage(im, -w / 2 - 2, -hh, w, hh);
+        fumetto(ctx, im, 94, -w / 2 - 2, -hh, w, hh);
       }
       ctx.restore();
     }
@@ -2609,9 +2872,10 @@
           ctx.lineWidth = 10 * (1 - f) + 2;
           ctx.beginPath(); ctx.ellipse(x, y, 40 + f * larg, 20 + f * 160, 0, Math.PI, 0); ctx.stroke();
           break;
+        case 'botto': disegnaBotto(p, x, y, f); break;
         case 'scritta':
           ctx.globalAlpha = 1 - f * f;
-          ctx.font = '700 20px Fredoka, sans-serif';
+          ctx.font = `22px ${FUMETTO}`;
           ctx.textAlign = 'center';
           ctx.lineWidth = 4;
           ctx.strokeStyle = '#1c1f27';
@@ -2625,8 +2889,86 @@
     }
   }
 
+  // linee di velocità a fumetto: quando Tino va forte o sfonda
+  function disegnaVelocita() {
+    const t = stato.tino;
+    if (!t || stato.fase !== 'corsa') return;
+    const forza = Math.max(clamp((t.v - 430) / 180, 0, 1) * 0.7, t.sfondamento > 0 || t.botta ? 1 : 0);
+    if (forza <= 0.02) return;
+    const p = stato.tempo * (t.v * 2.2);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 9; i++) {
+      const y = 70 + hash(i * 31) * (yStrada() - 90);
+      const lung = 60 + hash(i * 7) * 140;
+      const giro = larg + lung + 200;
+      const x = larg + 100 - ((p * (0.7 + hash(i * 3) * 0.6) + hash(i) * giro) % giro);
+      ctx.strokeStyle = `rgba(28,31,39,${0.28 * forza})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + lung, y); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,255,255,${0.5 * forza})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x + 6, y - 3); ctx.lineTo(x + lung * 0.7, y - 3); ctx.stroke();
+    }
+  }
+  // retinatura: puntini che crescono verso i bordi dello schermo, come la stampa dei fumetti
+  let retino = null;
+  function disegnaRetino() {
+    if (!retino || retino.l !== larg) {
+      const c = document.createElement('canvas');
+      const q = 1.5;
+      c.width = larg * q; c.height = alt * q;
+      const k = c.getContext('2d');
+      k.fillStyle = 'rgba(28,31,39,0.13)';
+      const passo = 9;
+      for (let y = 0; y < alt; y += passo) {
+        for (let x = (y / passo) % 2 ? passo / 2 : 0; x < larg; x += passo) {
+          const dx = Math.max(0, Math.abs(x - larg / 2) - larg * 0.36) / (larg * 0.14);
+          const dy = Math.max(0, Math.abs(y - alt / 2) - alt * 0.36) / (alt * 0.14);
+          const d = Math.min(1, Math.hypot(dx, dy));
+          if (d < 0.05) continue;
+          k.beginPath(); k.arc(x * q, y * q, d * 2.3 * q, 0, Math.PI * 2); k.fill();
+        }
+      }
+      retino = { l: larg, c };
+    }
+    // solo le fasce dei bordi (in mezzo non ci sono puntini)
+    const q = retino.c.width / larg, bx = Math.ceil(larg * 0.15), by = Math.ceil(alt * 0.15);
+    const pezzo = (x, y, w, h) => ctx.drawImage(retino.c, x * q, y * q, w * q, h * q, x, y, w, h);
+    pezzo(0, 0, larg, by); pezzo(0, alt - by, larg, by);
+    pezzo(0, by, bx, alt - 2 * by); pezzo(larg - bx, by, bx, alt - 2 * by);
+  }
+
+  function disegnaBotto(p, x, y, f) {
+    const s = f < 0.12 ? 0.4 + f / 0.12 * 0.8 : f < 0.22 ? 1.2 - (f - 0.12) : 1.1;
+    ctx.save();
+    ctx.globalAlpha = f > 0.7 ? (1 - f) / 0.3 : 1;
+    ctx.translate(x, y);
+    ctx.rotate(p.rot);
+    ctx.scale(s, s);
+    ctx.font = `${p.misura}px ${FUMETTO}`;
+    const lw = ctx.measureText(p.testo).width;
+    const rx = lw / 2 + 18, ry = p.misura * 0.85;
+    ctx.beginPath();
+    const n = 14;
+    for (let i = 0; i < n * 2; i++) {
+      const a = i / (n * 2) * Math.PI * 2;
+      const k = i % 2 ? 0.7 : 1 + hash(p.seme + i) * 0.22;
+      ctx.lineTo(Math.cos(a) * rx * k, Math.sin(a) * ry * k);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(28,31,39,0.9)';
+    ctx.save(); ctx.translate(4, 4); ctx.fill(); ctx.restore();
+    ctx.fillStyle = p.fondo; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#1c1f27'; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 5; ctx.strokeText(p.testo, 0, 2);
+    ctx.fillStyle = p.colore; ctx.fillText(p.testo, 0, 2);
+    ctx.restore();
+  }
+
   function testo(t, x, y, misura, colore, allinea = 'center', bordo = 4) {
-    ctx.font = `700 ${misura}px Fredoka, sans-serif`;
+    ctx.font = `${Math.round(misura * 1.12)}px ${FUMETTO}`;
     ctx.textAlign = allinea;
     ctx.lineJoin = 'round';
     ctx.lineWidth = bordo;
@@ -2651,6 +2993,8 @@
     // Grinta: 3 tacche
     const gx = 16, gy = 48, gw = 240, gh = 20;
     const piena = stato.grinta >= GRINTA.tacca * GRINTA.tacche;
+    ctx.fillStyle = 'rgba(28,31,39,0.45)';
+    arrotondato(gx + 1, gy + 1, gw + 6, gh + 6, 8); ctx.fill();
     ctx.fillStyle = '#1c1f27';
     arrotondato(gx - 3, gy - 3, gw + 6, gh + 6, 8); ctx.fill();
     const tw = gw / GRINTA.tacche;
@@ -2767,8 +3111,11 @@
       ? `<p class="record">Record: <b>${recordMetri} m</b> · <b>${recordPunti.toLocaleString('it-IT')}</b> punti · ghiande raccolte: ${ghiandeTotali}</p>` : '';
     const scelta = (id, nome, im) => `<button class="personaggio${stato.personaggio === id ? ' attivo' : ''}" data-azione="personaggio" data-id="${id}" aria-pressed="${stato.personaggio === id}">${im} ${nome}</button>`;
     return `<div class="riquadro">
-      <div class="ritratti">${img(stato.personaggio === 'gino' ? 'arrabbiato' : 'normale', 'salta')}${img('gino', 'gino' + (stato.personaggio === 'gino' ? ' salta' : ''))}</div>
-      <h1 class="titolo-punk">Tino Pro Skate</h1>
+      <div class="vignetta">
+        <img class="sfondo" src="${DISEGNI}fondali/vignetta.png" alt="" onerror="this.parentNode.classList.add('senza')">
+        <h1 class="titolo-punk">Tino Pro Skate</h1>
+        <div class="ritratti">${img(stato.personaggio === 'gino' ? 'arrabbiato' : 'normale', 'salta')}${img('gino', 'gino' + (stato.personaggio === 'gino' ? ' salta' : ''))}</div>
+      </div>
       <p>Hanno rubato lo skate di Gino! Tino sale sul suo e parte dalle Cascine: salti, trick, scivolate sulle panchine e pestoni in testa agli agenti della Tari.</p>
       ${rec}
       <div class="personaggi">${scelta('tino', 'Tino', img('normale'))}${scelta('gino', 'Gino', img('gino'))}</div>
@@ -2782,7 +3129,10 @@
 
   function pannelloStoria() {
     return `<div class="riquadro">
-      <h2>Lo skate di Gino</h2>
+      <div class="vignetta storia">
+        <img class="sfondo" src="${DISEGNI}fondali/vignetta.png" alt="Il viale delle Cascine al tramonto" onerror="this.parentNode.classList.add('senza')">
+        <h2 class="titolo-punk">Lo skate di Gino</h2>
+      </div>
       <div class="fumetti">
         <div class="fumetto">${img('gino', 'trema')}<p>Papà… mi hanno rubato lo skate!</p></div>
         <div class="fumetto destra">${img('arrabbiato')}<p>Sì, figlio mio: ci penso io!</p></div>

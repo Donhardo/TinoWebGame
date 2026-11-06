@@ -967,41 +967,66 @@ logica, su canvas), `ghianda.svg`.
   musica punk, Gino giocabile); 2 contenuti (da fare: Novoli, cantieri della tramvia e
   centro con ostacoli propri, modalità storia con gli inseguimenti dell'ispettore capo,
   potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
-  all'olio, lampredotto, ruota sgonfia; negozio); prima della tappa 2, la grafica a
-  fumetto delle Cascine e della half pipe (immagini già generate, da integrare); 3
+  all'olio, lampredotto, ruota sgonfia; negozio); grafica a fumetto delle Cascine e della
+  half pipe (fatta, prima della tappa 2); 3
   rifinitura (suoni, taratura con persone vere).
-- **Grafica a fumetto** (decisa): fondali ed elementi dipinti con Nano Banana Pro
-  (Gemini) in stile fumetto, generati dal proprietario del sito; per ora il gioco usa
-  ancora i disegni nel codice, che restano come riserva se un file manca. Stile comune
-  dei prompt: "Comic book cartoon style for a 2D side-scrolling skateboarding game: bold
-  uniform black ink outlines, flat vibrant colors with simple cel shading, light halftone
-  dots in the shadows, playful and exaggerated shapes, punk rock energy. Strict side view
-  (orthographic, no perspective), no people, no animals, no logos, no text unless
-  requested." Il primo fondale fa da riferimento di stile per gli altri ("same style as
-  the attached image").
-  - Fondali a tre strati per quartiere, tileable in orizzontale: lontano (21:9, cielo,
-    colline, monumenti; niente nel 15% basso), medio (21:9 su magenta #FF00FF, alberi,
-    lampioni, palazzi sulla stessa linea di base in fondo), vicino (4:1 su magenta, siepe,
-    cancellate, marciapiede). Cascine: colline coi cipressi, ponte all'Indiano, Arno;
-    platani, lampioni, la piramide; siepe con la cancellata.
-  - Elementi su magenta, di lato, appoggiati al bordo basso, con le proporzioni delle
-    sagome di `FORME`: cono 4:5, tombino aperto col coperchio 2:1, panchina verde 2,3:1,
-    ringhiera tileable 4:1, cassonetto 4:3, cassette di frutta 1:1, transenna 3:4, rampa
-    3:1, banco del mercato 2:1, tavola dello skate 5:1.
-  - Half pipe: muro di fondo coi murales (4:1, tileable, scritte "TINO", "PUNK", "SK8",
-    stelle, fulmini, una ghianda con gli occhiali da sole) e la conca vista in sezione su
-    magenta (larga 2,2 volte la profondità, tubi sui bordi). Facoltativa una vignetta
-    16:9 per il menu e la storia (viale delle Cascine al tramonto con lo skate
-    abbandonato).
-  - Preparazione (come l'aliante di Gino Volante): togliere il magenta calcolando la
-    trasparenza da quanto è magenta il pixel e ripulire i bordi, ritagliare, ridurre e
-    ottimizzare; i fondali senza strisce ripetute ai lati; file in
-    `games/tino-pro-skate/disegni/` (`fondali/`, `elementi/`, `pipe/`), nomi in
-    minuscolo coi trattini.
-  - Le foto di Tino e Gino restano le originali: per farle stare nel fumetto si aggiunge
-    nel codice un contorno nero spesso e un'ombra piena; scritte a fumetto ("BAM!",
-    "POP!", "SKRRR!") con un font da fumetto di Google Fonts (es. Bangers), linee di
-    velocità e retinatura.
+- **Grafica a fumetto** (fatta per le Cascine): fondali ed elementi dipinti con Nano Banana Pro
+  (Gemini) dal proprietario del sito, in `games/tino-pro-skate/disegni/`; se un file manca resta
+  il disegno nel codice. Stile comune dei prompt: "Comic book cartoon style for a 2D
+  side-scrolling skateboarding game: bold uniform black ink outlines, flat vibrant colors with
+  simple cel shading, light halftone dots in the shadows, playful and exaggerated shapes, punk
+  rock energy. Strict side view (orthographic, no perspective), no people, no animals, no logos,
+  no text unless requested." Il primo fondale fa da riferimento ("same style as the attached
+  image"); elementi su magenta #FF00FF, di lato, appoggiati al bordo basso, con le proporzioni
+  delle sagome di `FORME`.
+  - **Preparazione** (copione in Python non nel repository): Gemini li dà in JPG; il magenta si
+    toglie calcolando la trasparenza da quanto è magenta il pixel (`min(r, b) - g`), solo nella
+    zona di sfondo (collegata al bordo, più i buchi molto magenta come tra le doghe della
+    panchina, allargata di 2 px), con una soglia (sotto il 30% di colore il pixel è trasparente:
+    lo sfondo sfumato lasciava un velo) e togliendo il magenta dai bordi semitrasparenti;
+    poi ritaglio, riduzione (circa 2,5 volte la misura in gioco) e palette a 256 colori.
+  - **File**: `fondali/cascine-lontano.png` (1578 × 665, cielo, colline coi cipressi, ponte
+    all'Indiano, Arno), `cascine-medio.png` (platani, lampioni, piramide), `cascine-vicino.png`
+    (cancellata, siepe, marciapiede), `fondali/vignetta.png` (viale al tramonto con lo skate e un
+    cartello vuoto: ci va il titolo; menu e pannello della storia); `elementi/` cono, cassette,
+    cassonetto (un bidone più alto che largo: in gioco sono due bidoni affiancati, uno
+    specchiato), transenna (vista di fronte: più larga della sagoma), panchina, ringhiera
+    (tagliata a destra: si compone con la testa, tratti di tubo con un piede e la testa
+    specchiata), rampa, banco del mercato (allargato del 25%), tombino (aperto, il buco sulla
+    buca), tavola; `pipe/muro.png` (murales con TINO, PUNK, SKK8, la ghianda con gli occhiali) e
+    `pipe/conca.png` (sezione della conca coi blocchi di pietra ai lati).
+  - **Strati** (`disegna`, `striscia`, `strato`): lontano alto 400 a 0,05 della telecamera, medio
+    alto 182 a 0,3, vicino alto 84 a 0,7 (poggia 12 px sopra la strada); lontano e medio si
+    affiancano dritti e specchiati (i bordi non combaciavano), il vicino si ripete dritto. Sopra
+    il lontano si riempie col colore della sua riga in cima. Ogni strato si prepara una volta già
+    scalato per lo schermo, con la copia specchiata accanto e il velo del quartiere (`Q.velo`,
+    bianco al 16%: personaggi, ghiande e bollette si staccano) già sopra: scalare i disegni a
+    ogni fotogramma raddoppiava il tempo di disegno sul telefono.
+  - **Elementi** (`disegnaElemento`): adattati alla sagoma senza cambiarla, appoggiati a terra al
+    centro; le misure vengono dai disegni (seduta della panchina al 53% dall'alto, cima della
+    rampa al 93% della larghezza, tendone del banco in cima, buco del tombino dal 14% al 60%).
+  - **Half pipe** (`disegnaPipeDipinta`): il muro coi murales è alto 150 sopra la strada (la riga
+    247 del disegno sta a terra: sotto il disegno fa già da conca e si copre), largo ~1250, e si
+    vede anche nella parte aperta della conca; la conca è divisa a metà, le pareti hanno il
+    bordo esterno della curva (col tubo) sul bordo della pipe e in mezzo si ripete il pezzo
+    centrale del fondo (dal 40% al 60%), dritto e specchiato (stirare una colonna sola faceva
+    strisciate).
+  - **Aspetto a fumetto**: le foto di Tino, Gino e degli agenti si disegnano da una copia
+    preparata una volta (`contornata`, `fumetto`) con contorno nero di 3 px e ombra piena
+    sfalsata di 4 px; le ghiande hanno un contorno chiaro (si perdevano sugli alberi). Font
+    Bangers (Google Fonts) per HUD, messaggi, scritte dei trick e titoli; onomatopee in una
+    stella a punte (`botto`: POP! Giglio, WHOOSH! flip, SKRRR! grind, BAM! pestone, CRASH!
+    cassette, SBAM! urto, SDENG! agente sfondato, VROOOM! Sfondamento, KA-BOOM! Botta); linee di
+    velocità sopra i 430 px/s e con lo Sfondamento; retinatura a puntini sui bordi dello
+    schermo; bollette con contorno nero; pannelli con bordo nero spesso, ombra piena e
+    retinatura, bottoni da fumetto, foto con contorno (CSS `drop-shadow`).
+  - **Prestazioni**: con il processore rallentato ×4 (Pixel 7 in orizzontale) un fotogramma si
+    disegna in ~14 ms (prima ~9,5); i disegni pesano ~1,5 MB in tutto.
+  - **Controllo**: le corse simulate danno lo stesso identico stato di prima (8 semi, 3000 m,
+    impronta di tutto lo stato tranne particelle e messaggi; va fissata la larghezza dello
+    schermo, perché la strada si genera fino a un po' oltre il bordo destro).
+- **Altri quartieri** (tappa 2): fondali a tre strati con lo stesso schema; nomi
+  `fondali/<quartiere>-lontano|medio|vicino.png` (`fondale(Q.id)`).
 - **Mondo**: x verso destra, h verso l'alto (0 = strada), 40 px = 1 m. Schermo logico
   alto 540, largo 760-1300 secondo lo schermo; Tino sta a 0,26 della larghezza.
 - **Fisica** (tabella `FISICA`): gravità 2300, ollie 780 (~132 px; tenendo premuto la
@@ -1109,7 +1134,8 @@ logica, su canvas), `ghianda.svg`.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
-  `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e `root`.
+  `disegni/`, `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e
+  `root`.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
