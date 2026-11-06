@@ -964,8 +964,8 @@ logica, su canvas), `ghianda.svg`.
   (oppure da soli quando lo slancio è finito).
 - **Tappe**: 1 motore (fatta: corsa, salti, trick, combo, grind, manual, schiacciata,
   Grinta, agenti col retino e col timbro, quartiere delle Cascine, corsa infinita,
-  musica punk, Gino giocabile); 2 contenuti (da fare: Novoli, cantieri della tramvia e
-  centro con ostacoli propri, modalità storia con gli inseguimenti dell'ispettore capo,
+  musica punk, Gino giocabile); 2 contenuti (fatti i quattro quartieri: Novoli, cantieri
+  della tramvia e centro con ostacoli propri; da fare: modalità storia con gli inseguimenti dell'ispettore capo,
   potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
   all'olio, lampredotto, ruota sgonfia; negozio); grafica a fumetto delle Cascine e della
   half pipe (fatta, prima della tappa 2); 3
@@ -1037,11 +1037,55 @@ logica, su canvas), `ghianda.svg`.
   adesivi A1-A6), vignette della storia V1-V4, transenna alta dipinta S1. Proporzioni dei
   pezzi nuovi proposte nei prompt: le sagome si adattano ai disegni quando arrivano.
   Vantaggi e svantaggi delle tavole nei prompt sono solo una proposta.
-  **Stato**: il proprietario ha generato le immagini da N1 a T4 (da caricare nella prossima
-  sessione in uno zip); mancano T5, T6, K1-K5, A1-A6, V1-V4 e S1 (crediti finiti, li fa
-  dopo). Il codice della tappa 2 non è ancora cominciato.
-- **Altri quartieri** (tappa 2): fondali a tre strati con lo stesso schema; nomi
-  `fondali/<quartiere>-lontano|medio|vicino.png` (`fondale(Q.id)`).
+  **Stato**: arrivate e preparate (come quelle delle Cascine, copione Python non nel
+  repository) le immagini da N1 a T4, tranne C11 (barriera di cemento) e P4 (bombolone), che
+  per ora sono disegnati nel codice. Mancano T5, T6, K1-K5, A1-A6, V1-V4 e S1. Decisioni prese
+  sulle immagini: il tram C8 resta con le scritte della fiancata (va bene così al
+  proprietario; tolte solo le perline e lo sfondo bianco sopra il tetto); turista F6 (la
+  persona), non l'orsetto F6b; lo scavo C9 è tagliato sotto i bordi in prospettiva (i tubi sui
+  bordi sono disegnati nel codice); del fango C6 resta solo la pozza (via l'asfalto, tenuti i
+  pixel marroni). I lontani di Gemini (anche quello delle Cascine) avevano in fondo una fascia
+  bianca, tagliata: nel centro si vedeva sotto gli archi del Ponte Vecchio, che ora ha dietro
+  l'acqua dell'Arno disegnata nel codice. File: `fondali/<q>-lontano|medio|vicino.png` per `novoli`, `cantieri`,
+  `centro`, `fondali/ponte-vecchio.png`; `elementi/` scalinata, corrimano, fioriera,
+  monopattini, ruspa, benna, fango, binari, tram, sampietrini, turista, bancarella, bici;
+  `pipe/scavo.png`, `pipe/muro-cantiere.png`; `mezzi/` ape, monopattino, carrello, golf
+  (I1-I4); `poteri/` casco, ruote-oro, calamita, schiacciata, lampredotto, ruota-sgonfia
+  (P1-P3, P5-P7); `tavole/` giglio, longboard, leggera, pesante (T1-T4). Mezzi, poteri e
+  tavole non sono ancora usati nel codice.
+- **Quartieri** (tabella `QUARTIERI`, `GIRO_QUARTIERI`, `quartiereA(x)`): Cascine → Novoli →
+  cantieri della tramvia → centro, 750 m l'uno (`LUNGO_QUARTIERE`), poi si ricomincia dalle
+  Cascine (sempre più veloci). Ogni quartiere ha nome, colori (cielo, colline, palazzi,
+  marciapiede, strada, terra) e tipo di strada (`viale`, `piazza` di cemento, `cantiere` con
+  rattoppi e riga gialla, `lastricato` di pietra, `stradaQuartiere`). Lontano e medio sfumano
+  in 30 m (`SFUMA`) dal quartiere vecchio al nuovo; vicino e strada cambiano di netto al
+  confine (`perSegmenti`). Entrando compare il nome con un sottotitolo. Nel centro il medio
+  alterna i palazzi al Ponte Vecchio (`medioCentro`); senza disegni restano cielo, colline e
+  file di palazzi coi colori del quartiere (`disegnaPalazzi`). I pezzi hanno `q` (in quali
+  quartieri compaiono) e `pesi` per quartiere; i pezzi comuni (coni, cassette, buche, agenti,
+  rampe, transenne) ci sono ovunque, panchine, ringhiere, banco del mercato e cassonetti sono
+  delle Cascine (panchine e cassonetti anche a Novoli). Menu: "Parti da" sceglie il quartiere
+  di partenza (si parte coi metri e la velocità di lì); si sblocca quando il record arriva al
+  suo inizio (`quartiereAperto`, `localStorage` `partenza`). A fine corsa si vede il quartiere
+  raggiunto.
+  - **Novoli**: scalinata (`scalinata()`: sette parti `gradino` invisibili, 16-32-48-64-48-32-16
+    px, su cui si sale da soli perché `FISICA.gradino` ora è 18; corrimano invisibili che salgono
+    da 50 a 101, corrono a 101 sopra il piano e scendono a 62: grind inclinati, con `h0`,
+    `inclinato`, `quotaSu`, `pendenza`), corrimano lungo (grind a 60, 480-760 px), fioriera
+    (solida e grind sul bordo a 44), monopattini (solidi, rompibili, 50 di altezza).
+  - **Cantieri**: ruspa (tabella `RUSPA`: il corpo sta dietro e non urta; il braccio gira
+    attorno al perno, ciclo 3,2 s: giù 1 s con la benna a terra da saltare, sale 0,4 s, su 1,4
+    s, alta abbastanza da passarci sotto, scende 0,4 s; `angoloBenna`, `riquadroBenna`), fango
+    (zona di 220-300 px: a terra la velocità ×0,62, `ZONE`), binari (massicciata a 12, su cui si
+    sale da soli, e rotaia grind a 32), tram (solido e piano a 92, lungo 560: ci si salta sopra),
+    barriera di cemento (solida a 50, disegnata nel codice), lo scavo al posto della half pipe
+    (stesse regole, `arte: 'scavo'`, `disegnaScavo`, `disegnaMuroCantiere`), più transenne alte.
+  - **Centro**: sampietrini (zona di 520-820 px con un cono o le bici in mezzo: Tino trema, il
+    rotolio rimbomba e niente manual), turisti (solidi alti 96, uno o due; saltarli senza urtarli
+    vale "Foto ricordo! +100" col flash), bancarella (carretto solido a 54 e tettoia a 130 da cui
+    si passa sotto), bici nella rastrelliera (solide a 54, larghe 170).
+  - Tolti dopo le prove: l'agente col timbro sopra la fioriera e sopra la bancarella (atterrando
+    sulla fioriera ci si scivolava contro; sulla bancarella la tettoia lo copriva).
 - **Mondo**: x verso destra, h verso l'alto (0 = strada), 40 px = 1 m. Schermo logico
   alto 540, largo 760-1300 secondo lo schermo; Tino sta a 0,26 della larghezza.
 - **Fisica** (tabella `FISICA`): gravità 2300, ollie 780 (~132 px; tenendo premuto la
@@ -1123,7 +1167,7 @@ logica, su canvas), `ghianda.svg`.
   prende davanti a sé fino a 76 px d'altezza); col timbro lancia bollette ogni 1,9 → 1,25
   s, basse (44, da saltare) o alte (118, non bisogna saltare). Il pestone vale se si
   scende sulla testa entro 50 px dal centro; di lato è un urto.
-- **Quartieri** (tabella `QUARTIERI`, per ora solo `cascine`): fondale disegnato nel
+- **Fondale di riserva delle Cascine**: fondale disegnato nel
   codice a strati che scorrono a velocità diverse: nuvole, colline con i cipressi, l'Arno
   con il ponte all'Indiano, filari di platani con i lampioni e la piramide (l'antica
   ghiacciaia), siepe con la cancellata, viale d'asfalto con la pista ciclabile.
@@ -1148,7 +1192,18 @@ logica, su canvas), `ghianda.svg`.
   cause di urto più frequenti sono la rete, le bollette alte e il cassonetto. Con la half
   pipe (6 corse, ±20%): pianificatore 0-1 urti fino a 4000 m in 6 corse su 6, umani
   ~1800, ~3000, ~4500 m (la conca è una pausa senza ostacoli).
-- **Prove automatiche**: `window.tinoProSkate` (`stato` (getter), `nuovaCorsa(seme)`,
+- **Prove con i quartieri** (copioni non nel repository, in Playwright): il pianificatore
+  (ricerca in profondità con `clona`/`rimetti`, quattro mosse per tratti da 0,15 s, 5 tratti
+  avanti) arriva a 4000 m senza urti in 8 corse su 8 attraverso tutti i quartieri. I giocatori
+  "umani" sono stati riscritti: quando vedono che andando dritti urteranno cercano la finestra
+  di tempo in cui la mossa (salto corto, salto tenuto, ↓ tenuto) supera il pericolo lasciando
+  una via d'uscita per dopo (una ricerca in profondità di 3 tratti), e la fanno a metà finestra
+  con l'errore del livello. Con questo copione (8 corse) il gioco di prima, solo Cascine, dava
+  principiante ~1245 m e medio ~2430 m; con i quartieri principiante ~1245 m, medio ~2645 m,
+  bravo ~7150 m. Il copione di prima dava numeri un po' diversi (1500 / 2700 / 5150): i due
+  copioni non sono confrontabili tra loro, solo con sé stessi. Prima di accorciarli le bici
+  (196 px) e i monopattini (175) lasciavano una finestra di salto di meno di 0,1 s.
+- **Prove automatiche**: `window.tinoProSkate` (`stato` (getter), `nuovaCorsa(seme, da)` (da = quartiere di partenza, 0-3),
   `aggiorna`, `premi(azione, giu)` con azione `salto`, `trick`, `giu`, `avanti`,
   `indietro`, `sfondamento`, `botta`, `clona()`, `rimetti(s)`, `supporto`, `curva`, tabelle); con
   `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli. Lo stato
@@ -1163,7 +1218,7 @@ logica, su canvas), `ghianda.svg`.
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
   `disegni/`, `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e
-  `root`.
+  `root`. Per provare i quartieri, nella copia di `gioco.js` `quartiereAperto = () => true`.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;

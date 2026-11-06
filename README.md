@@ -70,6 +70,12 @@ e poi si visita http://localhost:8000.
   cui si esce tenendo →;
   si abbattono gli agenti della Tari saltandoci in testa. La Grinta (3 tacche) si
   carica con i trick: una tacca per lo Sfondamento, tre per la Botta di Grinta che
-  stordisce tutti. Per ora corsa infinita alle Cascine (anche con Gino), con grafica a
+  stordisce tutti. Corsa infinita (anche con Gino) attraverso quattro quartieri di Firenze,
+  ognuno con fondali e ostacoli propri: le Cascine, Novoli (scalinata col corrimano, corrimano
+  lunghi, fioriere, monopattini), i cantieri della tramvia (ruspa con la benna che sale e
+  scende, fango che rallenta, rotaie, il tram, barriere, lo scavo al posto della half pipe) e
+  il centro (sampietrini che fanno tremare, turisti, bancarelle, bici, il Ponte Vecchio sullo
+  sfondo); nel menu si sceglie da quale quartiere partire (si sblocca arrivandoci). Grafica a
   fumetto (fondali a tre strati ed elementi dipinti con Gemini in `disegni/`, contorni neri
-  attorno alle foto, onomatopee) e musica punk sintetizzata; Novoli, i cantieri della tramvia, il centro e la storia arrivano dopo.
+  attorno alle foto, onomatopee) e musica punk sintetizzata; la storia con gli inseguimenti
+  dell'ispettore arriva dopo.
