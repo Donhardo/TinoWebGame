@@ -959,6 +959,9 @@ logica, su canvas), `ghianda.svg`.
   con piccoli poteri, caschi e adesivi da guardare); Gino giocabile nell'infinito (scelta
   nel menu, `localStorage` `personaggio`); musica punk rock sintetizzata. Sul telefono si
   gioca in orizzontale (in verticale compare l'invito a girarlo e il gioco va in pausa).
+  Dopo la prima prova: manual con ← (non più con ↓), inclinazione in aria con ← → per
+  backflip e frontflip (la Cupola è stata tolta), half pipe da cui si esce tenendo →
+  (oppure da soli quando lo slancio è finito).
 - **Tappe**: 1 motore (fatta: corsa, salti, trick, combo, grind, manual, schiacciata,
   Grinta, agenti col retino e col timbro, quartiere delle Cascine, corsa infinita,
   musica punk, Gino giocabile); 2 contenuti (da fare: Novoli, cantieri della tramvia e
@@ -972,14 +975,25 @@ logica, su canvas), `ghianda.svg`.
   gravità scende a 1350 per 0,28 s, ~200 px). Velocità e pause tra i pezzi nelle curve
   `CURVE` ([metri, valore]): 340 → 395 (400 m) → 465 (1200) → 535 (2500) → 585 px/s
   (4000 m); strada libera tra i pezzi 1,5 s → 0,72 s.
-- **Comandi**: Spazio / ↑ / W salto (tenere = più alto); X / K trick in aria (Giglio; con
-  → la Cupola; tenendo premuto il Giglio diventa la presa "Il Lampredotto"); ↓ / S a
-  terra manual (max 3 s), in aria schiacciata (sfonda cassette e transenne dall'alto e
-  rimbalza); E / Maiusc Sfondamento; Q / Invio Botta di Grinta; mouse: sinistro salto,
-  destro trick. Telefono: metà sinistra salto; metà destra tocco = Giglio (dopo 0,11 s),
-  trascinata a destra = Cupola, tenuta = presa in aria / manual a terra, trascinata in
-  giù = schiacciata; pulsanti SFONDA e BOTTA disegnati in alto a destra.
-- **Trick e combo** (tabella `TRICK`): Giglio 0,36 s / 100 punti, Cupola 0,56 s / 220,
+- **Comandi**: Spazio / ↑ / W salto (tenere = più alto); in aria ← → (o A D) girano
+  all'indietro / in avanti, a terra fanno il manual (← sulle ruote dietro, → "di punta",
+  max 3 s); X / K Giglio in aria (tenendo premuto diventa la presa "Il Lampredotto");
+  ↓ / S schiacciata in aria (sfonda cassette e transenne dall'alto e rimbalza); E /
+  Maiusc Sfondamento; Q / Invio Botta di Grinta; mouse: sinistro salto, destro trick. Se
+  si salta tenendo ← o → (dal manual) non si gira finché non si lasciano
+  (`bloccaGiro`). Telefono: metà sinistra salto; metà destra: tocco = Giglio (dopo 0,11
+  s), tenuta = presa in aria / manual a terra, trascinata a destra o a sinistra = gira
+  (e nella half pipe a destra esce), trascinata in giù = schiacciata; pulsanti SFONDA e
+  BOTTA disegnati in alto a destra.
+- **Rotazione** (tabella `GIRO`, `giraAria`, `controllaAtterraggio`): tenendo ← o → la
+  velocità di rotazione sale (60 rad/s²) fino a 12 rad/s; lasciando si smorza (×e^-18t).
+  All'atterraggio la tavola deve essere dritta rispetto alla superficie (le rampe sono
+  inclinate) entro 0,62 rad (~35°) e il trick finito, altrimenti Tino cade; ogni giro
+  intero vale un Frontflip o un Backflip (`flipFatti`: 250 punti e 30 di Grinta a giro,
+  Doppio / Triplo con ×1,3). In discesa, se l'angolo è sbagliato la tavola si illumina di
+  rosso. Un flip sulla strada riesce col salto lungo lasciando la freccia dopo ~0,55 s
+  (finestra di ~0,1 s); con le rampe e la half pipe c'è più tempo.
+- **Trick e combo** (tabella `TRICK`): Giglio 0,36 s / 100 punti, flip (vedi sopra),
   presa 260 al secondo, grind 200 al secondo, manual 110 al secondo, Pestone 150
   (Superpestone doppio se si arriva con la schiacciata), Sfasciata 120. Un trick a metà
   quando si tocca terra fa cadere (si perdonano gli ultimi 0,07 s): niente ruota persa,
@@ -1002,8 +1016,22 @@ logica, su canvas), `ghianda.svg`.
   coni, transenna (rompibile), banco del mercato del martedì (tendone su cui si sale, con
   le cassette sotto), agente col timbro (davanti 860 px liberi: lancia da lontano), due
   cassonetti, due agenti col retino (il secondo dove si ricade dopo il pestone sul primo,
-  e non alza la rete), cono e agente, agente col timbro sul cassonetto. Ghiande lungo i
+  e non alza la rete), cono e agente, agente col timbro sul cassonetto, half pipe (dai
+  60 m). Ghiande lungo i
   salti e sui grind (10 punti l'una, sommate in `ghiande-totali` per il negozio futuro).
+- **Half pipe** (tabella `PIPE`, `puntoPipe`, `muoviPipe`, `lanciaPipe`, `esciPipe`,
+  `disegnaPipe`): conca a U scavata nella strada (due quarti di cerchio di raggio 130 e
+  fondo piatto di 200, larga 460), con muro di fondo coi graffiti e tubi sui bordi;
+  vicino alla conca la telecamera scende di 112 px (`stato.cam.h`, che entra in `sy`) e
+  mentre Tino è dentro la inquadra ferma. Tino ci entra dal bordo sinistro (o ci atterra
+  da un salto) e la percorre con la gravità lungo la curva; a ogni bordo vola dritto in
+  su a 960 × 0,9^passaggi px/s (~200 px al primo, ~6 voli), con base della tavola
+  verticale; in volo gira e fa i trick, e all'atterraggio si gira (specchiato, `verso`).
+  Ogni volo è un'azione "Aria" (50 punti) e la combo resta aperta per tutta la conca.
+  Tenendo → quando arriva al bordo destro esce e riprende la corsa; se lo slancio è sotto
+  560 esce da solo (~9 s). Una caduta dentro la conca toglie la combo e due passaggi.
+  Ghiande in colonna sopra i bordi. Mentre Tino è dentro gli agenti aspettano e le
+  bollette spariscono; la Botta di Grinta non si può usare.
 - **Agenti** (tabella `AGENTI`, disegni di `assets/agenti-tari/`, non si specchiano): col
   retino cammina verso Tino e a 215 px alza la rete (0,2 s di avviso, poi 0,38 s in cui
   prende davanti a sé fino a 76 px d'altezza); col timbro lancia bollette ogni 1,9 → 1,25
@@ -1031,10 +1059,12 @@ logica, su canvas), `ghianda.svg`.
   ogni ostacolo ha una finestra di 0,3-0,6 s per il salto giusto. Giocatori "umani" che
   saltano a metà della finestra con un errore (principiante 0,12 s e 3% di salti persi,
   medio 0,08 s e 1,5%, bravo 0,05 s e 0,5%; 8 corse): ~1500, ~2700, ~5150 m di media. Le
-  cause di urto più frequenti sono la rete, le bollette alte e il cassonetto.
+  cause di urto più frequenti sono la rete, le bollette alte e il cassonetto. Con la half
+  pipe (6 corse, ±20%): pianificatore 0-1 urti fino a 4000 m in 6 corse su 6, umani
+  ~1800, ~3000, ~4500 m (la conca è una pausa senza ostacoli).
 - **Prove automatiche**: `window.tinoProSkate` (`stato` (getter), `nuovaCorsa(seme)`,
   `aggiorna`, `premi(azione, giu)` con azione `salto`, `trick`, `giu`, `avanti`,
-  `sfondamento`, `botta`, `clona()`, `rimetti(s)`, `supporto`, `curva`, tabelle); con
+  `indietro`, `sfondamento`, `botta`, `clona()`, `rimetti(s)`, `supporto`, `curva`, tabelle); con
   `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli. Lo stato
   contiene solo dati (anche il seme del generatore, `stato.rng`), quindi copiandolo si
   prova il futuro; le particelle usano `Math.random` per non toccare la strada.

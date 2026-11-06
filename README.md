@@ -64,8 +64,9 @@ e poi si visita http://localhost:8000.
   in `games/sparabolle/livelli.js`.
 - **Tino Pro Skate** (`games/tino-pro-skate/`): Tino corre sullo skate per le strade di
   Firenze per recuperare lo skate di Gino, rubato dall'ispettore capo della Tari. Salti,
-  trick in aria (Giglio, Cupola, presa), scivolate su panchine e ringhiere, manual e
-  combo; si abbattono gli agenti della Tari saltandoci in testa. La Grinta (3 tacche) si
+  trick in aria (Giglio, presa, frontflip e backflip con ← →: bisogna atterrare dritti),
+  scivolate su panchine e ringhiere, manual e combo, half pipe da cui si esce tenendo →;
+  si abbattono gli agenti della Tari saltandoci in testa. La Grinta (3 tacche) si
   carica con i trick: una tacca per lo Sfondamento, tre per la Botta di Grinta che
   stordisce tutti. Per ora corsa infinita alle Cascine (anche con Gino), con musica punk
   sintetizzata; Novoli, i cantieri della tramvia, il centro e la storia arrivano dopo.
