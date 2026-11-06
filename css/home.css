@@ -247,6 +247,28 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
 }
 @keyframes ap-giocatore { from { left: 28%; } to { left: 72%; } }
 
+/* Anteprima di Sparabolle: un grappolo di bolle e una bolla che sale */
+.anteprima-bolle {
+  background:
+    linear-gradient(#5c3517 0 9%, transparent 9%),
+    linear-gradient(transparent 80%, #6cbf4a 80%, #58a83c),
+    linear-gradient(#9fd6f2, #d6effa);
+}
+.ap-bolle { position: absolute; left: 4%; top: 9%; width: 92%; height: auto; }
+.ap-bolle circle { stroke: rgba(0, 0, 0, 0.25); stroke-width: 1; }
+.ap-bolla-volo {
+  position: absolute; left: 50%; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 12%, #c69cf0 25%, #a463dc 70%, #6f2fb0);
+  animation: ap-bolla-volo 1.6s ease-in infinite;
+}
+.ap-tino-b { position: absolute; left: 24%; bottom: 3%; height: 46%; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25)); }
+.ap-gino-b { position: absolute; right: 22%; bottom: 3%; height: 30%; transform-origin: 50% 100%; animation: saltello 1.6s ease-in-out infinite; }
+@keyframes ap-bolla-volo {
+  0% { top: 74%; left: 50%; }
+  45% { left: 88%; }
+  100% { top: 40%; left: 62%; }
+}
+
 .piede { text-align: center; padding: 16px; font-size: 0.95rem; opacity: 0.75; }
 
 @media (max-width: 520px) {
