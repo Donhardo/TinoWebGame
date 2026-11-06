@@ -1024,12 +1024,16 @@ logica, su canvas), `ghianda.svg`.
   fondo piatto di 200, larga 460), con muro di fondo coi graffiti e tubi sui bordi;
   vicino alla conca la telecamera scende di 112 px (`stato.cam.h`, che entra in `sy`) e
   mentre Tino è dentro la inquadra ferma. Tino ci entra dal bordo sinistro (o ci atterra
-  da un salto) e la percorre con la gravità lungo la curva; a ogni bordo vola dritto in
+  da un salto) e la percorre lungo la curva con una velocità che dipende solo dalla quota
+  (quella di lancio del passaggio, più quanto è sceso), così arriva sempre al bordo
+  (prima, con la gravità lungo la curva, entrando lento o atterrando in fondo restava a
+  dondolare senza uscire); a ogni bordo vola dritto in
   su a 960 × 0,9^passaggi px/s (~200 px al primo, ~6 voli), con base della tavola
   verticale; in volo gira e fa i trick, e all'atterraggio si gira (specchiato, `verso`).
   Ogni volo è un'azione "Aria" (50 punti) e la combo resta aperta per tutta la conca.
   Tenendo → quando arriva al bordo destro esce e riprende la corsa; se lo slancio è sotto
-  560 esce da solo (~9 s). Una caduta dentro la conca toglie la combo e due passaggi.
+  560 esce da solo (~9 s), comunque dopo 10 voli. Il salto sulla parete "pompa" (una
+  volta per passaggio, toglie 1,5 passaggi: il volo dopo è più alto). Una caduta dentro la conca toglie la combo e due passaggi.
   Ghiande in colonna sopra i bordi. Mentre Tino è dentro gli agenti aspettano e le
   bollette spariscono; la Botta di Grinta non si può usare.
 - **Agenti** (tabella `AGENTI`, disegni di `assets/agenti-tari/`, non si specchiano): col
