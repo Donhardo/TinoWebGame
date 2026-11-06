@@ -297,3 +297,16 @@ kbd {
 .vignetta.storia { height: clamp(70px, 24vh, 200px); }
 .vignetta.storia .sfondo { object-position: 50% 0; }
 .vignetta.storia .titolo-punk { top: 10%; }
+
+/* Parti da: il quartiere da cui comincia la corsa (si sblocca arrivandoci) */
+.partenze { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.partenze span { font-weight: 600; font-size: 0.9rem; }
+.partenza {
+  font: inherit; font-size: 0.85rem; font-weight: 600;
+  padding: 3px 12px;
+  border: 2px solid var(--marrone); border-radius: 999px;
+  background: transparent; color: var(--marrone); cursor: pointer;
+}
+.partenza.attivo { background: var(--marrone); color: #fff; }
+.partenza:disabled { opacity: 0.4; cursor: not-allowed; border-style: dashed; }
+.partenza:focus-visible { outline: 3px solid #ffd59a; }

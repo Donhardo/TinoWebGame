@@ -33,7 +33,7 @@
     slancioMax: 0.15,          // accucciato prende velocità: fino a +15%
     slancioSu: 0.3,            // per secondo, accucciato
     slancioGiu: 0.1,           // per secondo, in piedi o in aria (torna piano)
-    gradino: 14,               // quanto sale da solo (rampe)
+    gradino: 18,               // quanto sale da solo (rampe, gradini della scalinata)
     margine: 8,                // gli urti perdonano qualche pixel
   };
 
@@ -154,11 +154,20 @@
   // il disegno fatto nel codice.
   const DISEGNI = 'disegni/';
   const disegni = {};
-  for (const n of ['cono', 'cassette', 'cassonetto', 'transenna', 'panchina', 'ringhiera', 'rampa', 'banco', 'tombino', 'tavola']) {
+  for (const n of ['cono', 'cassette', 'cassonetto', 'transenna', 'panchina', 'ringhiera', 'rampa', 'banco', 'tombino', 'tavola',
+    // Novoli
+    'scalinata', 'corrimano', 'fioriera', 'monopattini',
+    // i cantieri della tramvia
+    'ruspa', 'benna', 'fango', 'binari', 'tram',
+    // il centro
+    'sampietrini', 'turista', 'bancarella', 'bici']) {
     disegni[n] = carica(DISEGNI + 'elementi/' + n + '.png');
   }
   disegni.conca = carica(DISEGNI + 'pipe/conca.png');
   disegni.muro = carica(DISEGNI + 'pipe/muro.png');
+  disegni.scavo = carica(DISEGNI + 'pipe/scavo.png');
+  disegni.muroCantiere = carica(DISEGNI + 'pipe/muro-cantiere.png');
+  disegni.ponteVecchio = carica(DISEGNI + 'fondali/ponte-vecchio.png');
   // Le foto dei personaggi restano quelle originali: per farle stare nel
   // fumetto si prepara una volta una copia con un contorno nero spesso e
   // un'ombra piena (sfalsata in basso a destra). hRif è l'altezza a cui si
@@ -295,6 +304,7 @@
       messaggi: [],
       scossa: 0,
       cam: { x: 0, h: 0 },
+      quartiere: 0,            // quanti quartieri sono passati (per il messaggio d'entrata)
       statistiche: { cause: {}, urti: 0, cadute: 0, pestoni: 0, trick: 0, comboMax: 0, sfondamenti: 0, botte: 0 },
       risultato: null,
     };
@@ -429,6 +439,9 @@
     record: () => [523, 659, 784, 1046, 1318].forEach((f, i) => tono(f, 0.14, 'square', 0.04, null, i * 0.1)),
     ko: () => [392, 330, 262, 196].forEach((f, i) => tono(f, 0.22, 'square', 0.05, f * 0.9, i * 0.16)),
     via: () => [392, 523].forEach((f, i) => tono(f, 0.1, 'square', 0.05, null, i * 0.09)),
+    foto: () => { tono(2400, 0.03, 'square', 0.03); fruscio(0.08, 0.2, 'highpass', 5000, 0.03); },
+    splash: () => fruscio(0.25, 0.3, 'lowpass', 700, 0, 200),
+    quartiere: () => [523, 659, 784, 659, 1046].forEach((f, i) => tono(f, 0.09, 'square', 0.04, null, i * 0.08)),
   };
 
   // Suoni continui: il rotolio delle ruote (cambia con la velocità) e lo
@@ -457,7 +470,8 @@
     const t = audio.currentTime;
     const on = !muto && !stato.test && stato.fase === 'corsa' && !document.hidden && stato.tino;
     const ti = stato.tino;
-    const ruote = on && ti.terra && ti.grind === 0 ? 0.05 + 0.08 * clamp(ti.v / 600, 0, 1) : 0;
+    let ruote = on && ti.terra && ti.grind === 0 ? 0.05 + 0.08 * clamp(ti.v / 600, 0, 1) : 0;
+    if (on && ti.zona === 'sampietrini') ruote *= 1.6 + Math.sin(stato.tempo * 90) * 0.6; // il rombo dei sampietrini
     const grind = on && ti.grind > 0 ? 0.09 : 0;
     continui.ruote.g.gain.setTargetAtTime(ruote, t, 0.05);
     continui.ruote.f.frequency.setTargetAtTime(on ? 200 + ti.v * 0.5 : 200, t, 0.1);
@@ -845,7 +859,11 @@
   // ---------------------------------------------------------------- flusso
   const inGioco = () => stato.fase === 'corsa' || stato.fase === 'ko';
 
-  function nuovaCorsa(seme) {
+  // partenza: da quale quartiere (0 Cascine … 3 centro): si parte già con i metri e la velocità di lì
+  const quartiereAperto = (i) => i === 0 || recordMetri >= i * LUNGO_QUARTIERE;
+  let partenza = leggi('partenza', 0);
+  if (!(partenza >= 0 && partenza < 4 && quartiereAperto(partenza))) partenza = 0;
+  function nuovaCorsa(seme, da = partenza) {
     const personaggio = stato.personaggio;
     const test = stato.test;
     stato = nuovoStato();
@@ -853,8 +871,10 @@
     stato.personaggio = personaggio;
     stato.rng = seme === undefined ? null : seme | 0;
     stato.tino = nuovoTino();
-    stato.x0 = 0;
-    stato.gen = { x: 1100, n: 0, ultimo: '', ruota: 600 };
+    stato.x0 = -da * LUNGO_QUARTIERE * PX_M;
+    stato.metri = da * LUNGO_QUARTIERE;
+    stato.quartiere = da;
+    stato.gen = { x: 1100, n: 0, ultimo: '', ruota: stato.metri + 600 };
     stato.cam.x = stato.tino.x - xTino();
     // all'inizio una fila di ghiande per prendere confidenza
     for (let i = 0; i < 6; i++) stato.ghiande.push({ x: 380 + i * 60, h: 45, tipo: 'ghianda' });
@@ -914,7 +934,7 @@
       ghiandeTotali += stato.preseGhiande;
       scrivi('ghiande-totali', ghiandeTotali);
     }
-    stato.risultato = { metri, punti, ghiande: stato.preseGhiande, nuovoMetri, nuovoPunti, comboMax: stato.statistiche.comboMax };
+    stato.risultato = { quartiere: QUARTIERI[quartiereA(stato.tino.x).id].nome, metri, punti, ghiande: stato.preseGhiande, nuovoMetri, nuovoPunti, comboMax: stato.statistiche.comboMax };
     stato.fase = 'fine';
     if (!stato.test) {
       if (nuovoMetri || nuovoPunti) suoni.record();
@@ -1165,7 +1185,30 @@
     rampa: { w: 132, h: 46, rampa: true },
     banco: { w: 236, h: 128, piano: true, unaVia: true },
     halfpipe: { w: 2 * PIPE.raggio + PIPE.piano, h: 0, halfpipe: true },
+    // Novoli
+    scalinata: { w: 600, h: 0 },                                  // solo il disegno: gradini, piano e corrimano sono parti
+    gradino: { w: 36, h: 16, piano: true, nascosto: true },       // ci si sale da soli (FISICA.gradino)
+    corrimano: { w: 600, h: 60, grind: true },
+    fioriera: { w: 200, h: 44, solido: true, grind: true },       // si scivola sul bordo di cemento
+    monopattini: { w: 150, h: 50, solido: true, rompibile: true },
+    // i cantieri della tramvia
+    ruspa: { w: 220, h: 0, ruspa: true },                         // la ruspa sta dietro: colpisce solo la benna
+    fango: { w: 260, h: 0, zona: 'fango' },
+    binari: { w: 850, h: 12, piano: true },                        // la massicciata (ci si sale da soli)
+    rotaia: { w: 850, h: 32, grind: true, nascosto: true },
+    tram: { w: 560, h: 92, solido: true, piano: true },
+    barriera: { w: 70, h: 50, solido: true },
+    // il centro
+    sampietrini: { w: 600, h: 0, zona: 'sampietrini' },
+    turista: { w: 40, h: 96, solido: true },
+    bancarella: { w: 150, h: 54, solido: true, piano: true },      // il carretto; la tettoia è una parte
+    tettoia: { w: 176, h: 130, piano: true, unaVia: true, nascosto: true },
+    bici: { w: 170, h: 54, solido: true },
   };
+  // la pendenza di una superficie inclinata (rampe, corrimano della scalinata)
+  const inclinato = (o) => o.rampa || o.h0 !== undefined;
+  const quotaSu = (o, x) => (o.rampa ? 0 : o.h0) + (o.h - (o.rampa ? 0 : o.h0)) * clamp((x - o.x) / o.w, 0, 1);
+  const pendenza = (o) => (o && inclinato(o) ? -Math.atan2(o.h - (o.rampa ? 0 : o.h0), o.w) : 0);
   const altezza = (t) => (t.accucciato ? FISICA.altAccucciato : FISICA.alt);
   function ostacolo(tipo, x, extra = {}) {
     const o = Object.assign({ tipo, x, rotto: false, colpito: false }, FORME[tipo], extra);
@@ -1198,12 +1241,12 @@
   // strada libera che serve davanti (gli agenti col timbro lanciano da lontano).
   const PEZZI = [
     { id: 'cono', da: 0, peso: 3, crea: (x, v) => { ostacolo('cono', x); arco(x + 14, v); return 28; } },
-    { id: 'panchina', da: 0, peso: 2, crea: (x) => { const o = ostacolo('panchina', x); fila(x + 16, x + o.w - 10, o.h); return o.w; } },
+    { id: 'panchina', da: 0, peso: 2, q: ['cascine', 'novoli'], crea: (x) => { const o = ostacolo('panchina', x); fila(x + 16, x + o.w - 10, o.h); return o.w; } },
     { id: 'cassette', da: 20, peso: 2, crea: (x, v) => { ostacolo('cassette', x); arco(x + 25, v, 0, 4); return 50; } },
     { id: 'buca', da: 40, peso: 2, crea: (x, v) => { ostacolo('buca', x); arco(x + 36, v); return 72; } },
-    { id: 'cassonetto', da: 60, peso: 2, crea: (x) => { const o = ostacolo('cassonetto', x); fila(x + 22, x + o.w - 16, o.h, 40); return o.w; } },
+    { id: 'cassonetto', da: 60, peso: 2, q: ['cascine', 'novoli', 'cantieri'], crea: (x) => { const o = ostacolo('cassonetto', x); fila(x + 22, x + o.w - 16, o.h, 40); return o.w; } },
     { id: 'retino', da: 100, peso: 3, prima: 150, crea: (x) => { agente('retino', x + 30); return 60; } },
-    { id: 'ringhiera', da: 120, peso: 2, crea: (x) => {
+    { id: 'ringhiera', da: 120, peso: 2, q: ['cascine'], crea: (x) => {
       const w = Math.round(tra(280, 440));
       ostacolo('ringhiera', x, { w });
       ostacolo('cono', x + w * 0.55 - 14);
@@ -1227,19 +1270,19 @@
       return d + 28;
     } },
     { id: 'transenna', da: 250, peso: 1.5, crea: (x, v) => { ostacolo('transenna', x); arco(x + 12, v); return 24; } },
-    { id: 'sbarra', da: 180, peso: 1.6, crea: (x) => {
+    { id: 'sbarra', da: 180, peso: 1.6, pesi: { cantieri: 2.6, centro: 0.8 }, crea: (x) => {
       ostacolo('sbarra', x);
       for (let k = 0; k < 4; k++) stato.ghiande.push({ x: x - 50 + k * 48, h: 24, tipo: 'ghianda' });
       return 56;
     } },
-    { id: 'banco', da: 300, peso: 1.2, crea: (x) => {
+    { id: 'banco', da: 300, peso: 1.2, q: ['cascine'], crea: (x) => {
       const o = ostacolo('banco', x);
       ostacolo('cassette', x + 70);
       fila(x + 20, x + o.w - 16, o.h, 40);
       return o.w;
     } },
     { id: 'timbro', da: 350, peso: 2.5, prima: 860, crea: (x) => { agente('timbro', x + 30); return 60; } },
-    { id: 'cassonetti', da: 500, peso: 1.2, crea: (x, v) => {
+    { id: 'cassonetti', da: 500, peso: 1.2, q: ['cascine', 'novoli'], crea: (x, v) => {
       const d = Math.round(112 + v * 0.65);
       ostacolo('cassonetto', x); ostacolo('cassonetto', x + d);
       fila(x + 22, x + 96, 84, 40); fila(x + d + 22, x + d + 96, 84, 40);
@@ -1257,18 +1300,139 @@
       agente('retino', x + d + 30);
       return d + 60;
     } },
-    { id: 'halfpipe', da: 60, peso: 0.9, crea: (x) => {
-      const o = ostacolo('halfpipe', x);
+    { id: 'halfpipe', da: 60, peso: 0.9, q: ['cascine', 'novoli', 'cantieri'], crea: (x, v, m, q) => {
+      const o = ostacolo('halfpipe', x, { arte: q === 'cantieri' ? 'scavo' : 'pipe' }); // nei cantieri è lo scavo
       // colonne di ghiande sopra i bordi, da prendere in volo
       for (const xx of [x + 10, x + o.w - 10]) for (let h = 40; h <= 190; h += 50) ghianda(xx, h);
       return o.w;
     } },
-    { id: 'timbroCassonetto', da: 1200, peso: 1, prima: 860, crea: (x) => {
+    { id: 'timbroCassonetto', da: 1200, peso: 1, q: ['cascine'], prima: 860, crea: (x) => {
       ostacolo('cassonetto', x);
       agente('timbro', x + 56, 84);
       return 112;
     } },
+
+    // ---- Novoli: la piazza col Palazzo di Giustizia
+    { id: 'scalinata', da: 0, peso: 2, q: ['novoli'], crea: (x) => scalinata(x) },
+    { id: 'corrimano', da: 0, peso: 2, q: ['novoli'], crea: (x) => {
+      const w = Math.round(tra(480, 760));
+      ostacolo('corrimano', x, { w });
+      fila(x + 30, x + w - 10, 60);
+      return w;
+    } },
+    { id: 'fioriera', da: 0, peso: 2, q: ['novoli'], crea: (x) => { const o = ostacolo('fioriera', x); fila(x + 16, x + o.w - 10, o.h); return o.w; } },
+    { id: 'monopattini', da: 0, peso: 2, q: ['novoli'], crea: (x, v) => { const o = ostacolo('monopattini', x); arco(x + o.w / 2, v, 0, 5); return o.w; } },
+
+    // ---- i cantieri della tramvia
+    { id: 'ruspa', da: 0, peso: 2.2, q: ['cantieri'], crea: (x) => {
+      // la benna scende davanti alla ruspa: si passa sotto quando è su, si salta quando è giù
+      const o = ostacolo('ruspa', x + 190, { fase: tra(0, RUSPA.ciclo) });
+      for (let k = 0; k < 3; k++) stato.ghiande.push({ x: o.x - 150 + k * 40, h: 30, tipo: 'ghianda' });
+      return 190 + o.w;
+    } },
+    { id: 'fango', da: 0, peso: 2, q: ['cantieri'], crea: (x, v) => {
+      const w = Math.round(tra(220, 300));
+      ostacolo('fango', x, { w });
+      arco(x + w / 2, v, 0, 5);
+      return w;
+    } },
+    { id: 'binari', da: 0, peso: 2, q: ['cantieri'], crea: (x) => {
+      const w = Math.round(tra(600, 900));
+      ostacolo('binari', x, { w });
+      ostacolo('rotaia', x + 6, { w: w - 12 });
+      fila(x + 40, x + w - 20, 32);
+      return w;
+    } },
+    { id: 'tram', da: 0, peso: 1.6, q: ['cantieri'], crea: (x) => {
+      const o = ostacolo('tram', x);
+      fila(x + 40, x + o.w - 30, o.h, 44);
+      return o.w;
+    } },
+    { id: 'barriera', da: 0, peso: 2, q: ['cantieri'], crea: (x, v) => { ostacolo('barriera', x); arco(x + 35, v, 0, 5); return 70; } },
+    { id: 'barriere', da: 0, peso: 1, q: ['cantieri'], crea: (x, v) => {
+      const d = Math.round(v * 1.15);
+      ostacolo('barriera', x); ostacolo('barriera', x + d);
+      arco(x + 35, v, 0, 4); arco(x + d + 35, v, 0, 4);
+      return d + 70;
+    } },
+
+    // ---- il centro
+    { id: 'sampietrini', da: 0, peso: 2, q: ['centro'], crea: (x, v) => {
+      // i sampietrini: si trema e niente manual; in mezzo un cono o le bici
+      const w = Math.round(tra(520, 820));
+      ostacolo('sampietrini', x, { w });
+      const c = x + w * tra(0.45, 0.6);
+      if (casuale() < 0.5) { ostacolo('cono', c); arco(c + 14, v, 0, 4); } else { ostacolo('bici', c - 85); arco(c, v, 0, 5); }
+      return w;
+    } },
+    { id: 'turista', da: 0, peso: 2.2, q: ['centro'], crea: (x, v) => { ostacolo('turista', x); arco(x + 20, v, 0, 5); return 40; } },
+    { id: 'turisti', da: 0, peso: 1, q: ['centro'], crea: (x, v) => {
+      const d = Math.round(v * 1.2);
+      ostacolo('turista', x); ostacolo('turista', x + d, { verso: -1 });
+      arco(x + 20, v, 0, 4); arco(x + d + 20, v, 0, 4);
+      return d + 40;
+    } },
+    { id: 'bancarella', da: 0, peso: 2, q: ['centro'], crea: (x) => {
+      const o = ostacolo('bancarella', x + 13);
+      ostacolo('tettoia', x);
+      fila(x + 20, x + 160, 130, 40);
+      return o.w + 26;
+    } },
+    { id: 'bici', da: 0, peso: 1.8, q: ['centro'], crea: (x, v) => { ostacolo('bici', x); arco(x + 85, v, 0, 6); return 170; } },
   ];
+  const NOMI_GRIND = { panchina: 'Panchina', ringhiera: 'Ringhiera', corrimano: 'Corrimano', fioriera: 'Fioriera', rotaia: 'Rotaia' };
+  // la ruspa: la benna sale e scende davanti alla ruspa (tempi in secondi)
+  const RUSPA = {
+    ciclo: 3.2, giu: 1.0, sale: 0.4, su: 1.4,   // poi scende (il resto del ciclo)
+    braccio: 250,                               // larghezza del disegno del braccio
+    alza: 0.82,                                 // rad: di quanto si alza il braccio
+  };
+  const ZONE = { fango: 0.62 };            // nel fango la velocità è moltiplicata per questo
+  function zonaSotto(t) {
+    if (!t.terra || t.appoggio >= 0 || t.h > 0.5 || t.pipe) return null;
+    for (const o of stato.ostacoli) if (o.zona && t.x > o.x && t.x < o.x + o.w) return o.zona;
+    return null;
+  }
+  // l'angolo del braccio (0 = benna a terra) nel ciclo della ruspa
+  const BENNA_GIU = 0.116; // con questo angolo la benna tocca terra
+  function angoloBenna(o) {
+    const R = RUSPA, c = ((stato.tempo + o.fase) % R.ciclo + R.ciclo) % R.ciclo;
+    const liscia = (f) => f * f * (3 - 2 * f);
+    let f;
+    if (c < R.giu) f = 0;
+    else if (c < R.giu + R.sale) f = liscia((c - R.giu) / R.sale);
+    else if (c < R.giu + R.sale + R.su) f = 1;
+    else f = 1 - liscia((c - R.giu - R.sale - R.su) / (R.ciclo - R.giu - R.sale - R.su));
+    return BENNA_GIU + f * R.alza;
+  }
+  // il perno del braccio (sul corpo della ruspa) e il riquadro della benna, in coordinate del mondo
+  const pernoRuspa = (o) => ({ x: o.x + 0.1 * o.w, h: 60 });
+  function riquadroBenna(o) {
+    const a = angoloBenna(o), c = Math.cos(a), sn = Math.sin(a), p = pernoRuspa(o);
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const [x, y] of [[-225, 33], [-168, 33], [-225, 80], [-168, 80]]) {
+      const xx = x * c - y * sn, yy = x * sn + y * c; // rotazione sullo schermo (y in giù)
+      x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); y0 = Math.min(y0, yy); y1 = Math.max(y1, yy);
+    }
+    return { x0: p.x + x0 + 6, x1: p.x + x1 - 6, h0: p.h - y1, h1: p.h - y0 - 8 };
+  }
+  function toccaBenna(o, t) {
+    const b = riquadroBenna(o);
+    return t.x + FISICA.larg / 2 - 4 > b.x0 && t.x - FISICA.larg / 2 + 4 < b.x1 && t.h + altezza(t) - 4 > b.h0 && t.h < b.h1;
+  }
+  // la scalinata di Novoli: tre gradini su, il piano, tre gradini giù, e il
+  // corrimano tutto intorno (sale, corre sopra il piano, scende)
+  function scalinata(x) {
+    const o = ostacolo('scalinata', x);
+    const W = o.w;
+    const parti = [[0, 0.06, 16], [0.06, 0.12, 32], [0.12, 0.2, 48], [0.2, 0.7, 64], [0.7, 0.8, 48], [0.8, 0.9, 32], [0.9, 1, 16]];
+    for (const [a, b, h] of parti) ostacolo('gradino', x + a * W, { w: (b - a) * W, h });
+    ostacolo('corrimano', x + 0.005 * W, { w: 0.195 * W, h0: 50, h: 101, nascosto: true });
+    ostacolo('corrimano', x + 0.2 * W, { w: 0.6 * W, h: 101, nascosto: true });
+    ostacolo('corrimano', x + 0.8 * W, { w: 0.19 * W, h0: 101, h: 62, nascosto: true });
+    fila(x + 0.24 * W, x + 0.76 * W, 101, 46);
+    return W;
+  }
   const lancioRampa = (v) => 700 + v * 0.4;
 
   function generaStrada() {
@@ -1283,14 +1447,16 @@
         g.x += 200;
         continue;
       }
-      const possibili = PEZZI.filter((p) => m >= p.da && p.id !== g.ultimo);
+      const q = quartiereA(g.x).id;
+      const possibili = PEZZI.filter((p) => m >= p.da && p.id !== g.ultimo && (!p.q || p.q.includes(q)));
+      const peso = (p) => (p.pesi && p.pesi[q] !== undefined ? p.pesi[q] : p.peso);
       let tot = 0;
-      for (const p of possibili) tot += p.peso;
+      for (const p of possibili) tot += peso(p);
       let r = casuale() * tot;
       let scelto = possibili[0];
-      for (const p of possibili) { r -= p.peso; if (r <= 0) { scelto = p; break; } }
+      for (const p of possibili) { r -= peso(p); if (r <= 0) { scelto = p; break; } }
       const x = g.x + (scelto.prima || 0);
-      const lung = scelto.crea(x, v, m);
+      const lung = scelto.crea(x, v, m, q);
       g.ultimo = scelto.id;
       g.n++;
       g.x = x + lung + v * curva(CURVE.pausa, m) * tra(1, 1.3);
@@ -1306,9 +1472,9 @@
       const o = os[k];
       if (o.rotto) continue;
       let h;
-      if (o.rampa) {
+      if (inclinato(o)) {
         if (x < o.x || x > o.x + o.w) continue;
-        h = o.h * (x - o.x) / o.w;
+        h = quotaSu(o, x);
       } else if (o.piano || o.grind) {
         if (x < o.x - 6 || x > o.x + o.w + 6) continue;
         h = o.h;
@@ -1333,6 +1499,17 @@
         muoviNemici(dt);
         muoviBollette(dt);
         prendiGhiande();
+        // si entra in un quartiere nuovo
+        const qa = quartiereA(stato.tino.x);
+        if (qa.i !== stato.quartiere) {
+          stato.quartiere = qa.i;
+          if (qa.i > 0) {
+            const qq = QUARTIERI[qa.id];
+            messaggio(qq.nome + '!', 2, '#ffd23f', true);
+            messaggio(qq.sotto, 2, '#fff');
+            suoni.quartiere();
+          }
+        }
         // la prima transenna alta: si spiega come passarci sotto
         if (!stato.sbarraVista && stato.ostacoli.some((o) => o.tipo === 'sbarra' && o.x - stato.tino.x < 560 && o.x > stato.tino.x)) {
           stato.sbarraVista = true;
@@ -1384,6 +1561,12 @@
     let v = curva(CURVE.velocita, stato.metri) * t.mod * (1 + t.slancio);
     if (t.sfondamento > 0) v *= GRINTA.velSfondamento;
     if (t.caduta > 0) v *= 0.75;
+    // fango (rallenta) e sampietrini (si trema, niente manual): solo sulla strada
+    t.zona = ko ? null : zonaSotto(t);
+    if (t.zona === 'fango') {
+      v *= ZONE.fango;
+      if (Math.random() < dt * 24) stato.particelle.push({ tipo: 'pezzo', x: t.x + vis(-20, 10), h: 4, vx: vis(-220, 40), vy: vis(160, 360), t: 0, dur: 0.6, colore: Math.random() < 0.5 ? '#7a4a22' : '#9a6232', r: vis(3, 6), rot: 0, vr: 0 });
+    }
     if (ko) v = Math.max(0, (t.v || 0) - 500 * dt);
     t.v = v;
     if (!t.pipe) t.x += v * dt;
@@ -1460,6 +1643,15 @@
     // urti con gli ostacoli
     for (const o of stato.ostacoli) {
       if (o.rotto || o.colpito) continue;
+      if (o.ruspa) { if (toccaBenna(o, t) && urto('ruspa')) o.colpito = true; continue; }
+      if (o.tipo === 'turista' && !o.foto && t.x - FISICA.larg / 2 > o.x + o.w) {
+        // saltato senza urtarlo: foto ricordo
+        o.foto = true;
+        stato.punti += 100;
+        scritta('Foto ricordo! +100', o.x + 20, 170, '#fff3a0');
+        stato.particelle.push({ tipo: 'lampo', x: o.x + 4, h: 82, t: 0, dur: 0.25 });
+        suoni.foto();
+      }
       if (Math.abs(t.x - (o.x + o.w / 2)) > FISICA.larg / 2 + o.w / 2 - FISICA.margine / 2) continue;
       if (o.buca) {
         if (t.terra && t.appoggio < 0 && t.h === 0 && Math.abs(t.x - (o.x + o.w / 2)) < o.w / 2 - 12) {
@@ -1735,7 +1927,7 @@
     t.tenendo = false;
     t.schiacciaVis = 0.5 + forte * 0.6;
     if (stato.fase === 'ko') return;
-    const pend = o && o.rampa ? -Math.atan2(o.h, o.w) : 0;
+    const pend = pendenza(o);
     if (!controllaAtterraggio(pend)) { cadi(); t.schiaccia = false; t.grazia = 0; if (t.botta) onda(); return; }
     t.schiaccia = false;
     if (t.botta) { onda(); return; }
@@ -1743,7 +1935,7 @@
     if (o && o.grind) {
       t.manual = 0; t.manualForzato = 0;
       t.grind = 0.0001;
-      aggiungi(o.tipo === 'panchina' ? 'Panchina' : 'Ringhiera', 40);
+      aggiungi(NOMI_GRIND[o.tipo] || 'Grind', 40);
       suoni.grindInizio();
       scintille(t.x, t.h, 6);
       botto('SKRRR!', t.x + 20, t.h + 80, '#1f63c4', '#dff4ff', 24);
@@ -1770,7 +1962,7 @@
     t.manualForzato = Math.max(0, (t.manualForzato || 0) - dt);
     const tieni = stato.input.indietro || stato.input.avanti || (t.manual > 0 && t.manualForzato > 0);
     if (!tieni) t.manualFinito = false;
-    const puoManual = tieni && !t.manualFinito && t.caduta <= 0 && !t.botta && !t.accucciato;
+    const puoManual = tieni && !t.manualFinito && t.caduta <= 0 && !t.botta && !t.accucciato && t.zona !== 'sampietrini';
     if (puoManual) {
       if (t.manual === 0) {
         t.manualPunta = !stato.input.indietro;
@@ -1959,7 +2151,7 @@
   function aggiornaParticelle(dt) {
     for (const p of stato.particelle) {
       p.t += dt;
-      if (p.tipo === 'onda' || p.tipo === 'luccichio') continue;
+      if (p.tipo === 'onda' || p.tipo === 'luccichio' || p.tipo === 'lampo') continue;
       if (p.tipo === 'scritta' || p.tipo === 'botto') { p.h += p.vy * dt; continue; }
       p.x += p.vx * dt;
       p.h += p.vy * dt;
@@ -1970,14 +2162,16 @@
     stato.particelle = stato.particelle.filter((p) => p.t < p.dur);
   }
 
-  // ---------------------------------------------------------------- disegno
-  // Le Cascine: colline con i cipressi e il ponte all'Indiano in lontananza,
-  // l'Arno, i filari di platani con i lampioni, la siepe con la cancellata e
-  // il viale d'asfalto con la pista ciclabile.
+  // ---------------------------------------------------------------- quartieri
+  // La corsa passa per quattro quartieri di Firenze, uno dopo l'altro, poi si
+  // ricomincia (sempre più veloci). Ogni quartiere ha i suoi fondali a tre
+  // strati (disegni/fondali/<id>-lontano|medio|vicino.png), i suoi colori, la
+  // sua strada e i suoi ostacoli (PEZZI con q). Se un disegno manca resta il
+  // fondale fatto nel codice con i colori del quartiere.
   const QUARTIERI = {
     cascine: {
-      id: 'cascine',
-      nome: 'Le Cascine',
+      id: 'cascine', nome: 'Le Cascine', breve: 'Cascine', sotto: 'il parco lungo l\'Arno',
+      strada: 'viale',
       velo: 'rgba(235,245,255,0.16)', // schiarisce lontano e medio: personaggi e ghiande si staccano
       cielo: ['#6fb7ea', '#cfeafc'],
       colline: ['#a8c98c', '#8fb877'],
@@ -1991,23 +2185,82 @@
       asfalto: '#5a5e66',
       cordolo: '#c9c2b2',
     },
+    novoli: {
+      id: 'novoli', nome: 'Novoli', breve: 'Novoli', sotto: 'la piazza del Palazzo di Giustizia',
+      strada: 'piazza',
+      velo: 'rgba(235,245,255,0.16)',
+      cielo: ['#4fb3ef', '#c8ecff'],
+      colline: ['#a9c98a', '#92b979'],
+      cipresso: '#3e6e3f',
+      palazzi: ['#8fb8d8', '#c9ced6', '#e0844a', '#7cb35c'],
+      siepe: '#6a8f4c',
+      erba: '#9aa0a8',
+      asfalto: '#b7bbc2',
+      cordolo: '#dcdde0',
+      terra: '#7f858e',
+    },
+    cantieri: {
+      id: 'cantieri', nome: 'I cantieri della tramvia', breve: 'Cantieri', sotto: 'attenti alla ruspa!',
+      strada: 'cantiere',
+      velo: 'rgba(255,240,225,0.14)',
+      cielo: ['#f0b98d', '#fde3c6'],
+      colline: ['#9bb07a', '#86a06a'],
+      cipresso: '#4b6b3c',
+      palazzi: ['#e9e6df', '#3e7cc4', '#9aa3ad', '#f08a2a'],
+      siepe: '#e8792b',
+      erba: '#8a6a45',
+      asfalto: '#4b4d53',
+      cordolo: '#c9b48f',
+      terra: '#6b4a2e',
+    },
+    centro: {
+      id: 'centro', nome: 'Il centro', breve: 'Centro', sotto: 'sampietrini, turisti e il Ponte Vecchio',
+      strada: 'lastricato',
+      velo: 'rgba(255,240,220,0.14)',
+      cielo: ['#f2a65a', '#ffe0a8'],
+      colline: ['#b9a26b', '#a38d5c'],
+      cipresso: '#55603a',
+      palazzi: ['#e8d6a8', '#c9a77a', '#d9b98a', '#a8875e'],
+      siepe: '#9c958a',
+      erba: '#8c8578',
+      asfalto: '#8f8b84',
+      cordolo: '#c8c0b0',
+      terra: '#6e6556',
+    },
   };
-  const Q = QUARTIERI.cascine;
+  const GIRO_QUARTIERI = ['cascine', 'novoli', 'cantieri', 'centro'];
+  const LUNGO_QUARTIERE = 750;   // metri di ogni quartiere
+  const SFUMA = 30;              // metri in cui lontano e medio sfumano nel quartiere nuovo
+  // il quartiere a una x del mondo: { id, i (quanti quartieri prima), inizio (x del mondo) }
+  function quartiereA(x) {
+    const m = Math.max(0, (x - stato.x0) / PX_M);
+    const i = Math.floor(m / LUNGO_QUARTIERE);
+    return { id: GIRO_QUARTIERI[i % GIRO_QUARTIERI.length], i, inizio: stato.x0 + i * LUNGO_QUARTIERE * PX_M };
+  }
+  let Q = QUARTIERI.cascine;   // il quartiere che si sta disegnando
   const FUMETTO = 'Bangers, Fredoka, sans-serif'; // il font delle scritte a fumetto
   const yStrada = () => sy(0);
 
   function disegna() {
     ctx.save();
     if (stato.scossa > 0) ctx.translate((Math.random() - 0.5) * 14 * stato.scossa, (Math.random() - 0.5) * 10 * stato.scossa);
-    const F = fondale(Q.id);
-    if (pronta(F.lontano)) disegnaLontano(F.lontano);
-    else { disegnaCielo(); disegnaColline(); disegnaArnoPonte(); }
-    if (pronta(F.medio)) striscia(F.medio, 0.3, yStrada() - 30, 182, true, Q.velo);
-    else disegnaPlatani();
-    if (Q.velo && !pronta(F.lontano)) { ctx.fillStyle = Q.velo; ctx.fillRect(-20, -20, larg + 40, yStrada() + 20); }
-    if (pronta(F.vicino)) striscia(F.vicino, 0.7, yStrada() - 12, 84, false);
-    else disegnaSiepe();
-    disegnaStrada();
+    // lontano e medio: passando da un quartiere all'altro sfumano
+    const qa = quartiereA(stato.cam.x + larg / 2);
+    const prima = qa.i > 0 ? QUARTIERI[GIRO_QUARTIERI[(qa.i - 1) % GIRO_QUARTIERI.length]] : null;
+    const f = prima ? clamp((stato.cam.x + larg / 2 - qa.inizio) / PX_M / SFUMA, 0, 1) : 1;
+    if (f < 1) { Q = prima; disegnaFondo(); }
+    Q = QUARTIERI[qa.id];
+    ctx.globalAlpha = f;
+    disegnaFondo();
+    ctx.globalAlpha = 1;
+    // vicino e strada: cambiano di netto al confine
+    perSegmenti(() => {
+      const F = fondale(Q.id);
+      if (pronta(F.vicino)) striscia(F.vicino, 0.7, yStrada() - 12, 84, false);
+      else disegnaSiepe();
+      disegnaStrada();
+    });
+    Q = QUARTIERI[quartiereA(stato.tino ? stato.tino.x : stato.cam.x).id];
     disegnaOstacoli(false);
     disegnaGhiande();
     disegnaNemici();
@@ -2018,6 +2271,54 @@
     ctx.restore();
     disegnaRetino();
     if (stato.fase !== 'menu') disegnaHud();
+  }
+
+  function disegnaFondo() {
+    const F = fondale(Q.id);
+    if (pronta(F.lontano)) disegnaLontano(F.lontano);
+    else { disegnaCielo(); disegnaColline(); if (Q.id === 'cascine') disegnaArnoPonte(); }
+    if (pronta(F.medio)) {
+      if (Q.id === 'centro') medioCentro(F.medio);
+      else striscia(F.medio, 0.3, yStrada() - 30, 182, true, Q.velo);
+    } else if (Q.id === 'cascine') disegnaPlatani();
+    else disegnaPalazzi();
+    if (Q.velo && !pronta(F.lontano)) { ctx.fillStyle = Q.velo; ctx.fillRect(-20, -20, larg + 40, yStrada() + 20); }
+  }
+  // disegna a pezzi: a sinistra del confine col quartiere di sinistra, a destra con quello di destra
+  function perSegmenti(fn) {
+    const qs = quartiereA(stato.cam.x - 20), qd = quartiereA(stato.cam.x + larg + 20);
+    if (qs.i === qd.i) { Q = QUARTIERI[qs.id]; fn(); return; }
+    const xb = Math.round(sx(qd.inizio));
+    ctx.save(); ctx.beginPath(); ctx.rect(-20, -20, xb + 20, alt + 40); ctx.clip();
+    Q = QUARTIERI[qs.id]; fn();
+    ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(xb, -20, larg + 40 - xb, alt + 40); ctx.clip();
+    Q = QUARTIERI[qd.id]; fn();
+    ctx.restore();
+  }
+  // il centro: i palazzi, e ogni tanto al loro posto il Ponte Vecchio sull'Arno
+  function medioCentro(im) {
+    const c = strato(im, 182, true, Q.velo);
+    const PV = disegni.ponteVecchio;
+    const pv = pronta(PV) ? strato(PV, 150, false, Q.velo) : null;
+    const yb = yStrada() - 30, w = c.w, p = stato.cam.x * 0.3;
+    for (let k = Math.floor(p / w); k * w - p < larg + 20; k++) {
+      const x = Math.floor(k * w - p);
+      if (pv && hash(k * 31 + 7) < 0.3) ctx.drawImage(pv.tela, x + (w - pv.w) / 2, yb - 150 + 8, pv.w, 150);
+      else ctx.drawImage(c.tela, x, yb - 182, w + 0.5, 182);
+    }
+  }
+  // riserva per i quartieri senza il disegno del medio: file di palazzi coi colori del quartiere
+  function disegnaPalazzi() {
+    const p = stato.cam.x * 0.3, yb = yStrada() - 30;
+    for (let k = Math.floor(p / 90) - 1; k <= Math.floor((p + larg) / 90) + 1; k++) {
+      const x = k * 90 - p, h = 90 + hash(k * 5) * 80, w = 80;
+      ctx.fillStyle = Q.palazzi[Math.floor(hash(k * 3) * Q.palazzi.length)];
+      ctx.fillRect(x, yb - h, w, h);
+      ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3; ctx.strokeRect(x, yb - h, w, h);
+      ctx.fillStyle = 'rgba(28,31,39,0.35)';
+      for (let yy = yb - h + 14; yy < yb - 20; yy += 26) for (let xx = x + 12; xx < x + w - 14; xx += 22) ctx.fillRect(xx, yy, 10, 14);
+    }
   }
 
   // uno strato del fondale: il disegno si ripete in orizzontale e scorre a
@@ -2245,6 +2546,7 @@
   function disegnaStrada() {
     const y0 = yStrada();
     const c = stato.cam.x;
+    if (Q.strada !== 'viale') { stradaQuartiere(y0, c); return; }
     ctx.fillStyle = Q.erba;
     ctx.fillRect(-10, y0 - 34, larg + 20, 16);
     ctx.fillStyle = Q.cordolo;
@@ -2273,6 +2575,45 @@
     }
   }
 
+  // la strada degli altri quartieri: piazza di cemento (Novoli), asfalto
+  // rattoppato con la terra (cantieri), lastricato di pietra (centro)
+  function stradaQuartiere(y0, c) {
+    const giunti = (passo, y, h, colore, sfasa = 0) => {
+      ctx.fillStyle = colore;
+      for (let k = Math.floor((c - sfasa) / passo); k <= Math.floor((c + larg) / passo) + 1; k++) ctx.fillRect(k * passo + sfasa - c, y, 2, h);
+    };
+    // sopra la strada (marciapiede o terra)
+    ctx.fillStyle = Q.cordolo; ctx.fillRect(-10, y0 - 34, larg + 20, 20);
+    ctx.fillStyle = 'rgba(28,31,39,0.35)'; ctx.fillRect(-10, y0 - 15, larg + 20, 2);
+    // il fondo della strada
+    ctx.fillStyle = Q.asfalto; ctx.fillRect(-10, y0 - 14, larg + 20, 46);
+    if (Q.strada === 'piazza') {
+      giunti(60, y0 - 14, 46, 'rgba(28,31,39,0.18)');
+      ctx.fillStyle = 'rgba(28,31,39,0.18)'; ctx.fillRect(-10, y0 + 9, larg + 20, 2);
+      giunti(30, y0 - 34, 20, 'rgba(28,31,39,0.2)');
+    } else if (Q.strada === 'cantiere') {
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
+      for (let k = Math.floor(c / 23); k <= Math.floor((c + larg) / 23) + 1; k++) ctx.fillRect(k * 23 - c + hash(k) * 20, y0 - 10 + hash(k * 3) * 38, 3, 2);
+      // rattoppi e la riga gialla provvisoria
+      ctx.fillStyle = '#3c3e44';
+      for (let k = Math.floor(c / 260); k <= Math.floor((c + larg) / 260) + 1; k++) if (hash(k * 13) < 0.5) ctx.fillRect(k * 260 - c + hash(k) * 80, y0 - 6 + hash(k * 7) * 18, 60 + hash(k * 9) * 70, 14);
+      ctx.fillStyle = '#f2c230';
+      for (let k = Math.floor(c / 70); k <= Math.floor((c + larg) / 70) + 1; k++) ctx.fillRect(k * 70 - c, y0 + 18, 38, 4);
+      giunti(14, y0 - 34, 20, 'rgba(60,40,20,0.25)');
+    } else {
+      // lastre di pietra, sfalsate su due file
+      giunti(84, y0 - 14, 23, 'rgba(28,31,39,0.3)');
+      giunti(84, y0 + 9, 23, 'rgba(28,31,39,0.3)', 42);
+      ctx.fillStyle = 'rgba(28,31,39,0.3)'; ctx.fillRect(-10, y0 + 8, larg + 20, 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let k = Math.floor(c / 42); k <= Math.floor((c + larg) / 42) + 1; k++) ctx.fillRect(k * 42 - c + 6, y0 - 12 + (k & 1) * 23, 30, 2);
+    }
+    ctx.fillStyle = Q.cordolo; ctx.fillRect(-10, y0 + 32, larg + 20, 7);
+    ctx.fillStyle = Q.terra; ctx.fillRect(-10, y0 + 39, larg + 20, alt - y0);
+    ctx.fillStyle = 'rgba(28,31,39,0.15)';
+    for (let k = Math.floor(c / 31); k <= Math.floor((c + larg) / 31) + 1; k++) ctx.fillRect(k * 31 - c + hash(k * 5) * 20, y0 + 50 + hash(k * 7) * 20, 8, 3);
+  }
+
   function arrotondato(x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -2286,11 +2627,18 @@
   function disegnaOstacoli(davanti) {
     if (davanti) return;
     const y0 = yStrada();
-    // prima i muri delle half pipe (sono larghi: stanno dietro a tutto il resto)
+    // prima i muri delle half pipe (sono larghi: stanno dietro a tutto il resto),
+    // le zone sulla strada (fango, sampietrini) e la ruspa, che sta dietro
     for (const o of stato.ostacoli) if (o.halfpipe) disegnaMuroPipe(o, sx(o.x));
     for (const o of stato.ostacoli) {
       const x = sx(o.x);
-      if (x > larg + 50 || x + o.w < -50 || o.rotto) continue;
+      if (x > larg + 300 || x + o.w < -300) continue;
+      if (o.zona) disegnaZona(o, x, y0);
+      else if (o.ruspa) disegnaRuspa(o, x, y0);
+    }
+    for (const o of stato.ostacoli) {
+      const x = sx(o.x);
+      if (x > larg + 50 || x + o.w < -50 || o.rotto || o.nascosto || o.zona || o.ruspa) continue;
       const yt = sy(o.h);
       ctx.save();
       if (disegnaElemento(o, x, y0, yt)) { ctx.restore(); continue; }
@@ -2392,6 +2740,19 @@
         }
         case 'halfpipe': disegnaPipe(o, x); break;
         case 'sbarra': disegnaSbarra(o, x, y0); break;
+        case 'barriera': disegnaBarriera(o, x, y0, yt); break;
+        case 'scalinata': {
+          ctx.fillStyle = '#9ea3aa';
+          const W = o.w;
+          for (const [a, b, h] of [[0, 0.06, 16], [0.06, 0.12, 32], [0.12, 0.2, 48], [0.2, 0.7, 64], [0.7, 0.8, 48], [0.8, 0.9, 32], [0.9, 1, 16]]) {
+            ctx.fillRect(x + a * W, sy(h), (b - a) * W + 1, h); ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 2; ctx.strokeRect(x + a * W, sy(h), (b - a) * W, h);
+          }
+          ctx.strokeStyle = '#c9d2dc'; ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.moveTo(x + 0.005 * W, sy(50)); ctx.lineTo(x + 0.2 * W, sy(101)); ctx.lineTo(x + 0.8 * W, sy(101)); ctx.lineTo(x + 0.99 * W, sy(62)); ctx.stroke();
+          break;
+        }
+        case 'corrimano': case 'tram': case 'fioriera': case 'monopattini': case 'turista': case 'bancarella': case 'bici': case 'binari':
+          disegnaRiserva(o, x, y0, yt); break;
         case 'banco': {
           // il banco del mercato del martedì: tavolo con la merce e tendone a righe
           ctx.fillStyle = '#6b4a2e';
@@ -2423,7 +2784,7 @@
   // Restituisce false se il disegno non c'è (resta quello nel codice).
   function disegnaElemento(o, x, y0, yt) {
     const im = disegni[o.tipo === 'buca' ? 'tombino' : o.tipo];
-    if (o.tipo === 'halfpipe') return disegnaPipeDipinta(o, x);
+    if (o.tipo === 'halfpipe') return o.arte === 'scavo' ? disegnaScavo(o, x) : disegnaPipeDipinta(o, x);
     if (!pronta(im)) return false;
     const r = im.naturalWidth / im.naturalHeight;
     const piedi = (cx, h, w = h * r) => ctx.drawImage(im, cx - w / 2, y0 + 1 - h, w, h);
@@ -2456,6 +2817,40 @@
         ctx.drawImage(im, x, y0 + 1 - h, w, h);
         return true;
       }
+      case 'scalinata': { const h = o.w / r; ctx.drawImage(im, x, y0 + 1 - h, o.w, h); return true; }
+      case 'corrimano': {
+        // la curva a sinistra, tratti di tubo coi piedi, la curva specchiata a destra
+        const h = o.h / 0.95, k = h / im.naturalHeight, iw = im.naturalWidth, top = y0 + 1 - h;
+        const testa = 0.1 * iw * k, x0 = x - 6, x1 = x + o.w + 6;
+        ctx.drawImage(im, 0, 0, 0.1 * iw, im.naturalHeight, x0, top, testa, h);
+        const mezzo = x1 - x0 - 2 * testa, pezzo = 0.4 * iw * k;
+        const n = Math.max(1, Math.round(mezzo / pezzo));
+        for (let i = 0; i < n; i++) ctx.drawImage(im, 0.12 * iw, 0, 0.4 * iw, im.naturalHeight, x0 + testa + i * mezzo / n - 0.5, top, mezzo / n + 1, h);
+        ctx.save(); ctx.translate(x1, 0); ctx.scale(-1, 1);
+        ctx.drawImage(im, 0, 0, 0.1 * iw, im.naturalHeight, 0, top, testa, h);
+        ctx.restore();
+        return true;
+      }
+      case 'fioriera': piedi(x + o.w / 2, o.h / 0.73, o.w + 6); return true; // il bordo di cemento al 27% dall'alto
+      case 'monopattini': piedi(x + o.w / 2, o.h + 6); return true;
+      case 'tram': piedi(x + o.w / 2, o.h / 0.85, o.w + 10); return true;     // il tetto al 15% dall'alto
+      case 'bancarella': piedi(x + o.w / 2, 132); return true;                // la tettoia in cima, il banco al 60%
+      case 'bici': piedi(x + o.w / 2, o.h + 4); return true;
+      case 'turista': {
+        const h = o.h + 6, w = h * r;
+        ctx.translate(x + o.w / 2, 0);
+        if (o.verso === -1) ctx.scale(-1, 1);
+        ctx.drawImage(im, -w / 2, y0 + 1 - h, w, h);
+        return true;
+      }
+      case 'binari': {
+        // la massicciata con la rotaia, ripetuta (la cima della rotaia al 3%)
+        const h = 33, w = h * r;
+        ctx.save(); ctx.beginPath(); ctx.rect(x - 4, y0 - 40, o.w + 8, 50); ctx.clip();
+        for (let xx = x - 4; xx < x + o.w + 4; xx += w - 1) ctx.drawImage(im, xx, y0 + 1 - h, w, h);
+        ctx.restore();
+        return true;
+      }
       case 'ringhiera': {
         // testa (curva e primo piede), tratti di tubo con un piede, testa specchiata
         const h = o.h / 0.98, k = h / im.naturalHeight;
@@ -2477,6 +2872,90 @@
     }
   }
 
+  // riserva per gli elementi nuovi senza disegno: sagome semplici a fumetto
+  function disegnaRiserva(o, x, y0, yt) {
+    const colori = { corrimano: '#c9d2dc', tram: '#f2f2f2', fioriera: '#a9adb3', monopattini: '#2fb3a5', turista: '#f2c94c', bancarella: '#8a5a32', bici: '#3a7d44', binari: '#7d7f86' };
+    ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3;
+    if (o.grind && !o.solido) {
+      ctx.fillStyle = '#3a3e47';
+      for (let px = 8; px < o.w; px += 70) ctx.fillRect(x + px - 3, yt, 6, y0 - yt);
+      ctx.fillStyle = colori[o.tipo]; arrotondato(x - 3, yt - 3, o.w + 6, 7, 3.5); ctx.fill(); ctx.stroke();
+      return;
+    }
+    ctx.fillStyle = colori[o.tipo] || '#999';
+    arrotondato(x, yt, o.w, y0 - yt, 6); ctx.fill(); ctx.stroke();
+    if (o.tipo === 'tram') { ctx.fillStyle = '#d8342c'; ctx.fillRect(x + 4, yt + 18, o.w - 8, 8); ctx.fillStyle = '#9ed6f2'; for (let k = 20; k < o.w - 40; k += 60) ctx.fillRect(x + k, yt + 32, 40, 26); }
+    if (o.tipo === 'binari') { ctx.fillStyle = '#c9d2dc'; ctx.fillRect(x, sy(32), o.w, 6); }
+  }
+  // la barriera di cemento dei cantieri (fianchi inclinati, strisce rosse e bianche in cima)
+  function disegnaBarriera(o, x, y0, yt) {
+    const nero = '#1c1f27';
+    ctx.lineJoin = 'round';
+    ctx.fillStyle = 'rgba(28,31,39,0.3)';
+    ctx.beginPath(); ctx.moveTo(x + 4, y0 + 1); ctx.lineTo(x + 22, yt + 4 + 4); ctx.lineTo(x + o.w - 18, yt + 4 + 4); ctx.lineTo(x + o.w + 4, y0 + 1); ctx.fill();
+    ctx.fillStyle = '#c3c0b8';
+    ctx.beginPath(); ctx.moveTo(x, y0 + 1); ctx.lineTo(x + 10, y0 - 14); ctx.lineTo(x + 20, yt); ctx.lineTo(x + o.w - 20, yt); ctx.lineTo(x + o.w - 10, y0 - 14); ctx.lineTo(x + o.w, y0 + 1); ctx.closePath();
+    ctx.fill();
+    ctx.save(); ctx.clip();
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#fff' : '#d8342c'; ctx.fillRect(x + k * o.w / 6, yt, o.w / 6 + 1, 16); }
+    ctx.fillStyle = 'rgba(28,31,39,0.15)'; ctx.fillRect(x, y0 - 14, o.w, 15);
+    ctx.fillStyle = '#9c988f'; ctx.fillRect(x + 26, yt + 26, 6, 3); ctx.fillRect(x + o.w - 30, yt + 32, 8, 3);
+    ctx.restore();
+    ctx.strokeStyle = nero; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x, y0 + 1); ctx.lineTo(x + 10, y0 - 14); ctx.lineTo(x + 20, yt); ctx.lineTo(x + o.w - 20, yt); ctx.lineTo(x + o.w - 10, y0 - 14); ctx.lineTo(x + o.w, y0 + 1); ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 18, yt + 16); ctx.lineTo(x + o.w - 18, yt + 16); ctx.stroke();
+  }
+  // fango e sampietrini: disegnati sulla strada
+  function disegnaZona(o, x, y0) {
+    if (o.zona === 'sampietrini') {
+      const im = disegni.sampietrini;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y0 - 15, o.w, 48); ctx.clip();
+      if (pronta(im)) {
+        const h = 48, w = h * im.naturalWidth / im.naturalHeight;
+        for (let xx = x; xx < x + o.w; xx += w - 1) ctx.drawImage(im, xx, y0 - 15, w, h);
+      } else {
+        ctx.fillStyle = '#6f6a64'; ctx.fillRect(x, y0 - 15, o.w, 48);
+        ctx.fillStyle = '#8f8a82';
+        for (let i = 0; i < o.w / 12; i++) for (let j = 0; j < 4; j++) arrotondato(x + i * 12 + (j & 1) * 6, y0 - 14 + j * 12, 10, 10, 3), ctx.fill();
+      }
+      ctx.restore();
+      ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y0 - 15); ctx.lineTo(x, y0 + 33); ctx.moveTo(x + o.w, y0 - 15); ctx.lineTo(x + o.w, y0 + 33); ctx.stroke();
+      return;
+    }
+    // fango
+    const im = disegni.fango;
+    if (pronta(im)) { ctx.drawImage(im, x - 14, y0 - 12, o.w + 28, 38); return; }
+    ctx.fillStyle = '#7a4a22';
+    ctx.beginPath(); ctx.ellipse(x + o.w / 2, y0 + 6, o.w / 2 + 10, 14, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#9a6232';
+    ctx.beginPath(); ctx.ellipse(x + o.w / 2 - 20, y0 + 2, o.w / 3, 6, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  // la ruspa: il corpo dietro la strada e il braccio con la benna, che gira attorno al perno
+  function disegnaRuspa(o, x, y0) {
+    const C = disegni.ruspa, B = disegni.benna;
+    const hc = 126, a = angoloBenna(o), p = pernoRuspa(o);
+    if (pronta(C)) ctx.drawImage(C, x, y0 + 1 - hc, o.w, hc);
+    else {
+      ctx.fillStyle = '#f2c230'; ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3;
+      arrotondato(x + 30, y0 - 120, 120, 80, 10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#2b2b2b'; arrotondato(x + 6, y0 - 36, o.w - 12, 36, 14); ctx.fill();
+    }
+    ctx.save();
+    ctx.translate(sx(p.x), sy(p.h));
+    ctx.rotate(a);
+    if (pronta(B)) {
+      const w = RUSPA.braccio, h = w * B.naturalHeight / B.naturalWidth;
+      ctx.drawImage(B, -0.9 * w, -0.26 * h, w, h);
+    } else {
+      ctx.fillStyle = '#f2c230'; ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-150, -20); ctx.lineTo(-200, 30); ctx.lineTo(-190, 40); ctx.lineTo(-140, 0); ctx.lineTo(0, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillRect(-225, 33, 57, 47); ctx.strokeRect(-225, 33, 57, 47);
+    }
+    ctx.restore();
+  }
+
   // la half pipe dipinta: il muro coi murales dietro (sopra la strada e dentro la
   // conca) e la conca in sezione. La conca è divisa a metà: le due pareti si
   // appoggiano ai bordi (il bordo esterno della curva, con il tubo, sta sul
@@ -2484,6 +2963,7 @@
   // il muro coi murales: la riga 247 del disegno sta a terra (sotto, il disegno
   // fa già da conca e si copre); si vede anche nella parte aperta della conca
   function disegnaMuroPipe(o, x) {
+    if (o.arte === 'scavo') { disegnaMuroCantiere(o, x); return; }
     const M = disegni.muro;
     if (!pronta(M) || !pronta(disegni.conca)) return;
     const y0 = sy(0), k = 150 / 247, w = M.naturalWidth * k, h = M.naturalHeight * k;
@@ -2522,6 +3002,51 @@
     // sotto, la terra
     ctx.fillStyle = Q.terra || Q.erba;
     ctx.fillRect(x - fuori, top + hh - 2, o.w + 2 * fuori, alt + 200);
+    return true;
+  }
+
+  // lo scavo dei cantieri (al posto della half pipe): la recinzione coi graffiti
+  // dietro (tutta sopra la strada) e lo scavo in sezione; il bordo esterno della
+  // curva sta sul bordo dello scavo, il fondo si allunga in mezzo
+  function disegnaMuroCantiere(o, x) {
+    const M = disegni.muroCantiere;
+    if (!pronta(M) || !pronta(disegni.scavo)) return;
+    const y0 = sy(0), h = 180, w = M.naturalWidth * h / M.naturalHeight;
+    const xm = x + o.w / 2 - w / 2;
+    if (xm > larg + 10 || xm + w < -10) return;
+    ctx.drawImage(M, xm, y0 - 14 - h, w, h);
+    ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 4;
+    ctx.strokeRect(xm, y0 - 14 - h, w, h);
+  }
+  function disegnaScavo(o, x) {
+    const C = disegni.scavo;
+    if (!pronta(C)) return false;
+    const R = PIPE.raggio, x1 = x + o.w, y0 = sy(0);
+    const W = C.naturalWidth, H = C.naturalHeight;
+    const kx = R / (0.3 * W), ky = R / (0.86 * H);
+    const top = y0 - 4, hh = H * ky, fuori = 0.2 * W * kx;
+    // dietro, dove lo scavo è aperto: la terra scura
+    ctx.fillStyle = '#4a3220';
+    ctx.fillRect(x, y0 - 14, o.w, R + 20);
+    ctx.drawImage(C, 0, 0, W / 2, H, x - fuori, top, W / 2 * kx, hh);
+    const pezzo = 0.2 * W * kx, n = Math.max(1, Math.round((o.w - 2 * R) / pezzo)), lp = (o.w - 2 * R) / n;
+    for (let i = 0; i < n; i++) {
+      const xx = x + R + i * lp;
+      if (i & 1) {
+        ctx.save(); ctx.translate(xx + lp, 0); ctx.scale(-1, 1);
+        ctx.drawImage(C, 0.4 * W, 0, 0.2 * W, H, -0.5, top, lp + 1, hh);
+        ctx.restore();
+      } else ctx.drawImage(C, 0.4 * W, 0, 0.2 * W, H, xx - 0.5, top, lp + 1, hh);
+    }
+    ctx.drawImage(C, W / 2, 0, W / 2, H, x1 - R, top, W / 2 * kx, hh);
+    ctx.fillStyle = Q.terra || Q.erba;
+    ctx.fillRect(x - fuori, top + hh - 2, o.w + 2 * fuori, alt + 200);
+    // i tubi di metallo sui bordi
+    for (const xx of [x, x1]) {
+      ctx.fillStyle = '#d5dae1';
+      ctx.beginPath(); ctx.arc(xx, y0 - 3, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 2.5; ctx.stroke();
+    }
     return true;
   }
 
@@ -2844,10 +3369,7 @@
 
     let base = 0;
     if (t.pipe) base = t.base;
-    else if (t.terra && t.appoggio >= 0 && stato.ostacoli[t.appoggio] && stato.ostacoli[t.appoggio].rampa) {
-      const o = stato.ostacoli[t.appoggio];
-      base = -Math.atan2(o.h, o.w);
-    }
+    else if (t.terra && t.appoggio >= 0) base = pendenza(stato.ostacoli[t.appoggio]);
     let giro = 1, tavY = 0, tavRot = 0, corpoY = 0, sqx = 1, sqy = 1, extra = 0, manualRot = 0;
     const tr = t.trick;
     if (tr && tr.tipo === 'giglio') {
@@ -2875,6 +3397,7 @@
     const quasi = !storto && !t.terra && t.vy < 0 && resto > GIRO.tolleranza; // si atterra in manual
 
     ctx.translate(x, y);
+    if (t.zona === 'sampietrini') ctx.translate(Math.sin(stato.tempo * 83) * 1.2, Math.abs(Math.sin(stato.tempo * 61)) * -3); // i sampietrini fanno tremare
     if (t.verso < 0) ctx.scale(-1, 1);
     ctx.rotate(base);
     if (manualRot) {
@@ -2961,6 +3484,15 @@
           ctx.lineWidth = 3;
           ctx.beginPath(); ctx.arc(x, y, 10 + f * 18, 0, Math.PI * 2); ctx.stroke();
           break;
+        case 'lampo': {
+          // il flash della macchina fotografica del turista
+          const g = ctx.createRadialGradient(x, y, 2, x, y, 70);
+          g.addColorStop(0, `rgba(255,255,240,${1 - f})`);
+          g.addColorStop(1, 'rgba(255,255,240,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(x, y, 70, 0, Math.PI * 2); ctx.fill();
+          break;
+        }
         case 'onda':
           ctx.strokeStyle = `rgba(255,140,60,${1 - f})`;
           ctx.lineWidth = 10 * (1 - f) + 2;
@@ -3210,9 +3742,10 @@
         <h1 class="titolo-punk">Tino Pro Skate</h1>
         <div class="ritratti">${img(stato.personaggio === 'gino' ? 'arrabbiato' : 'normale', 'salta')}${img('gino', 'gino' + (stato.personaggio === 'gino' ? ' salta' : ''))}</div>
       </div>
-      <p>Hanno rubato lo skate di Gino! Tino sale sul suo e parte dalle Cascine: salti, trick, scivolate sulle panchine e pestoni in testa agli agenti della Tari.</p>
+      <p>Hanno rubato lo skate di Gino! Tino sale sul suo e parte dalle Cascine, poi Novoli, i cantieri della tramvia e il centro: salti, trick, scivolate su panchine, corrimano e rotaie, e pestoni in testa agli agenti della Tari.</p>
       ${rec}
       <div class="personaggi">${scelta('tino', 'Tino', img('normale'))}${scelta('gino', 'Gino', img('gino'))}</div>
+      <div class="partenze"><span>Parti da:</span>${GIRO_QUARTIERI.map((id, i) => `<button class="partenza${partenza === i ? ' attivo' : ''}" data-azione="partenza" data-id="${i}" aria-pressed="${partenza === i}"${quartiereAperto(i) ? '' : ' disabled title="Arriva fin qui per sbloccarlo"'}>${QUARTIERI[id].breve}</button>`).join('')}</div>
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Corsa infinita</button>
         <button class="bottone secondario" data-azione="storia">La storia</button>
@@ -3233,7 +3766,7 @@
         <div class="fumetto">${img('capo')}<p>Bolletta non pagata: skate pignorato! Ah ah ah!</p></div>
       </div>
       <p>L'ispettore capo della Tari è scappato con lo skate verso il centro. Tino parte dalle Cascine, poi Novoli, i cantieri della tramvia e il centro.</p>
-      <p class="nota">Per ora la corsa è alle Cascine: gli altri quartieri e l'inseguimento dell'ispettore arrivano presto.</p>
+      <p class="nota">Per ora la corsa passa per i quattro quartieri senza fermarsi: l'inseguimento dell'ispettore arriva presto.</p>
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Parti!</button>
         <button class="bottone secondario" data-azione="menu">Menu</button>
@@ -3263,7 +3796,7 @@
       <div class="ritratti">${ritratti}</div>
       <h2>${gino ? 'Gino è caduto!' : 'Tino è KO!'}</h2>
       <div class="dati">
-        <div><b>${r.metri} m</b><span>strada fatta</span></div>
+        <div><b>${r.metri} m</b><span>${r.quartiere}</span></div>
         <div><b>${r.punti.toLocaleString('it-IT')}</b><span>punti</span></div>
         <div><b>${r.ghiande}</b><span>ghiande</span></div>
         <div><b>${r.comboMax ? '× ' + r.comboMax : '–'}</b><span>combo più lunga</span></div>
@@ -3288,6 +3821,11 @@
       case 'storia': storiaVista = true; scrivi('storia-vista', true); mostraPannello(pannelloStoria()); break;
       case 'riprendi': riprendi(); break;
       case 'menu': vaiAlMenu(); break;
+      case 'partenza':
+        partenza = +btn.dataset.id;
+        scrivi('partenza', partenza);
+        mostraPannello(pannelloMenu());
+        break;
       case 'personaggio':
         stato.personaggio = btn.dataset.id;
         scrivi('personaggio', stato.personaggio);
