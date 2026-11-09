@@ -84,13 +84,14 @@ e poi si visita http://localhost:8000.
   Lungo la strada ci sono potenziamenti da prendere saltando (casco, ruote d'oro, calamita,
   bombolone, schiacciata all'olio, lampredotto) e una ruota sgonfia da evitare; con le
   ghiande raccolte si comprano nel negozio tavole con piccoli poteri.
-- **Tino Flipper** (`games/tino-flipper/`): flipper al neon, senza storia, solo per
-  divertirsi. Bumper a fungo, fionde, una rampa sopraelevata, l'orbita con lo spinner,
-  tre bersagli che cadono, la Tana (buca) e Gino al centro da colpire. Le corsie T·I·N·O
-  alzano il moltiplicatore del bonus, le combo di tiri raddoppiano e triplicano il campo,
-  tre ghiande nella Tana fanno partire il multiball con jackpot e super jackpot. Colpendo
-  Gino si accendono sei scenari, ognuno con colori, sfondo, musica e regole propri (Disco
-  nel bosco, Pioggia di ghiande, Caccia alle lucciole, Temporale, Luna park e la gran
-  festa di Gino con quattro ghiande); dopo la festa si ricomincia con il tavolo più
-  veloce. Palla salvata, rimbalzo nella corsia esterna, palla extra, scossone e tilt.
-  Suoni e musica synthwave sintetizzati; classifica dei cinque migliori punteggi.
+- **Tino Flipper** (`games/tino-flipper/`): flipper senza storia, solo per divertirsi.
+  Il tavolo nuovo, *Le radici della Quercia*, è alto due schermi: la telecamera segue la
+  ghianda (con una mini mappa del tavolo intero, o il tasto V per vederlo tutto). Quattro
+  flipper (uno a metà tavolo e uno nella galleria alta di assi), la radice lunga col
+  deviatore, il giro della morte con la liana, la buca del ghiro con il tunnel e il pozzo
+  che porta nella galleria, sassi che cadono, cartelli che si abbattono, il piolo d'oro che
+  gira, la resina che ferma la ghianda, il cece nel cunicolo, l'agente col timbro da
+  stordire e la dispensa con le ghiande in fila per il multiball. Quattro avventure (le
+  torce, la frana, la chiave, l'inseguimento) e il finale della Ghianda d'Oro. Il vecchio
+  tavolo al neon resta come tavolo bonus (`neon/`). Suoni e musica sintetizzati;
+  classifica dei cinque migliori punteggi per tavolo.

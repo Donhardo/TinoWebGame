@@ -232,3 +232,25 @@ kbd {
   .riquadro { padding: 16px 14px 18px; }
   .guida { grid-template-columns: 1fr; }
 }
+
+/* ---------- Versione 2: tavolo delle Radici (legno e torce) ---------- */
+body.tavolo-radici { background: #160c05; }
+.tavolo-radici .barra { background: #2a170a; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), inset 0 -2px 0 var(--neon, #ffb347); }
+.tavolo-radici .palco {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 160, 60, 0.18), transparent 60%),
+    radial-gradient(circle at 50% 100%, rgba(120, 80, 30, 0.25), transparent 55%),
+    #160c05;
+}
+.tavolo-radici .pannello { background: rgba(20, 10, 3, 0.55); }
+.tavolo-radici .riquadro {
+  background: linear-gradient(#3a2414, #22140a);
+  color: #fbeedd;
+  border-color: #c98a3e;
+  box-shadow: 0 0 18px rgba(255, 160, 60, 0.35), 0 14px 40px rgba(0, 0, 0, 0.5);
+}
+.tavolo-radici .riquadro h1, .tavolo-radici .riquadro h2 { text-shadow: 0 0 10px var(--neon2, #ff7a3d), 0 3px 0 #4a2a10; }
+.tavolo-radici .riquadro .bottone { background: #d9822b; box-shadow: 0 4px 0 #7a4210, 0 0 14px rgba(255, 150, 50, 0.45); text-decoration: none; }
+.tavolo-radici .riquadro .bottone.secondario { background: #4a2e15; box-shadow: 0 4px 0 #22140a; }
+.tavolo-radici .gira { background: #160c05; }
+#campo { touch-action: none; }
