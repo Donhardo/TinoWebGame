@@ -1325,8 +1325,131 @@ logica, su canvas), `ghianda.svg`.
   parati dal casco).
 
 ### Tino Flipper (`games/tino-flipper/`)
-Flipper al neon (meccaniche da classico del genere), senza storia: solo un passatempo.
-File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su canvas).
+Flipper (meccaniche da classici del genere), senza storia: solo un passatempo. Versione 2
+in corso (piano più sotto): motore comune e un tavolo per mondo; la versione 1 (Notte al
+neon) è diventata il tavolo bonus in `neon/`.
+File: `index.html` (pagina della versione 2), `stile.css` (comune, con le regole
+`.tavolo-radici` per il legno), `motore.js` (motore comune), `tavoli/radici.js` (primo
+tavolo), `gioco.js` (partita, telecamera, disegno, comandi, pannelli, giocatore simulato),
+`neon/index.html` e `neon/gioco.js` (versione 1, percorsi con `../../../`, la barra torna
+ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
+
+#### Versione 2: motore comune (`motore.js`, `gioco.js`)
+- **Motore** (`window.TF`): `TF.nuovoMondo(W, H)` dà un mondo da riempire con
+  `segmento`/`parete` (o.tipo, o.e, o.r, o.attivo, o.unaVia, o.piano, o.esito), `cerchio`,
+  `nuovoFlipper` ({ id, lato, x, y, lungo, r1, r2, piano, zona }), `sensore` (linea con
+  `verso`), `presa` (buca), `bocca` (entrata di una rampa: linea passata in avanti con
+  velocità sopra `velMin`), `percorso` (spezzata che la ghianda segue: rampe, tunnel con
+  `sotto`, scivoli; `costante` o `vel` [min, max]; esce al `piano` con `uscita`),
+  `prigioniera` (palla prigioniera: si muove solo in verticale tra `giu` e `su`),
+  `magnete`, `disco` (gira e trascina la ghianda), `mobile` (giocattolo che si muove).
+  Due piani: 0 il campo, 1 un mini campo rialzato; la ghianda urta solo il suo piano.
+  `TF.passoPalla(m, p, h, sim)` fa un passo (passo di 1/960 s, urti come nella versione 1)
+  e restituisce `{ bocca }`, `{ presa }` o `{ magnete }`; gli altri fatti arrivano a
+  `m.ev(tipo, oggetto, palla, info)` (`colpo`, `sensore`, `prigioniera`,
+  `prigionieraCima`, `parete`, `flipperColpo`, `palle`). Gli urti guardano solo le pareti
+  della fascia di 100 px in cui sta la ghianda (`preparaGriglia`). `TF.simula` prova il
+  futuro di una ghianda con copie dei flipper: la prima cosa con un `esito` è il risultato.
+  `TF.audio`: effetti (`suoni.nome()`) e lettore di musica col brano e gli stili del tavolo.
+- **Tavolo**: `TF.tavoli.<id>(G)` costruisce il mondo e restituisce regole (`evento`,
+  `bocca`, `finePercorso`, `presa`, `magnete`, `aggiorna`, `desiderati`, `esitoExtra`…),
+  strati da disegnare una volta (`strati.fondo`, `pareti`, `galleria`, `rampe`) e disegno
+  vivo (`disegnaPavimento`, `disegnaCampo`, `disegnaSopraGalleria`, `disegnaSopra`). `G`
+  è l'interfaccia di `gioco.js` (`punti`, `messaggio`, `tiro`, `percorso`, `trattieni`,
+  `libera`, `togli`, `avviaMultiball`, `avviaAvventura`, `d` per lampade, luci, ghiande e
+  flipper…).
+- **Partita** (`gioco.js`): regole comuni della versione 1 (palla salvata 12 s a inizio
+  palla, 14 nel multiball; tilt; bonus a fine palla con le righe del tavolo; combo e campo
+  ×2…×4; palla extra), multiball e avventure (al posto degli scenari: durano un tempo, il
+  finale dura finché c'è il multiball, poi si ricomincia col tavolo più veloce).
+  Classifica per tavolo (`localStorage` `tino-flipper:<id>:classifica`), `vista-intera`.
+- **Telecamera**: il tavolo è largo quanto lo schermo e se ne vede una finestra alta
+  almeno 960 (computer ~960, telefono in verticale ~1250; se lo schermo è più alto del
+  tavolo si vede tutto). Segue la ghianda più pericolosa (la più in basso che scende),
+  guardando dove sarà tra 0,25 s; se la ghianda è nel quarto basso della finestra mostra i
+  flipper in fondo; molla smorzata con zona morta di 36 px; la ghianda resta sempre ad
+  almeno 70 px dal bordo (tabella `CAMERA`). Tasto V o pulsante nella barra: tavolo
+  intero rimpicciolito. Mini mappa (strati del tavolo in piccolo, ghiande, finestra) nel
+  pannello di sinistra sugli schermi larghi, in alto a destra sul telefono.
+- **Comandi**: come nella versione 1; ogni tasto (o metà schermo) muove tutti i flipper del
+  suo lato. Il giocatore simulato tiene conto anche degli altri flipper dello stesso lato.
+- **Disegno**: strati a tavolo intero disegnati una volta (base, galleria, rampe; a
+  risoluzione limitata a ~2,6 milioni di pixel l'uno), di cui si copia solo la parte
+  inquadrata; sopra il disegno vivo nell'ordine pavimento, campo, ghiande del campo,
+  galleria, ghiande della galleria, rampe, ghiande sulle rampe. Messaggi e bonus in
+  coordinate dello schermo.
+
+#### Le radici della Quercia (`tavoli/radici.js`, tappa 1)
+- **Decisioni prese** (proposta approvata con la pianta): primo tavolo le Radici; il tavolo
+  al neon resta nel menu come bonus finché non passa sul motore nuovo (tappa 2); giocattolo:
+  l'agente col timbro che cammina sulla radice; avventure Le torce, La frana, La chiave,
+  Inseguimento e il finale La Ghianda d'Oro; tasto V per il tavolo intero; sblocco dei
+  tavoli coi punti da decidere nella tappa 2.
+- **Tavolo** 640 × 1900, centro del campo `CX` = 300, gravità 1450 (con 1650 le ghiande
+  arrivavano ai flipper troppo veloci: cadono da più in alto che nel tavolo vecchio).
+  Corridoio di lancio x 580-620 con lo stantuffo a y 1846; in cima un cancelletto
+  inclinato (da (618, 392) a (556, 454)) che si passa solo salendo: chi ricade dall'alto ci
+  scivola sopra e finisce nell'orbita (quello orizzontale faceva da mensola). Parte bassa
+  uguale alla versione 1 spostata di (+20, +847), con le corsie esterne più strette (guide
+  a x 78 e 522) e le sporgenze laterali più lunghe (fino a y 1518): prima tre ghiande perse
+  su quattro finivano nelle corsie esterne.
+- **Elementi**: fionde, tre nodi (bumper), corsie T·I·N·O col tiro da maestro, orbita
+  destra con lo spinner (x 520-580), radice lunga (rampa di legno dalla bocca a (115, 990):
+  in cima il deviatore la manda alla corsia interna destra o, con la dispensa aperta, alla
+  dispensa), giro della morte (bocca a (440, 960), anello di centro (455, 560), poi la liana
+  fino alla corsia interna sinistra), buca del ghiro (nicchia a (200, 876) con il sasso che
+  spunta davanti: tunnel sotto il campo fino al pozzo, che la fa salire nella galleria
+  alta), galleria alta (piano 1, x 40-240, y 368-650: quarto flipper a (64, 592), tre
+  torce, Gino da colpire, uscita a destra verso i nodi, scolo verso lo scivolo che riporta
+  sul campo), quattro sassi (bersagli che cadono, sotto la massa delle radici), tre
+  cartelli (si abbattono, si rialzano dopo 8 s; si colpiscono solo da sotto, dall'alto si
+  passa: prima la ghianda ci si fermava sopra), piolo d'oro (disco che gira a (300, 850)),
+  agente col timbro (cammina su y 692 tra x 296 e 462; con x più piccole schiacciava la
+  ghianda dello scivolo contro la parete), resina (magnete a (300, 1290)), cunicolo del cece
+  (palla prigioniera a x 540, sporge dall'imbocco: con i paletti sotto si poteva colpire
+  solo dritta dal basso), terzo flipper (a destra, perno (562, 1140), sotto l'uscita
+  dell'orbita), molla (rimbalzo nella corsia esterna sinistra), radice che spunta (palo
+  tra i flipper), dispensa (tubo con le ghiande bloccate in fila; nel multiball escono
+  lungo la liana fino alla corsia sinistra). Scivoli sopra i perni del terzo e del quarto
+  flipper (la ghianda restava tra parete e perno).
+- **Regole** (tabella `PUNTI`): sassi giù = dispensa aperta, tre ghiande bloccate =
+  multiball (jackpot su radice lunga e giro; dopo tre, super jackpot passando sul piolo
+  d'oro; sassi giù nel multiball = jackpot doppio); agente colpito 3 volte (poi una in più
+  per avventura fatta, al massimo 6) = avventura pronta nella buca (il sasso si abbassa);
+  sasso colpito = tunnel aperto per 20 s; torce tutte accese = campo ×2 per 20 s; Gino =
+  resina pronta (la resina ferma la ghianda e la tira verso il tiro che serve, provando le
+  direzioni con `TF.simula`); cece in cima = chiave, tre chiavi (poi 5, 7…) = palla extra
+  nella buca, e anche ogni 8 radici lunghe (poi 12); cartelli tutti giù = radice che spunta
+  per 20 s; spinner = molla ricaricata. Avventure (tabella `AVVENTURE`, 35-40 s): Le torce
+  (75.000 a torcia, tunnel aperto), La frana (sassi 25.000, banco intero 150.000 e si
+  rialzano subito), La chiave (cece 60.000, poi la radice lunga apre la porta: 200.000),
+  Inseguimento (agente veloce, 75.000 a colpo, cinque colpi 300.000); finale La Ghianda
+  d'Oro (quattro ghiande, ogni tiro jackpot 100.000, piolo d'oro 250.000). Combo con
+  radice lunga, giro, orbita, tunnel, agente, cece e uscita della galleria.
+- **Disegno nel codice**: terra con sassolini, radici e muschio; pareti di legno a tre
+  passate; massa delle radici con le venature; galleria di assi con l'ombra; rampe di
+  legno semitrasparenti, anello di metallo, liana con le foglie; nodi con gli anelli del
+  legno e il cappello d'ambra; sassi di pietra; cartelli; piolo d'oro che gira; torce con
+  la fiamma; agente (SVG) che cammina e cade stordito con le stelline; dispensa di vetro.
+  Neon solo per le lampade accese e le scritte. Musica in Re minore con i legnetti (menu 92
+  bpm, partita 112, avventure 116-134, multiball 130, finale 138).
+- **Taratura** (partite simulate, 6 per livello, fino a 20 minuti): nessuna ghianda esce
+  dal tavolo, nessun incastro. Con errore 25 / 35 / 50 ms e mira 60 / 35 / 20% le partite
+  durano in media ~15 / ~12 / ~5 minuti (molto variabili); il giocatore più preciso (4 ms)
+  arriva al finale e fa il giro. Si perde soprattutto nella corsia esterna destra.
+- **Provarlo su Claude**: in una cartella di appoggio `index.html` (senza doctype, html,
+  head e body, percorsi `../../` tolti, link alla home `#`), `css/sito.css`, `stile.css`,
+  `motore.js`, `tavoli/radici.js`, `gioco.js` (con `ASSETS = 'assets/'`),
+  `neon/index.html` e `neon/gioco.js` (percorsi `../assets/` e `../css/`),
+  `assets/tino/`, `assets/gino/`, `assets/agenti-tari/agente-timbro.svg`; si pubblica con
+  `files` e `root`. Prove: `window.tinoFlipper` (`stato`, `tavolo` (con `S`, `oggetti`,
+  tabelle), `mondo`, `camera`, `IA`, `iniziaPartita`, `aggiorna`, `avviaPercorso`,
+  `avviaAvventura`, `nuovaPalla`, `cambiaVista`); con `stato.test` e `stato.iaGioca` come
+  nella versione 1; `stato.statistiche.dove` (incastri e uscite), `scoli` (dove si perde
+  la ghianda), `tiri`. I copioni non sono nel repository.
+- **Stato**: tappa 1 fatta, da provare (artifact) prima di unire.
+
+#### Notte al neon (versione 1, ora `neon/`)
 - **Decisioni prese**: titolo "Tino Flipper", sottotitolo "Notte al neon nel bosco";
   nessuna storia; la palla è una ghianda tonda col cappello; Gino al centro del tavolo come
   bersaglio (la sua foto in un cerchio al neon), Tino sul grembiule in basso a sinistra (e
@@ -1431,8 +1554,10 @@ File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su canvas).
   `assets/gino/`; si pubblica con `files` e `root`.
 - **Stato**: giocabile (versione 1, un solo tavolo al neon). Dopo la prima prova al
   proprietario piace ma è "troppo compresso" e troppo tutto al neon: si passa alla
-  versione 2 qui sotto.
-- **Piano della versione 2** (approvato, da fare):
+  versione 2 qui sotto; resta come tavolo bonus.
+
+#### Piano della versione 2
+- **Piano della versione 2** (approvato; tappa 1 fatta, vedi sopra):
   - **Tavoli più grandi** (circa 640 × 1900 logici, alti due schermi) con **telecamera
     verticale** che segue la ghianda con anticipo e morbidezza (quando scende verso i
     flipper ci arriva prima la telecamera; nel multiball inquadra le ghiande più in basso);

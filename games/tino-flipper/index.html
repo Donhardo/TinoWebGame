@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Tino Flipper · I giochi di Tino</title>
-  <meta name="description" content="Il flipper al neon di Tino: bumper, rampe, multiball, jackpot e scenari che cambiano colore.">
+  <meta name="description" content="Il flipper di Tino: un tavolo alto due schermi tra le radici della quercia, con quattro flipper, rampe, tunnel, giro della morte, multiball e avventure.">
   <link rel="icon" href="../../assets/tino/tino-normale.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +20,9 @@
       <span id="palle" class="palle" aria-label="Palle"></span>
     </div>
     <div class="barra-destra">
+      <button id="btn-vista" class="barra-btn" type="button" aria-label="Tavolo intero" title="Tavolo intero (V)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 7h4M10 12h4M10 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
       <button id="btn-pausa" class="barra-btn" type="button" aria-label="Pausa" title="Pausa (P)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
       </button>
@@ -43,6 +46,8 @@
     </div>
   </main>
 
+  <script src="motore.js"></script>
+  <script src="tavoli/radici.js"></script>
   <script src="gioco.js"></script>
 </body>
 </html>
