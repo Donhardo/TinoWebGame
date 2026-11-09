@@ -296,6 +296,69 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
   58% { translate: 0 -55%; rotate: 8deg; }
 }
 
+/* Anteprima di Tino Flipper: tavolo al neon, flipper che battono e Gino al centro */
+.anteprima-flipper {
+  background:
+    radial-gradient(circle at 50% 110%, rgba(57, 240, 255, 0.25), transparent 50%),
+    radial-gradient(circle at 50% 0%, rgba(255, 79, 216, 0.3), transparent 55%),
+    linear-gradient(#0b0420, #2a0f52);
+}
+.ap-tavolo {
+  position: absolute; left: 31%; right: 31%; top: 6%; bottom: -4%;
+  border: 2px solid #39f0ff; border-bottom: 0;
+  border-radius: 999px 999px 0 0 / 40% 40% 0 0;
+  box-shadow: 0 0 10px #39f0ff, inset 0 0 10px rgba(57, 240, 255, 0.5);
+}
+.ap-bumper {
+  position: absolute; width: 4.6%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff 0 10%, #ff9be9 30%, #ff4fd8 70%);
+  box-shadow: 0 0 0 2px #1a0b33, 0 0 0 4px #ff4fd8, 0 0 14px #ff4fd8;
+  animation: ap-bumper 0.9s ease-in-out infinite;
+}
+.ap-bumper:nth-of-type(2) { left: 42%; top: 17%; }
+.ap-bumper:nth-of-type(3) { left: 53.4%; top: 17%; animation-delay: 0.3s; }
+.ap-bumper:nth-of-type(4) { left: 47.7%; top: 31%; animation-delay: 0.6s; }
+@keyframes ap-bumper { 0%, 70%, 100% { filter: brightness(1); scale: 1; } 80% { filter: brightness(1.8); scale: 0.88; } }
+.ap-gino-f {
+  position: absolute; left: 50%; top: 54%; width: 9%; aspect-ratio: 1; translate: -50% -50%;
+  border-radius: 50%; overflow: hidden; background: #1a0b33;
+  box-shadow: 0 0 0 2px #ff4fd8, 0 0 14px #ff4fd8;
+  animation: ap-gino-f 1.4s linear infinite;
+}
+.ap-gino-f img { width: 100%; height: 115%; object-fit: cover; object-position: 50% 20%; }
+@keyframes ap-gino-f { 0%, 45%, 60%, 100% { rotate: 0deg; } 48% { rotate: -9deg; } 52% { rotate: 8deg; } 56% { rotate: -5deg; } }
+.ap-flip {
+  position: absolute; bottom: 10%; width: 12%; height: 5%; border-radius: 999px;
+  background: linear-gradient(#fff, #c9cfe6); box-shadow: 0 0 0 2px #ff4fd8, 0 0 12px #39f0ff;
+}
+.ap-flip-sx { left: 37%; transform-origin: 8% 50%; animation: ap-flip-sx 1.4s ease-in-out infinite; }
+.ap-flip-dx { right: 37%; transform-origin: 92% 50%; animation: ap-flip-dx 1.4s ease-in-out infinite; }
+@keyframes ap-flip-sx { 0%, 100% { rotate: 28deg; } 6%, 14% { rotate: -22deg; } 22% { rotate: 28deg; } }
+@keyframes ap-flip-dx { 0%, 46%, 72%, 100% { rotate: -28deg; } 52%, 60% { rotate: 22deg; } }
+.ap-palla-f {
+  position: absolute; width: 4.5%; aspect-ratio: 1; margin: -2.25% 0 0 -2.25%; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3dc 0 12%, #f2b56a 28%, #b06a2a 70%, #6b3a12);
+  box-shadow: 0 0 10px rgba(57, 240, 255, 0.8);
+  animation: ap-palla-f 1.4s linear infinite;
+}
+@keyframes ap-palla-f {
+  0% { left: 44%; top: 80%; }
+  14% { left: 49%; top: 60%; }
+  28% { left: 56%; top: 40%; }
+  36% { left: 58%; top: 50%; }
+  50% { left: 56%; top: 80%; }
+  64% { left: 51%; top: 60%; }
+  78% { left: 44%; top: 42%; }
+  88% { left: 42%; top: 58%; }
+  100% { left: 44%; top: 80%; }
+}
+.ap-tino-f { position: absolute; left: 4%; bottom: 0; height: 62%; transform-origin: 50% 100%; animation: saltello 1.4s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(255, 79, 216, 0.6)); }
+.ap-scritta-f {
+  position: absolute; right: 3%; top: 50%; translate: 0 -50%; font-weight: 700; font-size: 1.25rem; color: #fff;
+  text-shadow: 0 0 6px #39f0ff, 0 0 14px #39f0ff; rotate: -8deg; animation: ap-scritta-f 1.4s steps(2) infinite;
+}
+@keyframes ap-scritta-f { 50% { text-shadow: 0 0 6px #ff4fd8, 0 0 14px #ff4fd8; } }
+
 .piede { text-align: center; padding: 16px; font-size: 0.95rem; opacity: 0.75; }
 
 @media (max-width: 520px) {
