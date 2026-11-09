@@ -1116,7 +1116,8 @@ logica, su canvas), `ghianda.svg`.
   carrello del cantiere (cartacce rovesciate dalla benna: ci si sale sopra) e golf cart con lo
   skate di Gino (centro, tutti gli attacchi). Entra da destra, poi il ciclo: **fuga** (5,5 →
   4,8 → 4,2 → 3,8 s secondo i colpi presi; sta 460 px avanti a Tino e attacca col braccio alzato
-  e il "!" 0,45 s prima: bollette basse o alte che vanno 330 px/s più piano di lui, oppure
+  e il "!" 0,45 s prima: bollette basse o alte che vanno 330 px/s più piano di lui, disegnate 1,4 volte più
+  grandi delle altre (urti ×1,2; `INSEGUIMENTO.grandezza`), oppure
   lascia cadere sacco / cartacce / cono; niente attacchi nei primi 0,8 s e negli ultimi 1,3),
   **avviso** (0,9 s di fumo), **inceppo** (torna indietro verso Tino a 270 px/s, con la freccia
   gialla sopra): saltandogli in testa (cima `alto` del mezzo) è un colpo (+500, rimbalzo come il

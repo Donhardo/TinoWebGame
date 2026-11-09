@@ -1520,6 +1520,7 @@
     riparte: 340,              // px/s: dopo il colpo (o l'urto) torna avanti
     oltre: 260,                // se Tino lo supera di tanto senza colpirlo, riparte
     bolletta: 330,             // velocità delle bollette rispetto all'ispettore
+    grandezza: 1.4,            // le sue bollette sono più grandi (disegno; gli urti crescono meno, ×1,2)
     avvisoLancio: 0.45,        // il braccio si alza prima di ogni attacco
     punti: 500,                // per ogni colpo
     ko: 2000,                  // quando il mezzo si schianta
@@ -1644,7 +1645,7 @@
     c.braccio = 0;
     if (tipo === 'bolletta') {
       const bassa = casuale() < 0.55;
-      stato.bollette.push({ x: retro, h: bassa ? AGENTI.bassa : AGENTI.alta, rot: 0, v: c.v - INSEGUIMENTO.bolletta });
+      stato.bollette.push({ x: retro, h: bassa ? AGENTI.bassa : AGENTI.alta, rot: 0, v: c.v - INSEGUIMENTO.bolletta, k: INSEGUIMENTO.grandezza });
       suoni.lancio();
     } else if (tipo === 'sacco') {
       const o = ostacolo('sacco', retro - 50);
@@ -2379,7 +2380,8 @@
       if (b.via) continue;
       b.x += (b.v === undefined ? -AGENTI.bolletta : b.v) * dt; // quelle dell'ispettore hanno la loro velocità
       b.rot += dt * 7;
-      if (Math.abs(b.x - t.x) < FISICA.larg / 2 + 12 && b.h + 10 > t.h && b.h - 10 < t.h + altezza(t)) {
+      const ku = b.k ? 1 + (b.k - 1) / 2 : 1; // le bollette grandi dell'ispettore
+      if (Math.abs(b.x - t.x) < FISICA.larg / 2 + 12 * ku && b.h + 10 * ku > t.h && b.h - 10 * ku < t.h + altezza(t)) {
         b.via = true;
         if (t.sfondamento > 0 || t.botta) { coriandoli(b.x, b.h, '#fff', 6); stato.punti += 30; }
         else if (urto(b.h > 80 ? 'bolletta alta' : 'bolletta bassa')) coriandoli(b.x, b.h, '#fff', 6);
@@ -3695,6 +3697,7 @@
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(Math.sin(b.rot) * 0.35);
+      if (b.k) ctx.scale(b.k, b.k);
       ctx.fillStyle = 'rgba(20,22,30,0.4)';
       ctx.fillRect(-11, -7, 28, 20);
       ctx.fillStyle = '#fff';
@@ -3710,9 +3713,10 @@
       ctx.fillRect(-9, 3, 18, 2);
       ctx.restore();
       // scia
+      const ks = b.k || 1;
       ctx.strokeStyle = 'rgba(28,31,39,0.55)';
       ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x + 18, y - 4); ctx.lineTo(x + 40, y - 4); ctx.moveTo(x + 18, y + 4); ctx.lineTo(x + 32, y + 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + 18 * ks, y - 4 * ks); ctx.lineTo(x + 40 * ks, y - 4 * ks); ctx.moveTo(x + 18 * ks, y + 4 * ks); ctx.lineTo(x + 32 * ks, y + 4 * ks); ctx.stroke();
     }
   }
 
