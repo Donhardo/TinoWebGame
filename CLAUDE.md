@@ -1113,7 +1113,8 @@ logica, su canvas), `ghianda.svg`.
   presa all'inizio), senza limiti.
 - **Inseguimento**: l'ispettore (SVG, non si specchia) sul mezzo dipinto: Ape (Cascine, sacchi
   di bollette), monopattino (Novoli, in piedi, più alto da colpire: 124, bollette e coni),
-  carrello del cantiere (cartacce rovesciate dalla benna: ci si sale sopra) e golf cart con lo
+  carrello del cantiere (cartacce rovesciate dalla benna: ci si sale sopra; monopattino e
+  carrello sono dipinti verso sinistra e si disegnano specchiati, `specchia`) e golf cart con lo
   skate di Gino (centro, tutti gli attacchi). Entra da destra, poi il ciclo: **fuga** (5,5 →
   4,8 → 4,2 → 3,8 s secondo i colpi presi; sta 460 px avanti a Tino e attacca col braccio alzato
   e il "!" 0,45 s prima: bollette basse o alte che vanno 330 px/s più piano di lui, disegnate 1,4 volte più

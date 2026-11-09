@@ -1502,11 +1502,12 @@
   // ciclo ricomincia, un po' più svelto. Con l'ultimo colpo il mezzo si schianta.
   // Mezzi: w = larghezza del disegno in gioco, alto = la cima da colpire,
   // sedile = dove sta l'ispettore (frazione della larghezza da sinistra, della
-  // altezza da terra), capo = altezza dell'ispettore, attacchi = pesi.
+  // altezza da terra), capo = altezza dell'ispettore, attacchi = pesi. specchia: il
+  // disegno guarda a sinistra (il monopattino e il carrello), si gira verso destra.
   const MEZZI = {
     ape: { w: 184, alto: 100, sedile: [0.67, 0.31], capo: 72, attacchi: { bolletta: 2, sacco: 2 }, ogni: 1.35 },
-    monopattino: { w: 124, alto: 124, sedile: [0.6, 0.13], capo: 100, attacchi: { bolletta: 3, cono: 1.2 }, ogni: 1.3 },
-    carrello: { w: 178, alto: 100, sedile: [0.74, 0.52], capo: 62, attacchi: { bolletta: 1.5, cartacce: 2 }, ogni: 1.35 },
+    monopattino: { w: 124, alto: 124, specchia: true, sedile: [0.4, 0.13], capo: 100, attacchi: { bolletta: 3, cono: 1.2 }, ogni: 1.3 },
+    carrello: { w: 178, alto: 100, specchia: true, sedile: [0.26, 0.52], capo: 62, attacchi: { bolletta: 1.5, cartacce: 2 }, ogni: 1.35 },
     golf: { w: 200, alto: 120, sedile: [0.45, 0.3], capo: 74, attacchi: { bolletta: 2, sacco: 1, cartacce: 1, cono: 1 }, ogni: 1.2 },
   };
   const INSEGUIMENTO = {
@@ -3613,7 +3614,12 @@
     ctx.translate(x + tremo, y0 + 1 - sobbalzo);
     if (c.fase === 'ko') ctx.rotate(-c.ko.inclina * 0.4);
     // sul monopattino l'ispettore sta davanti al manubrio; negli altri dentro il mezzo
-    if (pronta(im)) ctx.drawImage(im, -w / 2, -h, w, h);
+    if (pronta(im)) {
+      ctx.save();
+      if (M.specchia) ctx.scale(-1, 1);
+      ctx.drawImage(im, -w / 2, -h, w, h);
+      ctx.restore();
+    }
     else {
       ctx.fillStyle = '#4a4f5c'; ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3;
       arrotondato(-w / 2, -M.alto, w, M.alto - 14, 10); ctx.fill(); ctx.stroke();
