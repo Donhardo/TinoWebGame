@@ -965,8 +965,8 @@ logica, su canvas), `ghianda.svg`.
 - **Tappe**: 1 motore (fatta: corsa, salti, trick, combo, grind, manual, schiacciata,
   Grinta, agenti col retino e col timbro, quartiere delle Cascine, corsa infinita,
   musica punk, Gino giocabile); 2 contenuti (fatti i quattro quartieri: Novoli, cantieri
-  della tramvia e centro con ostacoli propri; da fare: modalità storia con gli inseguimenti dell'ispettore capo,
-  potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
+  della tramvia e centro con ostacoli propri; fatta la modalità storia con gli inseguimenti
+  dell'ispettore capo; da fare: potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
   all'olio, lampredotto, ruota sgonfia; negozio); grafica a fumetto delle Cascine e della
   half pipe (fatta, prima della tappa 2); 3
   rifinitura (suoni, taratura con persone vere).
@@ -1065,8 +1065,8 @@ logica, su canvas), `ghianda.svg`.
   monopattini, ruspa, benna, fango, binari, tram, sampietrini, turista, bancarella, bici;
   `pipe/scavo.png`, `pipe/muro-cantiere.png`; `mezzi/` ape, monopattino, carrello, golf
   (I1-I4); `poteri/` casco, ruote-oro, calamita, schiacciata, lampredotto, ruota-sgonfia
-  (P1-P3, P5-P7); `tavole/` giglio, longboard, leggera, pesante (T1-T4). Mezzi, poteri e
-  tavole non sono ancora usati nel codice.
+  (P1-P3, P5-P7); `tavole/` giglio, longboard, leggera, pesante (T1-T4). Mezzi e vignette
+  sono usati dalla storia; poteri, tavole, caschi e adesivi non ancora.
 - **Quartieri** (tabella `QUARTIERI`, `GIRO_QUARTIERI`, `quartiereA(x)`): Cascine → Novoli →
   cantieri della tramvia → centro, 750 m l'uno (`LUNGO_QUARTIERE`), poi si ricomincia dalle
   Cascine (sempre più veloci). Ogni quartiere ha nome, colori (cielo, colline, palazzi,
@@ -1196,7 +1196,8 @@ logica, su canvas), `ghianda.svg`.
   testa) saltella quando chiude una combo, trema quando urta, rotola quando cade.
 - **Punteggio**: punti delle combo + 10 per ghianda + 50 per ogni cosa sfondata;
   `localStorage` `tino-pro-skate:record-metri`, `record-punti`, `ghiande-totali`,
-  `storia-vista` (il dialogo della storia compare la prima volta).
+  `storia-capitolo` (capitoli finiti, 4 = storia finita), `storia-punti` (i punti migliori
+  di ogni capitolo).
 - **Difficoltà tarata** con corse simulate (Playwright, solo salti, senza trick né
   Grinta): un giocatore che pianifica (ricerca in profondità sul futuro copiato con
   `clona`/`rimetti`, 7 tratti da 0,15 s) arriva a 4500 m con 0-3 urti in 10 corse su 10;

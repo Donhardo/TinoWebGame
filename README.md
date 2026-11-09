@@ -77,5 +77,7 @@ e poi si visita http://localhost:8000.
   il centro (sampietrini che fanno tremare, turisti, bancarelle, bici, il Ponte Vecchio sullo
   sfondo); nel menu si sceglie da quale quartiere partire (si sblocca arrivandoci). Grafica a
   fumetto (fondali a tre strati ed elementi dipinti con Gemini in `disegni/`, contorni neri
-  attorno alle foto, onomatopee) e musica punk sintetizzata; la storia con gli inseguimenti
-  dell'ispettore arriva dopo.
+  attorno alle foto, onomatopee) e musica punk sintetizzata. Modalità storia in quattro
+  capitoli (uno per quartiere), ognuno con l'inseguimento finale dell'ispettore capo su un
+  mezzo (Ape, monopattino, carrello del cantiere, golf cart): quando il mezzo si inceppa gli
+  si salta in testa; vignette tra un capitolo e l'altro e finale sul Ponte Vecchio.

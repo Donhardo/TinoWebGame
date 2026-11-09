@@ -168,6 +168,8 @@
   disegni.scavo = carica(DISEGNI + 'pipe/scavo.png');
   disegni.muroCantiere = carica(DISEGNI + 'pipe/muro-cantiere.png');
   disegni.ponteVecchio = carica(DISEGNI + 'fondali/ponte-vecchio.png');
+  // i mezzi dell'ispettore capo (modalità storia)
+  for (const n of ['ape', 'monopattino', 'carrello', 'golf']) disegni['mezzo-' + n] = carica(DISEGNI + 'mezzi/' + n + '.png');
   // Le foto dei personaggi restano quelle originali: per farle stare nel
   // fumetto si prepara una volta una copia con un contorno nero spesso e
   // un'ombra piena (sfalsata in basso a destra). hRif è l'altezza a cui si
@@ -305,6 +307,8 @@
       scossa: 0,
       cam: { x: 0, h: 0 },
       quartiere: 0,            // quanti quartieri sono passati (per il messaggio d'entrata)
+      storia: null,            // nella storia: { cap, fase: strada | inseguimento | vinto, xFine, xVia }
+      capo: null,              // l'ispettore capo sul suo mezzo (inseguimento)
       statistiche: { cause: {}, urti: 0, cadute: 0, pestoni: 0, trick: 0, comboMax: 0, sfondamenti: 0, botte: 0 },
       risultato: null,
     };
@@ -317,7 +321,6 @@
   let recordMetri = leggi('record-metri', 0);
   let recordPunti = leggi('record-punti', 0);
   let ghiandeTotali = leggi('ghiande-totali', 0);
-  let storiaVista = leggi('storia-vista', false);
 
   function nuovoTino() {
     return {
@@ -442,6 +445,12 @@
     foto: () => { tono(2400, 0.03, 'square', 0.03); fruscio(0.08, 0.2, 'highpass', 5000, 0.03); },
     splash: () => fruscio(0.25, 0.3, 'lowpass', 700, 0, 200),
     quartiere: () => [523, 659, 784, 659, 1046].forEach((f, i) => tono(f, 0.09, 'square', 0.04, null, i * 0.08)),
+    // l'inseguimento dell'ispettore capo
+    megafono: () => { tono(330, 0.5, 'sawtooth', 0.05, 300); tono(440, 0.5, 'square', 0.03, 400, 0.06); fruscio(0.5, 0.08, 'bandpass', 1500); },
+    inceppo: () => [0, 0.18, 0.36].forEach((r) => { fruscio(0.14, 0.25, 'lowpass', 600, r, 150); tono(70, 0.12, 'square', 0.06, 40, r); }),
+    tonfo: () => { tono(110, 0.12, 'sine', 0.12, 50); fruscio(0.12, 0.2, 'lowpass', 700); },
+    risata: () => [0, 0.14, 0.28].forEach((r, i) => tono(260 - i * 20, 0.1, 'sawtooth', 0.04, 200 - i * 20, r)),
+    vittoria: () => [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => tono(f, 0.13, 'square', 0.045, null, i * 0.11)),
   };
 
   // Suoni continui: il rotolio delle ruote (cambia con la velocità) e lo
@@ -643,7 +652,7 @@
     const liv = corsa ? 1 : 0;
     const vel = corsa && stato.tino ? clamp((curva(CURVE.velocita, stato.metri) - 340) / 245, 0, 1) : 0;
     const bpm = corsa ? lerp(MUSICA.bpm[1], MUSICA.bpm[2], vel) : MUSICA.bpm[0];
-    const intenso = corsa && (stato.grinta >= GRINTA.tacca * GRINTA.tacche || (stato.combo && stato.combo.azioni.length >= 3));
+    const intenso = corsa && (!!stato.capo || stato.grinta >= GRINTA.tacca * GRINTA.tacche || (stato.combo && stato.combo.azioni.length >= 3));
     if (musica.prossimo < t) musica.prossimo = t + 0.03; // il timer è rimasto indietro
     const durata = 60 / bpm / 2; // ottavi
     while (musica.prossimo < t + MUSICA.anticipo) {
@@ -863,8 +872,8 @@
   const quartiereAperto = (i) => i === 0 || recordMetri >= i * LUNGO_QUARTIERE;
   let partenza = leggi('partenza', 0);
   if (!(partenza >= 0 && partenza < 4 && quartiereAperto(partenza))) partenza = 0;
-  function nuovaCorsa(seme, da = partenza) {
-    const personaggio = stato.personaggio;
+  function nuovaCorsa(seme, da = partenza, storia = false) {
+    const personaggio = storia ? 'tino' : stato.personaggio; // la storia si gioca con Tino
     const test = stato.test;
     stato = nuovoStato();
     stato.test = test;
@@ -878,12 +887,19 @@
     stato.cam.x = stato.tino.x - xTino();
     // all'inizio una fila di ghiande per prendere confidenza
     for (let i = 0; i < 6; i++) stato.ghiande.push({ x: 380 + i * 60, h: 45, tipo: 'ghianda' });
+    if (storia) {
+      stato.storia = { cap: da, fase: 'strada', xFine: stato.x0 + (da + 1) * LUNGO_QUARTIERE * PX_M, xVia: null };
+    }
     stato.fase = 'corsa';
     nascondiPannello();
     aggiornaBarra();
     suoni.via();
-    messaggio('Vai, Tino!', 1.4, '#ffd23f', true);
+    if (storia) {
+      messaggio(`Capitolo ${da + 1}: ${QUARTIERI[GIRO_QUARTIERI[da]].nome}`, 2.2, '#ffd23f', true);
+      messaggio(STORIA[da].via, 2.2, '#fff');
+    } else messaggio('Vai, Tino!', 1.4, '#ffd23f', true);
   }
+  const nuovaStoria = (cap, seme) => nuovaCorsa(seme, cap, true);
 
   function pausa() {
     if (!inGioco()) return;
@@ -900,7 +916,7 @@
     nascondiPannello();
   }
   function vaiAlMenu() {
-    const personaggio = stato.personaggio;
+    const personaggio = leggi('personaggio', stato.personaggio);
     stato = nuovoStato();
     stato.personaggio = personaggio;
     stato.fase = 'menu';
@@ -1095,6 +1111,12 @@
     for (const b of stato.bollette) {
       if (b.x > da && b.x < a) { b.via = true; coriandoli(b.x, b.h, '#fff', 5); }
     }
+    // l'ispettore in fuga: il mezzo si inceppa subito
+    const c = stato.capo;
+    if (c && (c.fase === 'fuga' || c.fase === 'avviso')) {
+      c.fase = 'inceppo'; c.t = 0; c.braccio = 0; c.tipo = null;
+      messaggio('L\'ispettore è stordito!', 1.3, '#ffd23f');
+    }
     stato.scossa = 0.5;
     stato.particelle.push({ tipo: 'onda', x: t.x, h: t.h, t: 0, dur: 0.6 });
     polvere(t.x, t.h, 18);
@@ -1204,6 +1226,9 @@
     bancarella: { w: 150, h: 54, solido: true, piano: true },      // il carretto; la tettoia è una parte
     tettoia: { w: 176, h: 130, piano: true, unaVia: true, nascosto: true },
     bici: { w: 170, h: 54, solido: true },
+    // lanciati dall'ispettore capo durante l'inseguimento
+    sacco: { w: 44, h: 40, solido: true, rompibile: true },                // sacco di bollette: si salta
+    cartacce: { w: 104, h: 46, solido: true, piano: true, rompibile: true }, // mucchio di cartacce: ci si sale sopra
   };
   // la pendenza di una superficie inclinata (rampe, corrimano della scalinata)
   const inclinato = (o) => o.rampa || o.h0 !== undefined;
@@ -1438,6 +1463,11 @@
   function generaStrada() {
     const g = stato.gen;
     while (g.x < stato.cam.x + larg + 700) {
+      // nella storia la strada finisce col quartiere: poi arriva l'ispettore
+      if (stato.storia && g.x >= stato.storia.xFine) {
+        if (stato.storia.xVia === null) stato.storia.xVia = g.x;
+        break;
+      }
       const m = (g.x - stato.x0) / PX_M;
       const v = curva(CURVE.velocita, m);
       // una ruota di scorta ogni tanto, se ne manca qualcuna
@@ -1461,6 +1491,271 @@
       g.n++;
       g.x = x + lung + v * curva(CURVE.pausa, m) * tra(1, 1.3);
     }
+  }
+
+  // ---------------------------------------------------------------- la storia
+  // Quattro capitoli, uno per quartiere: 750 m di strada, poi l'inseguimento
+  // dell'ispettore capo su un mezzo. Il ciclo dell'ispettore: scappa (sta avanti
+  // e attacca: bollette col megafono, sacchi, cartacce, coni), il mezzo fuma
+  // (avviso), si inceppa e torna indietro verso Tino; saltandogli in testa si
+  // mette a segno un colpo, urtarlo di lato toglie una ruota. Poi riparte e il
+  // ciclo ricomincia, un po' più svelto. Con l'ultimo colpo il mezzo si schianta.
+  // Mezzi: w = larghezza del disegno in gioco, alto = la cima da colpire,
+  // sedile = dove sta l'ispettore (frazione della larghezza da sinistra, della
+  // altezza da terra), capo = altezza dell'ispettore, attacchi = pesi.
+  const MEZZI = {
+    ape: { w: 184, alto: 100, sedile: [0.67, 0.31], capo: 72, attacchi: { bolletta: 2, sacco: 2 }, ogni: 1.35 },
+    monopattino: { w: 124, alto: 124, sedile: [0.6, 0.13], capo: 100, attacchi: { bolletta: 3, cono: 1.2 }, ogni: 1.3 },
+    carrello: { w: 178, alto: 100, sedile: [0.74, 0.52], capo: 62, attacchi: { bolletta: 1.5, cartacce: 2 }, ogni: 1.35 },
+    golf: { w: 200, alto: 120, sedile: [0.45, 0.3], capo: 74, attacchi: { bolletta: 2, sacco: 1, cartacce: 1, cono: 1 }, ogni: 1.2 },
+  };
+  const INSEGUIMENTO = {
+    distanza: 460,             // in fuga l'ispettore sta così avanti a Tino (centro del mezzo)
+    entra: 320,                // px/s: arriva da destra
+    fuga: [5.5, 4.8, 4.2, 3.8], // secondi di fuga, secondo i colpi già presi
+    calma: [0.8, 1.3],         // niente attacchi nei primi e negli ultimi secondi della fuga
+    cadenza: 0.08,             // gli attacchi si fanno più fitti di tanto a ogni colpo
+    avviso: 0.9,               // il mezzo fuma prima di incepparsi
+    avvicina: 270,             // px/s: il mezzo inceppato torna indietro verso Tino
+    riparte: 340,              // px/s: dopo il colpo (o l'urto) torna avanti
+    oltre: 260,                // se Tino lo supera di tanto senza colpirlo, riparte
+    bolletta: 330,             // velocità delle bollette rispetto all'ispettore
+    avvisoLancio: 0.45,        // il braccio si alza prima di ogni attacco
+    punti: 500,                // per ogni colpo
+    ko: 2000,                  // quando il mezzo si schianta
+  };
+  // i capitoli: quartiere, mezzo, colpi che servono e le battute
+  const STORIA = [
+    { mezzo: 'ape', colpi: 3, via: 'L\'ispettore è scappato verso Novoli…', capo: 'Ah ah! Con l\'Ape non mi prendi!' },
+    { mezzo: 'monopattino', colpi: 3, via: 'Sul monopattino, verso il Palazzo di Giustizia!', capo: 'Monopattino in condivisione: lo paghi tu!' },
+    { mezzo: 'carrello', colpi: 3, via: 'Tra le ruspe della tramvia!', capo: 'Questi cantieri non finiscono mai… e nemmeno io!' },
+    { mezzo: 'golf', colpi: 4, via: 'Il golf cart con lo skate di Gino!', capo: 'Lo skate è qui dietro: prendimi, se ci riesci!' },
+  ];
+  let storiaFatta = leggi('storia-capitolo', 0);      // capitoli finiti (4 = storia finita)
+  let storiaPunti = leggi('storia-punti', [0, 0, 0, 0]); // i punti migliori di ogni capitolo
+  let puntoInseguimento = null;                         // lo stato all'inizio dell'inseguimento (per riprovarlo)
+
+  function iniziaInseguimento() {
+    const st = stato.storia, t = stato.tino;
+    const S = STORIA[st.cap];
+    st.fase = 'inseguimento';
+    stato.capo = {
+      mezzo: S.mezzo, max: S.colpi, colpi: 0,
+      x: t.x + larg - xTino() + MEZZI[S.mezzo].w, v: 0,
+      fase: 'entra', t: 0, prossimo: 0, braccio: 0, tipo: null, ko: null, ride: 0,
+    };
+    messaggio('INSEGUIMENTO!', 2, '#ff5a3c', true);
+    messaggio(S.capo, 2.4, '#fff');
+    suoni.megafono();
+    // per riprovare l'inseguimento: si riparte da qui, con le ruote piene
+    puntoInseguimento = structuredClone(stato);
+  }
+  function riprovaInseguimento() {
+    if (!puntoInseguimento) return;
+    const test = stato.test;
+    stato = structuredClone(puntoInseguimento);
+    stato.test = test;
+    stato.tino.ruote = VITA.ruote;
+    stato.fase = 'corsa';
+    nascondiPannello();
+    aggiornaBarra();
+    suoni.via();
+  }
+
+  const fugaCapo = (c) => INSEGUIMENTO.fuga[Math.min(c.colpi, INSEGUIMENTO.fuga.length - 1)];
+  function muoviCapo(dt) {
+    const c = stato.capo;
+    if (!c) return;
+    const t = stato.tino, M = MEZZI[c.mezzo], I = INSEGUIMENTO;
+    c.t += dt;
+    c.ride = Math.max(0, c.ride - dt);
+    const d = c.x - t.x;
+    let dd = 0; // velocità rispetto a Tino
+    switch (c.fase) {
+      case 'entra':
+        dd = -I.entra;
+        if (d <= I.distanza) { c.fase = 'fuga'; c.t = 0; c.prossimo = I.calma[0] + 0.4; }
+        break;
+      case 'fuga': {
+        dd = clamp((I.distanza - d) * 3, -300, 300);
+        const fuga = fugaCapo(c);
+        if (c.t > I.calma[0] && c.t < fuga - I.calma[1]) {
+          c.prossimo -= dt;
+          if (c.prossimo < I.avvisoLancio) {
+            if (!c.tipo) c.tipo = sceltaAttacco(M);
+            c.braccio = Math.min(1, c.braccio + dt / I.avvisoLancio);
+          }
+          if (c.prossimo <= 0) {
+            attacca(c, M);
+            c.prossimo = M.ogni * (1 - I.cadenza * c.colpi) * tra(0.9, 1.15);
+          }
+        } else c.braccio = Math.max(0, c.braccio - dt * 3);
+        if (c.t >= fuga) { c.fase = 'avviso'; c.t = 0; c.braccio = 0; c.tipo = null; suoni.inceppo(); }
+        break;
+      }
+      case 'avviso':
+        dd = clamp((I.distanza - d) * 3, -300, 300);
+        if (Math.random() < dt * 20) fumo(c.x - M.w / 2, 30);
+        if (c.t >= I.avviso) {
+          c.fase = 'inceppo'; c.t = 0;
+          messaggio(touch ? 'Si è inceppato! Saltagli in testa!' : 'Si è inceppato! Saltagli in testa!', 1.4, '#ffd23f');
+        }
+        break;
+      case 'inceppo':
+        dd = -I.avvicina;
+        if (Math.random() < dt * 14) fumo(c.x - M.w / 2, 30);
+        if (d < -I.oltre) { riparti(c); messaggio('Mancato! Ci riprova…', 1.1, '#ff9a7a'); }
+        break;
+      case 'riparte':
+        dd = I.riparte;
+        if (d >= I.distanza) { c.fase = 'fuga'; c.t = 0; c.prossimo = I.calma[0] + 0.3; }
+        break;
+      case 'ko': {
+        // il mezzo si schianta e si ferma; l'ispettore vola all'indietro
+        c.v = Math.max(0, c.v - 700 * dt);
+        c.x += c.v * dt;
+        c.ko.vy -= FISICA.gravita * dt;
+        c.ko.h = Math.max(-200, c.ko.h + c.ko.vy * dt);
+        c.ko.x += c.ko.vx * dt;
+        c.ko.rot += c.ko.vr * dt;
+        c.ko.inclina = Math.min(0.5, c.ko.inclina + dt * 1.2);
+        if (c.t > 2.6) capitoloVinto();
+        return;
+      }
+      default: break;
+    }
+    const vt = t.pipe ? 0 : t.v;
+    c.v = vt + dd;
+    c.x += c.v * dt;
+    if (c.fase === 'inceppo') toccaCapo(c, M);
+  }
+  function sceltaAttacco(M) {
+    let tot = 0;
+    for (const k in M.attacchi) tot += M.attacchi[k];
+    let r = casuale() * tot;
+    for (const k in M.attacchi) { r -= M.attacchi[k]; if (r <= 0) return k; }
+    return 'bolletta';
+  }
+  function attacca(c, M) {
+    const retro = c.x - M.w / 2; // il retro del mezzo
+    const v = curva(CURVE.velocita, stato.metri);
+    const tipo = c.tipo || sceltaAttacco(M);
+    c.tipo = null;
+    c.braccio = 0;
+    if (tipo === 'bolletta') {
+      const bassa = casuale() < 0.55;
+      stato.bollette.push({ x: retro, h: bassa ? AGENTI.bassa : AGENTI.alta, rot: 0, v: c.v - INSEGUIMENTO.bolletta });
+      suoni.lancio();
+    } else if (tipo === 'sacco') {
+      const o = ostacolo('sacco', retro - 50);
+      arco(o.x + o.w / 2, v, 0, 4);
+      suoni.tonfo();
+    } else if (tipo === 'cartacce') {
+      const o = ostacolo('cartacce', retro - 112);
+      fila(o.x + 14, o.x + o.w - 10, o.h, 40);
+      suoni.tonfo();
+      coriandoli(o.x + o.w / 2, 40, '#fff', 6);
+    } else if (tipo === 'cono') {
+      const o = ostacolo('cono', retro - 36);
+      arco(o.x + 14, v, 0, 4);
+      suoni.tonfo();
+    }
+  }
+  function riparti(c) {
+    c.fase = 'riparte';
+    c.t = 0;
+  }
+  // il mezzo inceppato tocca Tino: dall'alto è un colpo, di lato un urto
+  function toccaCapo(c, M) {
+    const t = stato.tino;
+    const x0 = c.x - M.w * 0.45, x1 = c.x + M.w * 0.45;
+    if (t.x + FISICA.larg / 2 - 6 < x0 || t.x - FISICA.larg / 2 + 6 > x1) return;
+    if (t.vy < 0 && t.hPrima >= M.alto - 42 && t.h < M.alto + 4) { colpisciCapo(c, M, false); return; }
+    if (t.h < M.alto - FISICA.margine) {
+      if (t.sfondamento > 0 || t.botta) { colpisciCapo(c, M, true); return; }
+      urto('ispettore');
+      c.ride = 1.2;
+      suoni.risata();
+      messaggio('Ah ah ah!', 1, '#ff9a7a');
+      riparti(c);
+    }
+  }
+  function colpisciCapo(c, M, sfondato) {
+    const t = stato.tino;
+    c.colpi++;
+    stato.statistiche.colpiCapo = (stato.statistiche.colpiCapo || 0) + 1;
+    stato.punti += INSEGUIMENTO.punti;
+    if (!sfondato) {
+      t.vy = stato.input.salto ? FISICA.pestoneTenuto : FISICA.pestone;
+      t.terra = false; t.appoggio = -1;
+      t.tenuta = FISICA.tenutaMax;
+      t.schiaccia = false;
+      t.h = Math.max(t.h, M.alto - 10);
+    }
+    aggiungi(sfondato ? 'Sfondamento sull\'ispettore' : 'Pestone sull\'ispettore', 400);
+    caricaGrinta(30);
+    t.saltello = 0.6;
+    suoni.pestone();
+    suoni.ahia(false);
+    botto(sfondato ? 'SDENG!' : 'BAM!', c.x, M.alto + 70, '#e8463a', '#ffd23f', 36);
+    stelline(c.x, M.alto + 20);
+    // perde un po' di ghiande (e, se a Tino manca, una ruota)
+    const v = curva(CURVE.velocita, stato.metri);
+    for (let k = 0; k < 5; k++) ghianda(c.x + 160 + k * 46, 60 + k * 10);
+    if (t.ruote < VITA.ruote) stato.ghiande.push({ x: c.x + 420 + v * 0.3, h: 150, tipo: 'ruota' });
+    if (c.colpi >= c.max) { koCapo(c, M); return; }
+    const resta = c.max - c.colpi;
+    messaggio(resta === 1 ? 'Ancora un colpo!' : `Ancora ${resta} colpi!`, 1.3, '#ffd23f', true);
+    riparti(c);
+  }
+  function koCapo(c, M) {
+    c.fase = 'ko';
+    c.t = 0;
+    c.ko = { x: 0, h: 0, vx: -60, vy: 760, rot: 0, vr: -6, inclina: 0 };
+    stato.punti += INSEGUIMENTO.ko;
+    stato.tino.invulnerabile = 4; // niente urti mentre il mezzo si schianta
+    for (const b of stato.bollette) { b.via = true; coriandoli(b.x, b.h, '#fff', 4); }
+    stato.scossa = 0.6;
+    for (let i = 0; i < 26; i++) {
+      stato.particelle.push({ tipo: 'pezzo', x: c.x + vis(-M.w / 2, M.w / 2), h: vis(30, 90), vx: vis(-200, 320), vy: vis(250, 700), t: 0, dur: 1.4, colore: i % 3 ? '#7cc04a' : '#d8f0c0', r: vis(4, 8), rot: vis(0, 6), vr: vis(-12, 12) });
+    }
+    botto('KRASH!', c.x, M.alto + 90, '#e8463a', '#ffd23f', 44);
+    suoni.botta();
+    suoni.ko();
+    messaggio(stato.storia.cap === 3 ? 'Lo skate di Gino!' : 'Preso!', 2, '#7dff9a', true);
+    aggiornaBarra();
+  }
+  function fumo(x, h) {
+    stato.particelle.push({ tipo: 'polvere', x: x + vis(-6, 6), h: h + vis(0, 20), vx: vis(-120, -40), vy: vis(30, 90), t: 0, dur: vis(0.5, 0.9), r: vis(6, 12), fumo: true });
+  }
+
+  function capitoloVinto() {
+    const st = stato.storia;
+    st.fase = 'vinto';
+    const punti = Math.round(stato.punti);
+    const nuovo = punti > (storiaPunti[st.cap] || 0);
+    if (!stato.test) {
+      if (nuovo) { storiaPunti[st.cap] = punti; scrivi('storia-punti', storiaPunti); }
+      if (st.cap + 1 > storiaFatta) { storiaFatta = st.cap + 1; scrivi('storia-capitolo', storiaFatta); }
+      ghiandeTotali += stato.preseGhiande;
+      scrivi('ghiande-totali', ghiandeTotali);
+    }
+    stato.risultato = { storia: true, vinto: true, cap: st.cap, punti, ghiande: stato.preseGhiande, nuovo, comboMax: stato.statistiche.comboMax };
+    stato.fase = 'fine';
+    if (!stato.test) {
+      suoni.vittoria();
+      mostraPannello(st.cap === 3 ? pannelloFinale() : pannelloCapitolo());
+    }
+  }
+  function storiaPersa() {
+    const st = stato.storia;
+    if (!stato.test) {
+      ghiandeTotali += stato.preseGhiande;
+      scrivi('ghiande-totali', ghiandeTotali);
+    }
+    stato.risultato = { storia: true, vinto: false, cap: st.cap, inseguimento: st.fase === 'inseguimento', punti: Math.round(stato.punti), ghiande: stato.preseGhiande };
+    stato.fase = 'fine';
+    if (!stato.test) mostraPannello(pannelloPersa());
   }
 
   // la cima più alta sotto Tino che non superi hMax (strada, piani, ringhiere, rampe)
@@ -1497,8 +1792,12 @@
       muoviTino(dt);
       if (stato.fase === 'corsa') {
         muoviNemici(dt);
+        muoviCapo(dt);
         muoviBollette(dt);
         prendiGhiande();
+        // nella storia, finita la strada del quartiere arriva l'ispettore capo
+        const st = stato.storia;
+        if (st && st.fase === 'strada' && st.xVia !== null && stato.tino.x >= st.xVia - 100 && !stato.tino.pipe) iniziaInseguimento();
         // si entra in un quartiere nuovo
         const qa = quartiereA(stato.tino.x);
         if (qa.i !== stato.quartiere) {
@@ -1521,7 +1820,7 @@
       pulisci();
       if (stato.fase === 'ko') {
         stato.koT += dt;
-        if (stato.koT > 1.8) fine();
+        if (stato.koT > 1.8) { if (stato.storia) storiaPersa(); else fine(); }
       }
     }
     aggiornaParticelle(dt);
@@ -2078,7 +2377,7 @@
     const t = stato.tino;
     for (const b of stato.bollette) {
       if (b.via) continue;
-      b.x -= AGENTI.bolletta * dt;
+      b.x += (b.v === undefined ? -AGENTI.bolletta : b.v) * dt; // quelle dell'ispettore hanno la loro velocità
       b.rot += dt * 7;
       if (Math.abs(b.x - t.x) < FISICA.larg / 2 + 12 && b.h + 10 > t.h && b.h - 10 < t.h + altezza(t)) {
         b.via = true;
@@ -2234,7 +2533,7 @@
   // il quartiere a una x del mondo: { id, i (quanti quartieri prima), inizio (x del mondo) }
   function quartiereA(x) {
     const m = Math.max(0, (x - stato.x0) / PX_M);
-    const i = Math.floor(m / LUNGO_QUARTIERE);
+    const i = stato.storia ? stato.storia.cap : Math.floor(m / LUNGO_QUARTIERE); // nella storia il capitolo resta nel suo quartiere
     return { id: GIRO_QUARTIERI[i % GIRO_QUARTIERI.length], i, inizio: stato.x0 + i * LUNGO_QUARTIERE * PX_M };
   }
   let Q = QUARTIERI.cascine;   // il quartiere che si sta disegnando
@@ -2246,7 +2545,7 @@
     if (stato.scossa > 0) ctx.translate((Math.random() - 0.5) * 14 * stato.scossa, (Math.random() - 0.5) * 10 * stato.scossa);
     // lontano e medio: passando da un quartiere all'altro sfumano
     const qa = quartiereA(stato.cam.x + larg / 2);
-    const prima = qa.i > 0 ? QUARTIERI[GIRO_QUARTIERI[(qa.i - 1) % GIRO_QUARTIERI.length]] : null;
+    const prima = qa.i > 0 && !stato.storia ? QUARTIERI[GIRO_QUARTIERI[(qa.i - 1) % GIRO_QUARTIERI.length]] : null;
     const f = prima ? clamp((stato.cam.x + larg / 2 - qa.inizio) / PX_M / SFUMA, 0, 1) : 1;
     if (f < 1) { Q = prima; disegnaFondo(); }
     Q = QUARTIERI[qa.id];
@@ -2264,13 +2563,14 @@
     disegnaOstacoli(false);
     disegnaGhiande();
     disegnaNemici();
+    disegnaCapo();
     disegnaBollette();
     disegnaRider();
     disegnaParticelle();
     disegnaVelocita();
     ctx.restore();
     disegnaRetino();
-    if (stato.fase !== 'menu') disegnaHud();
+    if (stato.fase !== 'menu') { disegnaHud(); disegnaBarraCapo(); }
   }
 
   function disegnaFondo() {
@@ -2753,6 +3053,36 @@
           break;
         }
         case 'halfpipe': disegnaPipe(o, x); break;
+        case 'sacco': {
+          // il sacco di bollette caduto dall'ispettore
+          ctx.fillStyle = '#c9b48f'; ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(x + 4, y0); ctx.quadraticCurveTo(x - 4, yt + 14, x + 12, yt + 8);
+          ctx.lineTo(x + 16, yt - 2); ctx.lineTo(x + 28, yt - 2); ctx.lineTo(x + 32, yt + 8);
+          ctx.quadraticCurveTo(x + o.w + 4, yt + 14, x + o.w - 4, y0); ctx.closePath();
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#6b4a2e'; ctx.fillRect(x + 13, yt + 5, 18, 4);
+          ctx.fillStyle = '#d8342c'; ctx.font = `14px ${FUMETTO}`; ctx.textAlign = 'center';
+          ctx.fillText('TARI', x + o.w / 2, y0 - 10);
+          ctx.fillStyle = '#fff'; ctx.fillRect(x + 20, yt - 8, 14, 9); ctx.strokeRect(x + 20, yt - 8, 14, 9);
+          break;
+        }
+        case 'cartacce': {
+          // il mucchio di cartacce rovesciato dalla benna
+          ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 2.5;
+          ctx.fillStyle = '#e9e4d6';
+          ctx.beginPath(); ctx.moveTo(x - 4, y0); ctx.quadraticCurveTo(x + 6, yt - 2, x + o.w / 2, yt - 2); ctx.quadraticCurveTo(x + o.w - 6, yt - 2, x + o.w + 4, y0); ctx.closePath();
+          ctx.fill(); ctx.stroke();
+          for (let k = 0; k < 7; k++) {
+            const px = x + 10 + ((k * 37) % (o.w - 26)), py = y0 - 8 - ((k * 23) % 30);
+            ctx.save(); ctx.translate(px, py); ctx.rotate((k % 3 - 1) * 0.4);
+            ctx.fillStyle = k % 2 ? '#fff' : '#f6efd9';
+            ctx.fillRect(-9, -6, 18, 12); ctx.strokeRect(-9, -6, 18, 12);
+            if (k % 3 === 0) { ctx.fillStyle = '#d8342c'; ctx.fillRect(-6, -2, 12, 3); }
+            ctx.restore();
+          }
+          break;
+        }
         case 'sbarra': disegnaSbarra(o, x, y0); break;
         case 'barriera': disegnaBarriera(o, x, y0, yt); break;
         case 'scalinata': {
@@ -3254,6 +3584,100 @@
       }
     }
   }
+  // l'ispettore capo sul suo mezzo (inseguimento)
+  function disegnaCapo() {
+    const c = stato.capo;
+    if (!c) return;
+    const M = MEZZI[c.mezzo], im = disegni['mezzo-' + c.mezzo];
+    const x = sx(c.x);
+    if (x < -400 || x > larg + 400) return;
+    const r = pronta(im) ? im.naturalWidth / im.naturalHeight : 1.5;
+    const w = M.w, h = w / r, y0 = yStrada();
+    const inceppato = c.fase === 'avviso' || c.fase === 'inceppo';
+    const tremo = inceppato ? Math.sin(stato.tempo * 60) * 2 : 0;
+    const sobbalzo = c.fase === 'ko' ? 0 : Math.abs(Math.sin(stato.tempo * (inceppato ? 7 : 16))) * (inceppato ? 3 : 1.5);
+    // l'ispettore: seduto (o in piedi sul monopattino), il braccio alzato prima di lanciare
+    const s = M.capo / 302, cw = 260 * s, ch = 320 * s;
+    const disegnaIspettore = () => {
+      if (!pronta(immagini.capo)) return;
+      const ride = c.ride > 0 ? Math.sin(stato.tempo * 30) * 0.06 : 0;
+      ctx.save();
+      ctx.translate(-w / 2 + M.sedile[0] * w, -M.sedile[1] * h);
+      ctx.rotate(-0.12 * c.braccio + ride + (inceppato ? Math.sin(stato.tempo * 20) * 0.05 : 0));
+      fumetto(ctx, immagini.capo, ch, -110 * s, -302 * s, cw, ch);
+      ctx.restore();
+    };
+    ctx.save();
+    ctx.translate(x + tremo, y0 + 1 - sobbalzo);
+    if (c.fase === 'ko') ctx.rotate(-c.ko.inclina * 0.4);
+    // sul monopattino l'ispettore sta davanti al manubrio; negli altri dentro il mezzo
+    if (pronta(im)) ctx.drawImage(im, -w / 2, -h, w, h);
+    else {
+      ctx.fillStyle = '#4a4f5c'; ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3;
+      arrotondato(-w / 2, -M.alto, w, M.alto - 14, 10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#1c1f27';
+      for (const dx of [-w * 0.32, w * 0.32]) { ctx.beginPath(); ctx.arc(dx, -12, 14, 0, Math.PI * 2); ctx.fill(); }
+    }
+    if (c.fase !== 'ko') disegnaIspettore();
+    ctx.restore();
+    if (c.fase === 'ko') {
+      // vola via all'indietro
+      ctx.save();
+      ctx.translate(x - w / 2 + M.sedile[0] * w + c.ko.x, y0 - M.sedile[1] * h - c.ko.h);
+      ctx.rotate(c.ko.rot);
+      if (pronta(immagini.capo)) fumetto(ctx, immagini.capo, ch, -110 * s, -302 * s, cw, ch);
+      ctx.restore();
+      return;
+    }
+    // avvisi: "!" prima di ogni attacco e quando il mezzo fuma
+    const testa = sy(M.sedile[1] * h + M.capo + 14);
+    const xc = x - w / 2 + M.sedile[0] * w;
+    if (c.braccio > 0.2 || c.fase === 'avviso') {
+      ctx.fillStyle = '#ffd23f';
+      ctx.strokeStyle = '#1c1f27';
+      ctx.lineWidth = 3;
+      ctx.font = `34px ${FUMETTO}`;
+      ctx.textAlign = 'center';
+      ctx.strokeText('!', xc, testa);
+      ctx.fillText('!', xc, testa);
+    }
+    if (c.fase === 'inceppo') {
+      // la freccia sopra il mezzo: saltagli in testa
+      const yy = sy(M.alto + 70) + Math.sin(stato.tempo * 10) * 5;
+      ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#1c1f27'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x - 14, yy); ctx.lineTo(x + 14, yy); ctx.lineTo(x + 14, yy + 14); ctx.lineTo(x + 24, yy + 14); ctx.lineTo(x, yy + 34); ctx.lineTo(x - 24, yy + 14); ctx.lineTo(x - 14, yy + 14); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+  }
+  // la barra dell'ispettore (colpi che mancano) e, prima dell'inseguimento, quanto manca
+  function disegnaBarraCapo() {
+    const st = stato.storia;
+    if (!st) return;
+    const y = touch ? 150 : 28, xd = larg - 18;
+    if (st.fase === 'strada') {
+      const m = Math.max(0, Math.ceil((st.xFine - stato.tino.x) / PX_M));
+      testo(`Ispettore tra ${m} m`, xd, y + 6, 18, '#ffd9a8', 'right', 4);
+      return;
+    }
+    const c = stato.capo;
+    if (!c) return;
+    const resta = c.max - c.colpi;
+    const passo = 30, x0 = xd - c.max * passo;
+    testo('ISPETTORE', x0 - 10, y + 6, 16, '#ffd9a8', 'right', 3);
+    for (let i = 0; i < c.max; i++) {
+      const xx = x0 + i * passo + passo / 2;
+      ctx.fillStyle = '#1c1f27';
+      ctx.fillRect(xx - 12, y - 10, 24, 18);
+      ctx.fillStyle = i < resta ? '#fff' : '#4a4e58';
+      ctx.fillRect(xx - 10, y - 8, 20, 14);
+      if (i < resta) {
+        ctx.fillStyle = '#d8342c';
+        ctx.font = '700 7px Fredoka, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('TARI', xx, y + 2);
+      }
+    }
+  }
   function stella(x, y, r, colore) {
     ctx.fillStyle = colore;
     ctx.beginPath();
@@ -3478,7 +3902,7 @@
       const f = p.t / p.dur;
       switch (p.tipo) {
         case 'polvere':
-          ctx.fillStyle = `rgba(210,200,180,${0.6 * (1 - f)})`;
+          ctx.fillStyle = p.fumo ? `rgba(90,92,100,${0.55 * (1 - f)})` : `rgba(210,200,180,${0.6 * (1 - f)})`;
           ctx.beginPath(); ctx.arc(x, y, p.r * (1 + f), 0, Math.PI * 2); ctx.fill();
           break;
         case 'scintilla':
@@ -3762,17 +4186,28 @@
       </div>
       <p>Hanno rubato lo skate di Gino! Tino sale sul suo e parte dalle Cascine, poi Novoli, i cantieri della tramvia e il centro: salti, trick, scivolate su panchine, corrimano e rotaie, e pestoni in testa agli agenti della Tari.</p>
       ${rec}
+      <div class="scelte">
+        <button class="bottone" data-azione="storia" data-primo>La storia${storiaFatta > 0 && storiaFatta < 4 ? ` (capitolo ${storiaFatta + 1})` : ''}</button>
+      </div>
+      <h2 class="sottotitolo">Corsa infinita</h2>
       <div class="personaggi">${scelta('tino', 'Tino', img('normale'))}${scelta('gino', 'Gino', img('gino'))}</div>
       <div class="partenze"><span>Parti da:</span>${GIRO_QUARTIERI.map((id, i) => `<button class="partenza${partenza === i ? ' attivo' : ''}" data-azione="partenza" data-id="${i}" aria-pressed="${partenza === i}"${quartiereAperto(i) ? '' : ' disabled title="Arriva fin qui per sbloccarlo"'}>${QUARTIERI[id].breve}</button>`).join('')}</div>
       <div class="scelte">
-        <button class="bottone" data-azione="gioca" data-primo>Corsa infinita</button>
-        <button class="bottone secondario" data-azione="storia">La storia</button>
+        <button class="bottone secondario" data-azione="gioca">Corsa infinita</button>
       </div>
       ${testoComandi()}
     </div>`;
   }
 
+  // la storia: introduzione e scelta del capitolo
+  const capitoloDa = () => (storiaFatta >= 4 ? 0 : storiaFatta);
+  const nomeCapitolo = (i) => QUARTIERI[GIRO_QUARTIERI[i]].nome;
   function pannelloStoria() {
+    const da = capitoloDa();
+    const capitoli = storiaFatta > 0
+      ? `<div class="partenze"><span>Capitolo:</span>${GIRO_QUARTIERI.map((id, i) => `<button class="partenza" data-azione="capitolo" data-id="${i}"${i <= storiaFatta ? '' : ' disabled title="Finisci il capitolo prima"'}>${i + 1} · ${QUARTIERI[id].breve}</button>`).join('')}</div>` : '';
+    const totale = storiaPunti.reduce((a, b) => a + b, 0);
+    const fatta = storiaFatta >= 4 ? `<p class="record">Storia finita! I punti migliori di ogni capitolo: <b>${totale.toLocaleString('it-IT')}</b></p>` : '';
     return `<div class="riquadro">
       <div class="vignetta storia">
         <img class="sfondo" src="${DISEGNI}fondali/vignetta.png" alt="Il viale delle Cascine al tramonto" onerror="this.parentNode.classList.add('senza')">
@@ -3783,10 +4218,94 @@
         <div class="fumetto destra">${img('arrabbiato')}<p>Sì, figlio mio: ci penso io!</p></div>
         <div class="fumetto">${img('capo')}<p>Bolletta non pagata: skate pignorato! Ah ah ah!</p></div>
       </div>
-      <p>L'ispettore capo della Tari è scappato con lo skate verso il centro. Tino parte dalle Cascine, poi Novoli, i cantieri della tramvia e il centro.</p>
-      <p class="nota">Per ora la corsa passa per i quattro quartieri senza fermarsi: l'inseguimento dell'ispettore arriva presto.</p>
+      <p>L'ispettore capo della Tari scappa con lo skate verso il centro. Quattro capitoli: le Cascine, Novoli, i cantieri della tramvia e il centro. Alla fine di ognuno c'è l'inseguimento: quando il suo mezzo si inceppa, <b>saltagli in testa</b>!</p>
+      ${fatta}
+      ${capitoli}
       <div class="scelte">
-        <button class="bottone" data-azione="gioca" data-primo>Parti!</button>
+        <button class="bottone" data-azione="capitolo" data-id="${da}" data-primo>${da === 0 ? 'Parti!' : `Capitolo ${da + 1}: ${QUARTIERI[GIRO_QUARTIERI[da]].breve}`}</button>
+        <button class="bottone secondario" data-azione="menu">Menu</button>
+      </div>
+    </div>`;
+  }
+  // tra un capitolo e l'altro: la vignetta del quartiere dopo e le battute
+  const DOPO = [
+    { vignetta: 'vignetta-novoli', titolo: 'Novoli', alt: 'La piazza del Palazzo di Giustizia', fumetti: [
+      ['capo', '', 'Mi hai rotto l\'Ape, ma lo skate non c\'era! Prendo un monopattino!'],
+      ['arrabbiato', 'destra', 'Non mi scappi, ispettore!'],
+      ['gino', 'salta', 'È andato verso il Palazzo di Giustizia!'],
+    ] },
+    { vignetta: 'vignetta-cantieri', titolo: 'I cantieri', alt: 'I cantieri della tramvia', fumetti: [
+      ['capo', '', 'Monopattino scarico? Mi nascondo nei cantieri della tramvia!'],
+      ['gino', 'trema', 'Attento alla ruspa, papà!'],
+      ['normale', 'destra', 'Scavi, fango e binari: niente mi ferma!'],
+    ] },
+    { vignetta: 'vignetta-centro', titolo: 'Il centro', alt: 'Il centro di Firenze', fumetti: [
+      ['capo', '', 'Lo skate è sul golf cart: fino al Ponte Vecchio non mi prendi!'],
+      ['arrabbiato', 'destra', 'Ultimo giro, ispettore: lo skate torna a casa!'],
+    ] },
+  ];
+  const fumetti = (lista) => `<div class="fumetti">${lista.map(([chi, classe, testo]) => `<div class="fumetto${classe === 'destra' ? ' destra' : ''}">${img(chi, classe === 'destra' ? '' : classe)}<p>${testo}</p></div>`).join('')}</div>`;
+  function datiCapitolo(r) {
+    return `<div class="dati">
+        <div><b>${r.punti.toLocaleString('it-IT')}</b><span>punti</span></div>
+        <div><b>${r.ghiande}</b><span>ghiande</span></div>
+        <div><b>${r.comboMax ? '× ' + r.comboMax : '–'}</b><span>combo più lunga</span></div>
+      </div>
+      ${r.nuovo ? '<p class="nuovo-record">Record del capitolo!</p>' : ''}`;
+  }
+  function pannelloCapitolo() {
+    const r = stato.risultato, D = DOPO[r.cap];
+    return `<div class="riquadro">
+      <div class="vignetta storia">
+        <img class="sfondo" src="${DISEGNI}fondali/${D.vignetta}.png" alt="${D.alt}" onerror="this.parentNode.classList.add('senza')">
+        <h2 class="titolo-punk">Capitolo ${r.cap + 2}: ${D.titolo}</h2>
+      </div>
+      <h2>Capitolo ${r.cap + 1} finito!</h2>
+      ${datiCapitolo(r)}
+      ${fumetti(D.fumetti)}
+      <div class="scelte">
+        <button class="bottone" data-azione="capitolo" data-id="${r.cap + 1}" data-primo>Avanti!</button>
+        <button class="bottone secondario" data-azione="menu">Menu</button>
+      </div>
+    </div>`;
+  }
+  function pannelloFinale() {
+    const r = stato.risultato;
+    const totale = storiaPunti.reduce((a, b) => a + b, 0);
+    return `<div class="riquadro">
+      <div class="vignetta storia finale">
+        <img class="sfondo" src="${DISEGNI}fondali/vignetta-finale.png" alt="Il Ponte Vecchio al tramonto, con lo skate di Tino e quello di Gino" onerror="this.parentNode.classList.add('senza')">
+        <h2 class="titolo-punk">Lo skate è salvo!</h2>
+      </div>
+      ${fumetti([
+        ['capo', 'trema', 'La bolletta… prima o poi la pagherete!'],
+        ['gino', 'salta', 'Il mio skate! Papà, sei il più forte!'],
+        ['normale', 'destra', 'Bollette o no, lo skate di Gino non si tocca!'],
+      ])}
+      <p>Al tramonto, sul Ponte Vecchio, Tino e Gino guardano l'Arno con i loro skate.</p>
+      ${datiCapitolo(r)}
+      <p class="record">I punti migliori di ogni capitolo: <b>${totale.toLocaleString('it-IT')}</b></p>
+      <div class="scelte">
+        <button class="bottone" data-azione="menu" data-primo>Menu</button>
+        <button class="bottone secondario" data-azione="capitolo" data-id="0">Ricomincia la storia</button>
+      </div>
+    </div>`;
+  }
+  function pannelloPersa() {
+    const r = stato.risultato;
+    const scelte = r.inseguimento
+      ? `<button class="bottone" data-azione="riprova-inseguimento" data-primo>Riprova l'inseguimento</button>
+        <button class="bottone secondario" data-azione="capitolo" data-id="${r.cap}">Rifai il capitolo</button>`
+      : `<button class="bottone" data-azione="capitolo" data-id="${r.cap}" data-primo>Riprova il capitolo</button>`;
+    const testoP = r.inseguimento
+      ? 'Niente paura: si riparte dall\'inizio dell\'inseguimento, con tutte le ruote. Aspetta che il mezzo si inceppi e saltagli in testa!'
+      : `Il capitolo ${r.cap + 1} (${nomeCapitolo(r.cap)}) riparte dall'inizio.`;
+    return `<div class="riquadro">
+      <div class="ritratti">${img('ko')}${img(r.inseguimento ? 'capo' : 'gino', r.inseguimento ? 'salta' : 'gino trema')}</div>
+      <h2>${r.inseguimento ? 'L\'ispettore è scappato!' : 'Tino è KO!'}</h2>
+      <p>${testoP}</p>
+      <div class="scelte">
+        ${scelte}
         <button class="bottone secondario" data-azione="menu">Menu</button>
       </div>
     </div>`;
@@ -3832,11 +4351,10 @@
     const btn = e.target.closest('button[data-azione]');
     if (!btn) return;
     switch (btn.dataset.azione) {
-      case 'gioca':
-        if (!storiaVista) { storiaVista = true; scrivi('storia-vista', true); mostraPannello(pannelloStoria()); break; }
-        nuovaCorsa();
-        break;
-      case 'storia': storiaVista = true; scrivi('storia-vista', true); mostraPannello(pannelloStoria()); break;
+      case 'gioca': nuovaCorsa(); break;
+      case 'storia': mostraPannello(pannelloStoria()); break;
+      case 'capitolo': nuovaStoria(+btn.dataset.id); break;
+      case 'riprova-inseguimento': riprovaInseguimento(); break;
       case 'riprendi': riprendi(); break;
       case 'menu': vaiAlMenu(); break;
       case 'partenza':
@@ -3892,10 +4410,10 @@
   // da solo; clona() e rimetti(s) servono a provare il futuro senza toccarlo
   window.tinoProSkate = {
     get stato() { return stato; },
-    nuovaCorsa, aggiorna, premi, supporto, curva, disegna,
+    nuovaCorsa, nuovaStoria, riprovaInseguimento, aggiorna, premi, supporto, curva, disegna,
     clona: () => structuredClone(stato),
     rimetti: (s) => { stato = s; },
     larghezza: () => larg,
-    FISICA, CURVE, TRICK, GRINTA, VITA, AGENTI, PEZZI, FORME, PX_M,
+    FISICA, CURVE, TRICK, GRINTA, VITA, AGENTI, PEZZI, FORME, PX_M, MEZZI, INSEGUIMENTO, STORIA,
   };
 })();
