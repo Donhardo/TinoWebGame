@@ -158,7 +158,7 @@
     // Novoli
     'scalinata', 'corrimano', 'fioriera', 'monopattini',
     // i cantieri della tramvia
-    'ruspa', 'benna', 'fango', 'binari', 'tram',
+    'ruspa', 'benna', 'fango', 'binari', 'tram', 'barriera', 'sbarra',
     // il centro
     'sampietrini', 'turista', 'bancarella', 'bici']) {
     disegni[n] = carica(DISEGNI + 'elementi/' + n + '.png');
@@ -1181,7 +1181,7 @@
     cassonetto: { w: 112, h: 84, solido: true, piano: true },
     cassette: { w: 50, h: 52, solido: true, rompibile: true },
     transenna: { w: 24, h: 64, solido: true, rompibile: true },
-    sbarra: { w: 56, h: 230, basso: 56, solido: true, rompibile: true }, // transenna alta: si passa sotto accucciati
+    sbarra: { w: 90, h: 230, basso: 56, solido: true, rompibile: true }, // transenna alta: si passa sotto accucciati
     rampa: { w: 132, h: 46, rampa: true },
     banco: { w: 236, h: 128, piano: true, unaVia: true },
     halfpipe: { w: 2 * PIPE.raggio + PIPE.piano, h: 0, halfpipe: true },
@@ -1197,7 +1197,7 @@
     binari: { w: 850, h: 12, piano: true },                        // la massicciata (ci si sale da soli)
     rotaia: { w: 850, h: 32, grind: true, nascosto: true },
     tram: { w: 560, h: 92, solido: true, piano: true },
-    barriera: { w: 70, h: 50, solido: true },
+    barriera: { w: 130, h: 50, solido: true },
     // il centro
     sampietrini: { w: 600, h: 0, zona: 'sampietrini' },
     turista: { w: 40, h: 96, solido: true },
@@ -1272,8 +1272,8 @@
     { id: 'transenna', da: 250, peso: 1.5, crea: (x, v) => { ostacolo('transenna', x); arco(x + 12, v); return 24; } },
     { id: 'sbarra', da: 180, peso: 1.6, pesi: { cantieri: 2.6, centro: 0.8 }, crea: (x) => {
       ostacolo('sbarra', x);
-      for (let k = 0; k < 4; k++) stato.ghiande.push({ x: x - 50 + k * 48, h: 24, tipo: 'ghianda' });
-      return 56;
+      for (let k = 0; k < 4; k++) stato.ghiande.push({ x: x - 33 + k * 48, h: 24, tipo: 'ghianda' });
+      return 90;
     } },
     { id: 'banco', da: 300, peso: 1.2, q: ['cascine'], crea: (x) => {
       const o = ostacolo('banco', x);
@@ -1348,12 +1348,12 @@
       fila(x + 40, x + o.w - 30, o.h, 44);
       return o.w;
     } },
-    { id: 'barriera', da: 0, peso: 2, q: ['cantieri'], crea: (x, v) => { ostacolo('barriera', x); arco(x + 35, v, 0, 5); return 70; } },
+    { id: 'barriera', da: 0, peso: 2, q: ['cantieri'], crea: (x, v) => { ostacolo('barriera', x); arco(x + 65, v, 0, 5); return 130; } },
     { id: 'barriere', da: 0, peso: 1, q: ['cantieri'], crea: (x, v) => {
-      const d = Math.round(v * 1.15);
+      const d = Math.round(v * 1.15) + 60;
       ostacolo('barriera', x); ostacolo('barriera', x + d);
-      arco(x + 35, v, 0, 4); arco(x + d + 35, v, 0, 4);
-      return d + 70;
+      arco(x + 65, v, 0, 4); arco(x + d + 65, v, 0, 4);
+      return d + 130;
     } },
 
     // ---- il centro
@@ -2812,6 +2812,10 @@
       }
       case 'cassette': piedi(x + o.w / 2, o.h + 2); return true;
       case 'transenna': piedi(x + o.w / 2, o.h + 2); return true;
+      // transenna alta: il disegno va da terra (pali) alla cima del cartello, le assi
+      // finiscono al 24% dall'alto del fondo, cioè a o.basso; è un po' più larga della sagoma
+      case 'sbarra': piedi(x + o.w / 2, o.h + 1); return true;
+      case 'barriera': piedi(x + o.w / 2, (o.h + 2) * 64 / 61); return true; // il blocco è largo il 90% del disegno, in fondo c'è l'ombra
       case 'panchina': piedi(x + o.w / 2, o.h / 0.47, o.w + 4); return true; // seduta al 53% dall'alto
       case 'rampa': ctx.drawImage(im, x, y0 + 1 - (o.h + 2), o.w / 0.93, o.h + 2); return true; // la cima al 93%
       case 'banco': piedi(x + o.w / 2, o.h / 0.95, o.w + 10); return true; // tendone in cima

@@ -1038,8 +1038,22 @@ logica, su canvas), `ghianda.svg`.
   pezzi nuovi proposte nei prompt: le sagome si adattano ai disegni quando arrivano.
   Vantaggi e svantaggi delle tavole nei prompt sono solo una proposta.
   **Stato**: arrivate e preparate (come quelle delle Cascine, copione Python non nel
-  repository) le immagini da N1 a T4, tranne C11 (barriera di cemento) e P4 (bombolone), che
-  per ora sono disegnati nel codice. Mancano T5, T6, K1-K5, A1-A6, V1-V4 e S1. Decisioni prese
+  repository) tutte le immagini (A5, il cono, al secondo tentativo: la prima volta Gemini
+  aveva rifatto il fulmine). T5 e T6 al secondo tentativo (al primo la
+  tavola era vista da sotto): nel prompt va detto che è di profilo, "NOT from above, NOT from
+  below", allegando anche `tavole/giglio.png`. I caschi sono specchiati (Gemini li fa guardare
+  a sinistra, Tino guarda a destra). Nuovi file: `tavole/pop-corn.png`, `tavole/oro.png`,
+  `caschi/` stelle, ghianda, cresta, cupola (a cappello di ghianda), alato (K1-K5);
+  `adesivi/` ghianda, ruota, giglio, fulmine, cono, tari; `poteri/bombolone.png`,
+  `elementi/barriera.png` (usata: la barriera è passata da 70 a 130 di larghezza per stare
+  alle proporzioni del disegno, e la coppia di barriere è più distanziata di 60 px; il
+  pianificatore non la urta mai in 20 incontri); `elementi/sbarra.png` (S1, usata: il disegno
+  va da terra alla cima del cartello, 0-230, con le assi che finiscono a 56; tagliati i pali
+  lunghi sotto, che Gemini fa alti mezza immagine; la transenna è passata da 56 a 90 di
+  larghezza perché il disegno è largo ~107); `fondali/vignetta-novoli`, `-cantieri`,
+  `-centro`, `-finale` (V1-V4, 900 px; alla V4 tolta la cornice bianca; V1 e V2 rifatte al
+  secondo tentativo: la prima volta avevano le palme ed erano la stessa piazza con lo skatepark;
+  nel prompt "no palm trees, no skatepark ramps" e il Palazzo di Giustizia descritto com'è). Decisioni prese
   sulle immagini: il tram C8 resta con le scritte della fiancata (va bene così al
   proprietario; tolte solo le perline e lo sfondo bianco sopra il tetto); turista F6 (la
   persona), non l'orsetto F6b; lo scavo C9 è tagliato sotto i bordi in prospettiva (i tubi sui
@@ -1078,7 +1092,7 @@ logica, su canvas), `ghianda.svg`.
     s, alta abbastanza da passarci sotto, scende 0,4 s; `angoloBenna`, `riquadroBenna`), fango
     (zona di 220-300 px: a terra la velocità ×0,62, `ZONE`), binari (massicciata a 12, su cui si
     sale da soli, e rotaia grind a 32), tram (solido e piano a 92, lungo 560: ci si salta sopra),
-    barriera di cemento (solida a 50, disegnata nel codice), lo scavo al posto della half pipe
+    barriera di cemento (solida a 50, larga 130, dipinta), lo scavo al posto della half pipe
     (stesse regole, `arte: 'scavo'`, `disegnaScavo`, `disegnaMuroCantiere`), più transenne alte.
   - **Centro**: sampietrini (zona di 520-820 px con un cono o le bici in mezzo: Tino trema, il
     rotolio rimbomba e niente manual), turisti (solidi alti 96, uno o due; saltarli senza urtarli
@@ -1141,7 +1155,7 @@ logica, su canvas), `ghianda.svg`.
   e non alza la rete), cono e agente, agente col timbro sul cassonetto, transenna alta (dai
   180 m: `sbarra`, larga 56, solida da 56 a 230 px con `basso: 56`, quindi non si salta: si
   passa sotto accucciati, con 4 ghiande basse; la prima volta compare l'avviso; si sfonda
-  con la Grinta; disegnata nel codice, due assi a strisce e il cartello LAVORI IN CORSO),
+  con la Grinta; dipinta, `elementi/sbarra.png`, larga 90; di riserva il disegno nel codice),
   half pipe (dai
   60 m). Ghiande lungo i
   salti e sui grind (10 punti l'una, sommate in `ghiande-totali` per il negozio futuro).
@@ -1213,7 +1227,10 @@ logica, su canvas), `ghianda.svg`.
   alte passate da sotto. I copioni non sono nel repository: il pianificatore prova per ogni
   tratto da 0,15 s quattro mosse (niente, salto corto, salto tenuto, ↓ tenuto) per 5 tratti
   avanti; con l'accucciata e il manual nuovi arriva a 3000 m senza urti in 8 corse su 8 (4-9
-  transenne alte a corsa); senza la mossa ↓ sbatte sempre contro le transenne.
+  transenne alte a corsa); senza la mossa ↓ sbatte sempre contro le transenne. Attenzione nel
+  copione: ↓ va tenuto senza lasciarlo tra un tratto e l'altro (lasciato anche per un solo
+  fotogramma Tino si rialza sotto la transenna e la urta). Con la transenna larga 90 e la
+  barriera larga 130: cantieri (1500-2250 m) senza urti in 4 corse su 4, 11 transenne alte.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
