@@ -317,3 +317,48 @@ kbd {
 .vignetta.finale .sfondo { object-position: 50% 20%; }
 .fumetto .salta { animation: saltello 1.2s ease-in-out infinite; }
 .fumetto .trema { animation: trema 0.5s ease-in-out infinite; transform-origin: 50% 100%; }
+
+/* Negozio delle tavole */
+.ico-ghianda { width: 0.95em; height: 1.1em; vertical-align: -0.15em; }
+.sbloccato { font-weight: 600; color: var(--verde-scuro); }
+.negozio { width: min(760px, 100%); }
+.anteprima-tino { display: block; margin: 0 auto; }
+.borsa { font-size: 1.05rem; }
+.merce {
+  list-style: none;
+  margin: 8px 0 0; padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.pezzo {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 6px 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #1c1f27;
+  box-shadow: 3px 3px 0 #1c1f27;
+}
+.pezzo.scelto { background: #f1f8e8; border-color: var(--verde-scuro); box-shadow: 3px 3px 0 var(--verde-scuro); }
+.pezzo .figura { height: 64px; display: grid; place-items: center; }
+.pezzo .figura img { max-height: 64px; max-width: 130px; object-fit: contain; }
+.pezzo .figura .fig-tavola { width: 130px; }
+.pezzo.chiuso .figura img { opacity: 0.6; filter: grayscale(0.4); }
+.pezzo .nome { font-weight: 700; line-height: 1.15; }
+.potere { display: flex; flex-direction: column; font-size: 0.8rem; line-height: 1.2; min-height: 2.5em; }
+.potere .piu { color: var(--verde-scuro); }
+.potere .piu::before { content: '+ '; font-weight: 700; }
+.potere .meno { color: #a0522d; }
+.potere .meno::before { content: '− '; font-weight: 700; }
+.bottone.piccolo { padding: 4px 12px; font-size: 0.92rem; margin-top: auto; }
+.bottone.piccolo[disabled] { opacity: 0.45; cursor: not-allowed; }
+.in-uso-etichetta, .traguardo { margin-top: auto; font-size: 0.86rem; font-weight: 600; padding: 5px 0; }
+.in-uso-etichetta { color: var(--verde-scuro); }
+.traguardo { color: #7a6a5a; }
+@media (max-width: 560px) { .merce { grid-template-columns: repeat(2, 1fr); } }
+@media (max-height: 460px) {
+  .merce { grid-template-columns: repeat(4, 1fr); }
+  .pezzo .figura { height: 48px; }
+  .pezzo .figura img { max-height: 48px; }
+  .anteprima-tino { height: 110px !important; width: auto !important; }
+}

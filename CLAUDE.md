@@ -955,8 +955,10 @@ logica, su canvas), `ghianda.svg`.
   rubato lo skate di Gino ("Papà… mi hanno rubato lo skate!" "Sì, figlio mio: ci penso
   io!"), l'ispettore capo l'ha pignorato per una bolletta non pagata; modalità storia
   (quartieri con inseguimento dell'ispettore alla fine) e corsa infinita; Grinta a 3
-  tacche (1 tacca Sfondamento, 3 tacche Botta di Grinta); negozio con le ghiande (tavole
-  con piccoli poteri, caschi e adesivi da guardare); Gino giocabile nell'infinito (scelta
+  tacche (1 tacca Sfondamento, 3 tacche Botta di Grinta); negozio con le ghiande, solo
+  tavole con piccoli poteri (caschi e adesivi da appoggiare su Tino sono stati provati e
+  tolti: non andavano bene; i disegni restano in `disegni/caschi/` e `disegni/adesivi/`,
+  non usati); Gino giocabile nell'infinito (scelta
   nel menu, `localStorage` `personaggio`); musica punk rock sintetizzata. Sul telefono si
   gioca in orizzontale (in verticale compare l'invito a girarlo e il gioco va in pausa).
   Dopo la prima prova: manual con ← (non più con ↓), inclinazione in aria con ← → per
@@ -964,10 +966,9 @@ logica, su canvas), `ghianda.svg`.
   (oppure da soli quando lo slancio è finito).
 - **Tappe**: 1 motore (fatta: corsa, salti, trick, combo, grind, manual, schiacciata,
   Grinta, agenti col retino e col timbro, quartiere delle Cascine, corsa infinita,
-  musica punk, Gino giocabile); 2 contenuti (fatti i quattro quartieri: Novoli, cantieri
-  della tramvia e centro con ostacoli propri; fatta la modalità storia con gli inseguimenti
-  dell'ispettore capo; da fare: potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
-  all'olio, lampredotto, ruota sgonfia; negozio); grafica a fumetto delle Cascine e della
+  musica punk, Gino giocabile); 2 contenuti (fatta: i quattro quartieri: Novoli, cantieri
+  della tramvia e centro con ostacoli propri; la modalità storia con gli inseguimenti
+  dell'ispettore capo; potenziamenti per strada e negozio); grafica a fumetto delle Cascine e della
   half pipe (fatta, prima della tappa 2); 3
   rifinitura (suoni, taratura con persone vere).
 - **Grafica a fumetto** (fatta per le Cascine): fondali ed elementi dipinti con Nano Banana Pro
@@ -1066,7 +1067,48 @@ logica, su canvas), `ghianda.svg`.
   `pipe/scavo.png`, `pipe/muro-cantiere.png`; `mezzi/` ape, monopattino, carrello, golf
   (I1-I4); `poteri/` casco, ruote-oro, calamita, schiacciata, lampredotto, ruota-sgonfia
   (P1-P3, P5-P7); `tavole/` giglio, longboard, leggera, pesante (T1-T4). Mezzi e vignette
-  sono usati dalla storia; poteri, tavole, caschi e adesivi non ancora.
+  sono usati dalla storia; poteri e tavole dai potenziamenti e dal negozio; caschi e adesivi
+  non sono usati.
+- **Potenziamenti per strada** (tabelle `POTERI` e `COMPARSA` in cima a `gioco.js`, icone in
+  `disegni/poteri/`): uno ogni 300-450 m dai 150 m, in un tratto di strada libera tutto suo
+  (`generaStrada`, come la ruota di scorta), mai due uguali di fila; nella corsa infinita e
+  nella strada della storia, non nell'inseguimento (all'inizio dell'inseguimento i
+  potenziamenti attivi si tolgono). I buoni stanno a 165 (si prendono saltando), la ruota
+  sgonfia (1 su 6) a 20, sulla strada (si evita saltando). Casco (peso 12, finché non si urta,
+  al massimo 20 s: l'urto non toglie la ruota, "BONK!"), ruote d'oro (18, 15 s, combo × 2),
+  calamita (20, 15 s, attira le ghiande entro 170 px), bombolone (15, +1 tacca di Grinta;
+  con la Grinta piena +300 punti), schiacciata all'olio (12, 12 s, velocità del salto × 1,06),
+  lampredotto (12, 15 s, Grinta doppia), ruota sgonfia (8 s, salto × 0,95, manual al massimo
+  1 s, Tino arrabbiato). Stato in `stato.poteri` ({ id: secondi }), `attivo(id)`,
+  `prendiPotere`, `aggiornaPoteri`, `forzaSalto()`. HUD: icone sotto la Grinta con l'anello
+  del tempo (lampeggiano negli ultimi 2 s). Su Tino: alone azzurro (casco), ruote dorate,
+  anelli rossi (calamita), sbuffi viola, gocce d'olio, tavola che pende (ruota sgonfia).
+  Prima il casco aveva peso 18 e durava 30 s: il medio andava il 16% più lontano.
+- **Negozio** (tabella `TAVOLE`; `pannelloNegozio`, dal menu e dalla fine della corsa, come
+  in Gino Volante): solo tavole; si compra con `ghiande-totali` (si raccolgono ~150 ghiande
+  ogni 1000 m: ~200 a corsa per il principiante, ~450 il medio, ~750 il bravo).
+  `localStorage` `tavola`, `tavole`; `posseduto(tipo, id)`; i poteri della tavola si
+  leggono con `pTav('chiave', predefinito)`. Tavole: classica (gratis), giglio 500 (Giglio
+  0,30 s e 150 punti; flip −10%), longboard 1000 (fango × 0,8 invece di 0,62, sampietrini
+  senza tremare e col manual, manual fino a 4,5 s; giri × 0,85; disegnata larga 104),
+  leggera 1800 (giri × 1,2; atterraggio entro 30°), pesante 2800 (Sfondamento 1,5 s,
+  pestoni e sfasciate +50%; salto × 0,985, giri × 0,9), pop corn 4000 (attira le ghiande
+  entro 90 px; Grinta × 0,9), tavola d'oro al record di 5000 m (ghiande × 2). In cima al
+  negozio Tino sulla tavola scelta e Gino. Le tavole valgono anche con Gino e
+  nell'inseguimento.
+- **Taratura di potenziamenti e tavole** (copione Playwright non nel repository: il
+  giocatore, quando andando dritto urterebbe entro 1,15 s, prova quattro mosse (salto corto,
+  tenuto, ↓ per 0,5 e 0,9 s) a ogni istante da 0 a 0,8 s e guarda 1,7 s avanti, sceglie la
+  mossa con la finestra di istanti buoni più lunga e la fa a metà finestra con l'errore del
+  livello (principiante 0,12 s e 3% di mosse perse, medio 0,08 e 1,5%, bravo 0,05 e 0,5%);
+  salta per i potenziamenti buoni e cerca di evitare la ruota sgonfia; niente trick né
+  Grinta). 30 corse per livello, fino a 6000 m, senza / con potenziamenti: principiante
+  1219 / 1205 m, medio 2835 / 3133 m (+10%), bravo 4874 / 5217 m (+7%). Tavole (medio, 30
+  corse): giglio, pop corn e oro danno le stesse corse della classica (non cambiano i
+  salti), longboard +2%, pesante −2% al principiante (50 corse). La leggera col salto più
+  alto (anche solo +2% di velocità) dava al principiante +22-26%: il salto più alto è stato
+  tolto. Con la ruota sgonfia sempre attiva il bravo arriva a 3000 m in 11 corse su 12.
+  Ghiande: pop corn +28%, oro × 2.
 - **Quartieri** (tabella `QUARTIERI`, `GIRO_QUARTIERI`, `quartiereA(x)`): Cascine → Novoli →
   cantieri della tramvia → centro, 750 m l'uno (`LUNGO_QUARTIERE`), poi si ricomincia dalle
   Cascine (sempre più veloci). Ogni quartiere ha nome, colori (cielo, colline, palazzi,
@@ -1276,7 +1318,11 @@ logica, su canvas), `ghianda.svg`.
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
   `disegni/`, `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e
   `root`. Per provare i quartieri, nella copia di `gioco.js` `quartiereAperto = () => true`; per
-  aprire tutti i capitoli della storia `leggi('storia-capitolo', 3)`.
+  aprire tutti i capitoli della storia `leggi('storia-capitolo', 3)`; per il negozio
+  `leggi('ghiande-totali', 5000)` e traguardi aperti (`if (x.traguardo) return true;` in
+  `posseduto`). Nelle prove: `prova('tavola', id)` sceglie senza comprare, `regalaGhiande(n)`,
+  `prendiPotere(id, x, h)`, `stato.poteri`, `stato.statistiche.poteri` e `salvati` (urti
+  parati dal casco).
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
