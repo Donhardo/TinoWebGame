@@ -83,4 +83,4 @@ e poi si visita http://localhost:8000.
   si salta in testa; vignette tra un capitolo e l'altro e finale sul Ponte Vecchio.
   Lungo la strada ci sono potenziamenti da prendere saltando (casco, ruote d'oro, calamita,
   bombolone, schiacciata all'olio, lampredotto) e una ruota sgonfia da evitare; con le
-  ghiande raccolte si comprano nel negozio tavole con piccoli poteri, caschi e adesivi.
+  ghiande raccolte si comprano nel negozio tavole con piccoli poteri.

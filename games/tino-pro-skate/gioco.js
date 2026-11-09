@@ -137,9 +137,8 @@
     bombolonePieno: 300,       // punti del bombolone con la Grinta già piena
   };
 
-  // Il negozio: tavole (con piccoli poteri), caschi e adesivi (da guardare).
-  // Si compra con le ghiande raccolte; i pezzi con traguardo si sbloccano col
-  // record in metri, l'adesivo della Tari finendo la storia.
+  // Il negozio: tavole con piccoli poteri. Si compra con le ghiande raccolte;
+  // la tavola d'oro si sblocca col record in metri.
   const TAVOLE = [
     { id: 'classica', nome: 'Classica', prezzo: 0, piu: 'Equilibrata', file: 'elementi/tavola' },
     { id: 'giglio', nome: 'Giglio', prezzo: 500, piu: 'Il Giglio è più svelto e vale 150', meno: 'Flip: −10% di punti', giglioDur: 0.3, giglioPunti: 150, flip: 0.9 },
@@ -149,33 +148,6 @@
     { id: 'pop-corn', nome: 'Pop corn', prezzo: 4000, piu: 'Attira le ghiande vicine', meno: 'Grinta −10%', calamita: 90, grinta: 0.9 },
     { id: 'oro', nome: 'Tavola d\'oro', traguardo: 5000, piu: 'Ghiande doppie', ghiande: 2 },
   ];
-  const CASCHI = [
-    { id: 'nessuno', nome: 'Niente', prezzo: 0 },
-    { id: 'stelle', nome: 'Stelle', prezzo: 300 },
-    { id: 'ghianda', nome: 'Ghianda', prezzo: 700 },
-    { id: 'cresta', nome: 'Cresta punk', prezzo: 1200 },
-    { id: 'cupola', nome: 'Cappello di ghianda', prezzo: 1800 },
-    { id: 'alato', nome: 'Alato', traguardo: 3000 },
-  ];
-  const ADESIVI = [
-    { id: 'nessuno', nome: 'Niente', prezzo: 0 },
-    { id: 'ghianda', nome: 'Ghianda', prezzo: 150 },
-    { id: 'ruota', nome: 'Ruota di fuoco', prezzo: 300 },
-    { id: 'giglio', nome: 'Giglio', prezzo: 500 },
-    { id: 'fulmine', nome: 'Fulmine', prezzo: 750 },
-    { id: 'cono', nome: 'Cono', prezzo: 1000 },
-    { id: 'tari', nome: 'Abbasso la Tari', storia: true },
-  ];
-  // Casco e adesivo si appoggiano alle foto: [centro x, centro y, larghezza,
-  // rotazione in gradi] in pixel della foto originale, per ogni espressione.
-  const POSE = {
-    normale: { casco: [245, 88, 280, 6], adesivo: [150, 400, 100, -12] },
-    arrabbiato: { casco: [128, 92, 205, 0], adesivo: [78, 292, 72, -10] },
-    ferito: { casco: [124, 90, 212, -4], adesivo: [74, 330, 74, -10] },
-    ko: { casco: [80, 112, 150, -80], adesivo: [215, 150, 66, 0] },
-    gino: { casco: [195, 84, 380, 0] },
-  };
-
   const AGENTI = {
     larg: 46,
     alt: 100,
@@ -230,11 +202,9 @@
   disegni.ponteVecchio = carica(DISEGNI + 'fondali/ponte-vecchio.png');
   // i mezzi dell'ispettore capo (modalità storia)
   for (const n of ['ape', 'monopattino', 'carrello', 'golf']) disegni['mezzo-' + n] = carica(DISEGNI + 'mezzi/' + n + '.png');
-  // potenziamenti, tavole, caschi e adesivi del negozio
+  // potenziamenti e tavole del negozio
   for (const n of Object.keys(POTERI)) disegni['potere-' + n] = carica(DISEGNI + 'poteri/' + n + '.png');
   for (const x of TAVOLE) disegni['tavola-' + x.id] = x.id === 'classica' ? disegni.tavola : carica(DISEGNI + 'tavole/' + x.id + '.png');
-  for (const x of CASCHI) if (x.id !== 'nessuno') disegni['casco-' + x.id] = carica(DISEGNI + 'caschi/' + x.id + '.png');
-  for (const x of ADESIVI) if (x.id !== 'nessuno') disegni['adesivo-' + x.id] = carica(DISEGNI + 'adesivi/' + x.id + '.png');
   // Le foto dei personaggi restano quelle originali: per farle stare nel
   // fumetto si prepara una volta una copia con un contorno nero spesso e
   // un'ombra piena (sfalsata in basso a destra). hRif è l'altezza a cui si
@@ -1014,7 +984,7 @@
     const metri = Math.floor(stato.metri);
     const nuovoMetri = metri > recordMetri;
     const nuovoPunti = punti > recordPunti;
-    const sbloccati = nuovoMetri ? [...TAVOLE, ...CASCHI].filter((x) => x.traguardo && recordMetri < x.traguardo && metri >= x.traguardo).map((x) => (TAVOLE.includes(x) ? x.nome : 'Casco ' + x.nome.toLowerCase())) : [];
+    const sbloccati = nuovoMetri ? TAVOLE.filter((x) => x.traguardo && recordMetri < x.traguardo && metri >= x.traguardo).map((x) => x.nome) : [];
     if (!stato.test) {
       if (nuovoMetri) { recordMetri = metri; scrivi('record-metri', metri); }
       if (nuovoPunti) { recordPunti = punti; scrivi('record-punti', punti); }
@@ -1705,15 +1675,14 @@
   let storiaPunti = leggi('storia-punti', [0, 0, 0, 0]); // i punti migliori di ogni capitolo
 
   // ---------------------------------------------------------------- negozio: cosa si possiede e cosa si usa
-  const LISTE = { tavola: TAVOLE, casco: CASCHI, adesivo: ADESIVI };
-  const presi = { tavola: leggi('tavole', ['classica']), casco: leggi('caschi', ['nessuno']), adesivo: leggi('adesivi', ['nessuno']) };
-  const scelti = { tavola: leggi('tavola', 'classica'), casco: leggi('casco', 'nessuno'), adesivo: leggi('adesivo', 'nessuno') };
+  const LISTE = { tavola: TAVOLE };
+  const presi = { tavola: leggi('tavole', ['classica']) };
+  const scelti = { tavola: leggi('tavola', 'classica') };
   const trova = (lista, id) => lista.find((x) => x.id === id) || lista[0];
-  // un pezzo è disponibile se è comprato, o se il record (o la storia finita) lo ha sbloccato
+  // una tavola è disponibile se è comprata, o se il record l'ha sbloccata
   function posseduto(tipo, id) {
     const x = trova(LISTE[tipo], id);
     if (x.traguardo) return recordMetri >= x.traguardo;
-    if (x.storia) return storiaFatta >= 4;
     return !x.prezzo || presi[tipo].includes(id);
   }
   for (const tipo of Object.keys(scelti)) if (!posseduto(tipo, scelti[tipo])) scelti[tipo] = LISTE[tipo][0].id;
@@ -3970,24 +3939,6 @@
     k.restore();
   }
 
-  // casco e adesivo del negozio sopra la foto (disegnata in x, y, w, h)
-  function vesti(k, posa, x, y, w, casco = scelti.casco, adesivo = scelti.adesivo) {
-    const P = POSE[posa], foto = immagini[posa];
-    if (!P || !pronta(foto)) return;
-    const sc = w / foto.naturalWidth;
-    const pezzo = (im, [cx, cy, ww, r]) => {
-      if (!pronta(im)) return;
-      const hh = ww * im.naturalHeight / im.naturalWidth;
-      k.save();
-      k.translate(x + cx * sc, y + cy * sc);
-      k.rotate(r * Math.PI / 180);
-      k.drawImage(im, -ww * sc / 2, -hh * sc / 2, ww * sc, hh * sc);
-      k.restore();
-    };
-    if (adesivo !== 'nessuno' && P.adesivo) pezzo(disegni['adesivo-' + adesivo], P.adesivo);
-    if (casco !== 'nessuno' && P.casco) pezzo(disegni['casco-' + casco], P.casco);
-  }
-
   function facciaTino() {
     const t = stato.tino;
     if (stato.fase === 'ko' || stato.fase === 'fine') return 'ko';
@@ -4030,18 +3981,15 @@
           ctx.rotate(ko ? t.rot : 1.2 + Math.sin(stato.tempo * 30) * 0.1);
           const hh = 58, w = hh * im.naturalWidth / im.naturalHeight;
           fumetto(ctx, im, 62, -w / 2, -hh / 2, w, hh);
-          vesti(ctx, 'gino', -w / 2, -hh / 2, w);
         } else if (ko) {
           const hh = 58, w = hh * im.naturalWidth / im.naturalHeight;
           ctx.translate(x, y);
           fumetto(ctx, im, 94, -w / 2, -hh, w, hh, CONTORNO_TINO);
-          vesti(ctx, 'ko', -w / 2, -hh, w);
         } else {
           ctx.translate(x, y - 6);
           ctx.rotate(-1.25);
           const hh = 88, w = hh * im.naturalWidth / im.naturalHeight;
           fumetto(ctx, im, 94, -w / 2, -hh + 26, w, hh, CONTORNO_TINO);
-          vesti(ctx, faccia, -w / 2, -hh + 26, w);
         }
         ctx.restore();
       }
@@ -4155,12 +4103,10 @@
         ctx.translate(dx, dy);
         ctx.rotate(r);
         fumetto(ctx, im, 62, -w / 2, -hh, w, hh);
-        vesti(ctx, 'gino', -w / 2, -hh, w);
       } else {
         const hh = 94, w = hh * im.naturalWidth / im.naturalHeight;
         if (t.contento > 0) ctx.translate(0, -Math.sin((1 - t.contento / 0.5) * Math.PI) * 10); // saltello col potenziamento
         fumetto(ctx, im, 94, -w / 2 - 2, -hh, w, hh, CONTORNO_TINO);
-        vesti(ctx, faccia, -w / 2 - 2, -hh, w);
       }
       ctx.restore();
     }
@@ -4580,7 +4526,6 @@
       <p>Al tramonto, sul Ponte Vecchio, Tino e Gino guardano l'Arno con i loro skate.</p>
       ${datiCapitolo(r)}
       <p class="record">I punti migliori di ogni capitolo: <b>${totale.toLocaleString('it-IT')}</b></p>
-      <p class="sbloccato">Premio: l'adesivo <b>Abbasso la Tari</b>! Lo trovi nel negozio.</p>
       <div class="scelte">
         <button class="bottone" data-azione="menu" data-primo>Menu</button>
         <button class="bottone secondario" data-azione="capitolo" data-id="0">Ricomincia la storia</button>
@@ -4646,10 +4591,9 @@
   }
 
   // ---------------------------------------------------------------- negozio
-  // Tre schede: tavole (con i poteri), caschi e adesivi (da guardare). Si compra
-  // con le ghiande raccolte; alcuni pezzi si sbloccano col record o con la storia.
-  let schedaNegozio = 'tavola';
-  const SCHEDE = { tavola: 'Tavole', casco: 'Caschi', adesivo: 'Adesivi' };
+  // Le tavole, ognuna con un piccolo potere. Si compra con le ghiande raccolte;
+  // la tavola d'oro si sblocca col record.
+  const schedaNegozio = 'tavola';
   function pannelloNegozio() {
     const tipo = schedaNegozio, lista = LISTE[tipo], scelto = scelti[tipo];
     const voci = lista.map((x) => {
@@ -4658,12 +4602,9 @@
       if (x.id === scelto) bottone = '<span class="in-uso-etichetta">In uso</span>';
       else if (mio) bottone = `<button class="bottone piccolo" data-azione="usa" data-id="${x.id}">Usa</button>`;
       else if (x.traguardo) bottone = `<span class="traguardo">Record di ${x.traguardo} m</span>`;
-      else if (x.storia) bottone = '<span class="traguardo">Finisci la storia</span>';
       else bottone = `<button class="bottone piccolo" data-azione="compra" data-id="${x.id}" ${ghiandeTotali < x.prezzo ? 'disabled' : ''}><img src="ghianda.svg" alt="ghiande" class="ico-ghianda"> ${x.prezzo}</button>`;
-      const potere = tipo === 'tavola'
-        ? `<span class="potere"><span class="piu">${x.piu}</span>${x.meno ? `<span class="meno">${x.meno}</span>` : ''}</span>` : '';
-      const file = tipo === 'tavola' ? (x.file || 'tavole/' + x.id) : (tipo === 'casco' ? 'caschi/' : 'adesivi/') + x.id;
-      const fig = x.id === 'nessuno' ? '<span class="niente">–</span>' : `<img class="fig-${tipo}" src="${DISEGNI}${file}.png" alt="">`;
+      const potere = `<span class="potere"><span class="piu">${x.piu}</span>${x.meno ? `<span class="meno">${x.meno}</span>` : ''}</span>`;
+      const fig = `<img class="fig-tavola" src="${DISEGNI}${x.file || 'tavole/' + x.id}.png" alt="">`;
       return `<li class="pezzo${x.id === scelto ? ' scelto' : ''}${mio ? '' : ' chiuso'}">
         <span class="figura">${fig}</span>
         <span class="nome">${x.nome}</span>
@@ -4671,17 +4612,11 @@
         ${bottone}
       </li>`;
     }).join('');
-    const note = {
-      tavola: 'Ogni tavola ha un piccolo potere: un vantaggio e un piccolo svantaggio.',
-      casco: 'I caschi sono solo da guardare: Tino (e Gino) li porta in corsa.',
-      adesivo: 'Gli adesivi sono solo da guardare: Tino se li attacca sul fianco.',
-    };
     return `<div class="riquadro negozio">
       <h2>Negozio</h2>
       <canvas class="anteprima-tino" data-anteprima="tino" width="260" height="150"></canvas>
       <p class="borsa"><img src="ghianda.svg" alt="" class="ico-ghianda"> <b>${ghiandeTotali}</b> ghiande da spendere · record ${recordMetri} m</p>
-      <div class="schede" role="tablist">${Object.keys(SCHEDE).map((k) => `<button role="tab" class="scheda${k === tipo ? ' attiva' : ''}" aria-selected="${k === tipo}" data-azione="scheda" data-scheda="${k}">${SCHEDE[k]}</button>`).join('')}</div>
-      <p class="nota">${note[tipo]}</p>
+      <p class="nota">Ogni tavola ha un piccolo potere: un vantaggio e un piccolo svantaggio.</p>
       <ul class="merce">${voci}</ul>
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Corsa infinita</button>
@@ -4699,11 +4634,11 @@
   }
   function compra(tipo, id) {
     const x = trova(LISTE[tipo], id);
-    if (x.traguardo || x.storia || posseduto(tipo, id) || ghiandeTotali < x.prezzo) return false;
+    if (x.traguardo || posseduto(tipo, id) || ghiandeTotali < x.prezzo) return false;
     ghiandeTotali -= x.prezzo;
     scrivi('ghiande-totali', ghiandeTotali);
     presi[tipo].push(id);
-    scrivi({ tavola: 'tavole', casco: 'caschi', adesivo: 'adesivi' }[tipo], presi[tipo]);
+    scrivi('tavole', presi[tipo]);
     usa(tipo, id);
     suoni.record();
     return true;
@@ -4712,7 +4647,7 @@
     scelti[tipo] = id;
     scrivi(tipo, id);
   }
-  // in cima al negozio: Tino sulla tavola scelta, con casco e adesivo (e Gino col casco)
+  // in cima al negozio: Tino sulla tavola scelta, e Gino
   function disegnaAnteprima() {
     const c = pannello.querySelector('canvas[data-anteprima]');
     if (!c) return;
@@ -4730,14 +4665,12 @@
     if (pronta(foto)) {
       const hh = 94, w = hh * foto.naturalWidth / foto.naturalHeight;
       k.drawImage(foto, -w / 2 - 2, -hh - 13, w, hh);
-      vesti(k, 'normale', -w / 2 - 2, -hh - 13, w);
     }
     k.restore();
     const gino = immagini.gino;
     if (pronta(gino)) {
       const hh = 64, w = hh * gino.naturalWidth / gino.naturalHeight;
       k.drawImage(gino, W * 0.8 - w / 2, H - 8 - hh, w, hh);
-      vesti(k, 'gino', W * 0.8 - w / 2, H - 8 - hh, w);
     }
   }
 
@@ -4747,9 +4680,8 @@
     switch (btn.dataset.azione) {
       case 'gioca': nuovaCorsa(); break;
       case 'negozio': mostraNegozio(); break;
-      case 'scheda': schedaNegozio = btn.dataset.scheda; mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
-      case 'usa': usa(schedaNegozio, btn.dataset.id); mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
-      case 'compra': if (compra(schedaNegozio, btn.dataset.id)) mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
+      case 'usa': usa(schedaNegozio, btn.dataset.id); mostraNegozio(); break;
+      case 'compra': if (compra(schedaNegozio, btn.dataset.id)) mostraNegozio(); break;
       case 'storia': mostraPannello(pannelloStoria()); break;
       case 'capitolo': nuovaStoria(+btn.dataset.id); break;
       case 'riprova-inseguimento': riprovaInseguimento(); break;
@@ -4813,10 +4745,10 @@
     rimetti: (s) => { stato = s; },
     larghezza: () => larg,
     FISICA, CURVE, TRICK, GRINTA, VITA, AGENTI, PEZZI, FORME, PX_M, MEZZI, INSEGUIMENTO, STORIA,
-    POTERI, COMPARSA, TAVOLE, CASCHI, ADESIVI, POSE,
+    POTERI, COMPARSA, TAVOLE,
     // negozio: scegliere senza comprare, regalare ghiande, comprare
     prova: (tipo, id) => { scelti[tipo] = id; },
     regalaGhiande: (n) => { ghiandeTotali += n; },
-    compra, posseduto, prendiPotere, vesti,
+    compra, posseduto, prendiPotere,
   };
 })();

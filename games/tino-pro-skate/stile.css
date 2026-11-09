@@ -318,21 +318,12 @@ kbd {
 .fumetto .salta { animation: saltello 1.2s ease-in-out infinite; }
 .fumetto .trema { animation: trema 0.5s ease-in-out infinite; transform-origin: 50% 100%; }
 
-/* Negozio: tavole, caschi e adesivi */
+/* Negozio delle tavole */
 .ico-ghianda { width: 0.95em; height: 1.1em; vertical-align: -0.15em; }
 .sbloccato { font-weight: 600; color: var(--verde-scuro); }
 .negozio { width: min(760px, 100%); }
 .anteprima-tino { display: block; margin: 0 auto; }
 .borsa { font-size: 1.05rem; }
-.schede { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
-.scheda {
-  font: inherit; font-weight: 600;
-  padding: 5px 16px;
-  border: 2px solid var(--marrone); border-radius: 999px;
-  background: transparent; color: var(--marrone); cursor: pointer;
-}
-.scheda.attiva { background: var(--marrone); color: #fff; }
-.scheda:focus-visible { outline: 3px solid #ffd59a; }
 .merce {
   list-style: none;
   margin: 8px 0 0; padding: 0;
@@ -352,7 +343,6 @@ kbd {
 .pezzo .figura { height: 64px; display: grid; place-items: center; }
 .pezzo .figura img { max-height: 64px; max-width: 130px; object-fit: contain; }
 .pezzo .figura .fig-tavola { width: 130px; }
-.pezzo .niente { font-size: 2rem; opacity: 0.4; }
 .pezzo.chiuso .figura img { opacity: 0.6; filter: grayscale(0.4); }
 .pezzo .nome { font-weight: 700; line-height: 1.15; }
 .potere { display: flex; flex-direction: column; font-size: 0.8rem; line-height: 1.2; min-height: 2.5em; }

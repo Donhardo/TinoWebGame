@@ -955,8 +955,10 @@ logica, su canvas), `ghianda.svg`.
   rubato lo skate di Gino ("Papà… mi hanno rubato lo skate!" "Sì, figlio mio: ci penso
   io!"), l'ispettore capo l'ha pignorato per una bolletta non pagata; modalità storia
   (quartieri con inseguimento dell'ispettore alla fine) e corsa infinita; Grinta a 3
-  tacche (1 tacca Sfondamento, 3 tacche Botta di Grinta); negozio con le ghiande (tavole
-  con piccoli poteri, caschi e adesivi da guardare); Gino giocabile nell'infinito (scelta
+  tacche (1 tacca Sfondamento, 3 tacche Botta di Grinta); negozio con le ghiande, solo
+  tavole con piccoli poteri (caschi e adesivi da appoggiare su Tino sono stati provati e
+  tolti: non andavano bene; i disegni restano in `disegni/caschi/` e `disegni/adesivi/`,
+  non usati); Gino giocabile nell'infinito (scelta
   nel menu, `localStorage` `personaggio`); musica punk rock sintetizzata. Sul telefono si
   gioca in orizzontale (in verticale compare l'invito a girarlo e il gioco va in pausa).
   Dopo la prima prova: manual con ← (non più con ↓), inclinazione in aria con ← → per
@@ -1065,7 +1067,8 @@ logica, su canvas), `ghianda.svg`.
   `pipe/scavo.png`, `pipe/muro-cantiere.png`; `mezzi/` ape, monopattino, carrello, golf
   (I1-I4); `poteri/` casco, ruote-oro, calamita, schiacciata, lampredotto, ruota-sgonfia
   (P1-P3, P5-P7); `tavole/` giglio, longboard, leggera, pesante (T1-T4). Mezzi e vignette
-  sono usati dalla storia; poteri, tavole, caschi e adesivi dai potenziamenti e dal negozio.
+  sono usati dalla storia; poteri e tavole dai potenziamenti e dal negozio; caschi e adesivi
+  non sono usati.
 - **Potenziamenti per strada** (tabelle `POTERI` e `COMPARSA` in cima a `gioco.js`, icone in
   `disegni/poteri/`): uno ogni 300-450 m dai 150 m, in un tratto di strada libera tutto suo
   (`generaStrada`, come la ruota di scorta), mai due uguali di fila; nella corsa infinita e
@@ -1081,23 +1084,18 @@ logica, su canvas), `ghianda.svg`.
   del tempo (lampeggiano negli ultimi 2 s). Su Tino: alone azzurro (casco), ruote dorate,
   anelli rossi (calamita), sbuffi viola, gocce d'olio, tavola che pende (ruota sgonfia).
   Prima il casco aveva peso 18 e durava 30 s: il medio andava il 16% più lontano.
-- **Negozio** (tabelle `TAVOLE`, `CASCHI`, `ADESIVI`, `POSE`; `pannelloNegozio`, dal menu e
-  dalla fine della corsa, come in Gino Volante): schede tavole, caschi, adesivi; si compra
-  con `ghiande-totali` (si raccolgono ~150 ghiande ogni 1000 m: ~200 a corsa per il
-  principiante, ~450 il medio, ~750 il bravo). `localStorage` `tavola`, `casco`, `adesivo`,
-  `tavole`, `caschi`, `adesivi`; `posseduto(tipo, id)`; i poteri della tavola si leggono
-  con `pTav('chiave', predefinito)`. Tavole: classica (gratis), giglio 500 (Giglio 0,30 s e
-  150 punti; flip −10%), longboard 1000 (fango × 0,8 invece di 0,62, sampietrini senza
-  tremare e col manual, manual fino a 4,5 s; giri × 0,85; disegnata larga 104), leggera 1800
-  (giri × 1,2; atterraggio entro 30°), pesante 2800 (Sfondamento 1,5 s, pestoni e sfasciate
-  +50%; salto × 0,985, giri × 0,9), pop corn 4000 (attira le ghiande entro 90 px; Grinta
-  × 0,9), tavola d'oro al record di 5000 m (ghiande × 2). Caschi (solo da guardare): stelle
-  300, ghianda 700, cresta 1200, cappello di ghianda 1800, alato al record di 3000 m. Adesivi:
-  ghianda 150, ruota di fuoco 300, giglio 500, fulmine 750, cono 1000, "Abbasso la Tari"
-  finendo la storia. Casco e adesivo si appoggiano alle foto con `POSE` ([centro x, centro y,
-  larghezza, rotazione] in pixel della foto, per normale, arrabbiato, ferito, ko e Gino, che
-  ha solo il casco), funzione `vesti`; seguono rotazioni e schiacciamenti. Le tavole valgono
-  anche con Gino e nell'inseguimento.
+- **Negozio** (tabella `TAVOLE`; `pannelloNegozio`, dal menu e dalla fine della corsa, come
+  in Gino Volante): solo tavole; si compra con `ghiande-totali` (si raccolgono ~150 ghiande
+  ogni 1000 m: ~200 a corsa per il principiante, ~450 il medio, ~750 il bravo).
+  `localStorage` `tavola`, `tavole`; `posseduto(tipo, id)`; i poteri della tavola si
+  leggono con `pTav('chiave', predefinito)`. Tavole: classica (gratis), giglio 500 (Giglio
+  0,30 s e 150 punti; flip −10%), longboard 1000 (fango × 0,8 invece di 0,62, sampietrini
+  senza tremare e col manual, manual fino a 4,5 s; giri × 0,85; disegnata larga 104),
+  leggera 1800 (giri × 1,2; atterraggio entro 30°), pesante 2800 (Sfondamento 1,5 s,
+  pestoni e sfasciate +50%; salto × 0,985, giri × 0,9), pop corn 4000 (attira le ghiande
+  entro 90 px; Grinta × 0,9), tavola d'oro al record di 5000 m (ghiande × 2). In cima al
+  negozio Tino sulla tavola scelta e Gino. Le tavole valgono anche con Gino e
+  nell'inseguimento.
 - **Taratura di potenziamenti e tavole** (copione Playwright non nel repository: il
   giocatore, quando andando dritto urterebbe entro 1,15 s, prova quattro mosse (salto corto,
   tenuto, ↓ per 0,5 e 0,9 s) a ogni istante da 0 a 0,8 s e guarda 1,7 s avanti, sceglie la
@@ -1322,7 +1320,7 @@ logica, su canvas), `ghianda.svg`.
   `root`. Per provare i quartieri, nella copia di `gioco.js` `quartiereAperto = () => true`; per
   aprire tutti i capitoli della storia `leggi('storia-capitolo', 3)`; per il negozio
   `leggi('ghiande-totali', 5000)` e traguardi aperti (`if (x.traguardo) return true;` in
-  `posseduto`). Nelle prove: `prova(tipo, id)` sceglie senza comprare, `regalaGhiande(n)`,
+  `posseduto`). Nelle prove: `prova('tavola', id)` sceglie senza comprare, `regalaGhiande(n)`,
   `prendiPotere(id, x, h)`, `stato.poteri`, `stato.statistiche.poteri` e `salvati` (urti
   parati dal casco).
 
