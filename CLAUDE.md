@@ -1429,9 +1429,53 @@ File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su canvas).
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `assets/tino/`,
   `assets/gino/`; si pubblica con `files` e `root`.
-- **Stato**: giocabile. Possibili seguiti, non ancora decisi: altri tavoli (per esempio
-  uno al mare o negli uffici della Tari), una seconda rampa o un giro della morte, missioni
-  con gli agenti della Tari, classifica con le iniziali.
+- **Stato**: giocabile (versione 1, un solo tavolo al neon). Dopo la prima prova al
+  proprietario piace ma è "troppo compresso" e troppo tutto al neon: si passa alla
+  versione 2 qui sotto.
+- **Piano della versione 2** (approvato, da fare):
+  - **Tavoli più grandi** (circa 640 × 1900 logici, alti due schermi) con **telecamera
+    verticale** che segue la ghianda con anticipo e morbidezza (quando scende verso i
+    flipper ci arriva prima la telecamera; nel multiball inquadra le ghiande più in basso);
+    **mini mappa** del tavolo (nel pannello sugli schermi larghi, in un angolo sul
+    telefono). Sul telefono si resta in verticale.
+  - **Più flipper**: oltre ai due in basso un terzo a metà tavolo (a destra) e, dove serve,
+    un quarto piccolo su un piano rialzato in alto; il giocatore simulato deve saperli
+    usare tutti.
+  - **Elementi meccanici dei flipper veri** (ognuno vestito secondo il tavolo):
+    magneti che fermano e trattengono la ghianda (e la rilanciano o la spostano), bersagli
+    che cadono a banchi con ripristino, bersagli fissi, bersagli che spuntano dal piano e
+    si riabbassano, cartellini e sagome che si abbattono e si rialzano, espulsore verticale
+    dalla buca a una rampa (la ghianda sale da sotto), tunnel sotto il campo (la ghianda
+    sparisce e riesce altrove), deviatori sulle rampe che cambiano strada, rampe di filo
+    metallico, giro della morte, palo che si alza tra i flipper (salva la ghianda), rimbalzo
+    nelle corsie esterne, lancio automatico, blocco con le ghiande che si vedono ferme in
+    fila, palla prigioniera (una ghianda chiusa in un corridoio da spingere in fondo),
+    disco che gira sul piano e devia la ghianda, giocattolo che si muove e si colpisce
+    (bersaglio da "picchiare"), mini campo rialzato, cancelletti a una via, spinner,
+    corsie con i rollover.
+  - **Un tavolo per ogni mondo degli altri giochi**, ognuno con un giocattolo e regole
+    proprie: Radici della Quercia (legno, radici, torce, piolo d'oro che fa girare la
+    ghianda, Ghianda d'Oro), Prato (erba, fiorellini, formiche che corrono, funghi), Spiaggia
+    (faro che gira e illumina i tiri, castello di sabbia da abbattere, onda che spinge),
+    Uffici della Tari (timbro gigante che scende, archivio coi cassetti, agente col retino
+    come bersaglio mobile, ispettore capo come sfida), Firenze a fumetto (rampa sul Ponte
+    Vecchio, tram che attraversa, onomatopee, contorni neri) e l'attuale Notte al neon come
+    tavolo bonus. Nel menu si sceglie il tavolo; i tavoli si sbloccano coi punti.
+  - **Grafica disegnata, non solo neon**: piano di gioco dipinto (prompt per Gemini come
+    negli altri giochi, con un fondale di riserva disegnato nel codice), pareti di legno,
+    plastica colorata o metallo cromato secondo il tavolo, lampade come inserti di plastica
+    che si accendono; il neon solo per luci, scritte e momenti speciali (multiball,
+    jackpot).
+  - **Codice**: motore comune (fisica, flipper, rampe, elementi meccanici, telecamera,
+    regole, suoni) e un file per tavolo descritto a dati in `games/tino-flipper/tavoli/`.
+    Si tengono le regole che funzionano già (corsie, combo, multiball, jackpot, scenari,
+    palla salvata, tilt), adattate a ogni tavolo.
+  - **Tappe**: 1) motore grande con telecamera, flipper in più, primi elementi meccanici e
+    il primo tavolo nuovo disegnato nel codice; 2) gli altri tavoli; 3) prompt per i
+    fondali dipinti e rifinitura. Prima di iniziare: pianta del primo tavolo (anche come
+    schizzo) e decisioni da prendere col proprietario. Ogni tavolo si controlla con partite
+    simulate (la ghianda non deve uscire né incastrarsi) e si tara; si fa provare come
+    artifact prima di unire.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
