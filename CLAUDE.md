@@ -1447,7 +1447,16 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   `avviaAvventura`, `nuovaPalla`, `cambiaVista`); con `stato.test` e `stato.iaGioca` come
   nella versione 1; `stato.statistiche.dove` (incastri e uscite), `scoli` (dove si perde
   la ghianda), `tiri`. I copioni non sono nel repository.
-- **Stato**: tappa 1 fatta, da provare (artifact) prima di unire.
+- **Stato**: tappa 1 fatta e provata dal proprietario: "va bene". Da fare (prossima
+  sessione, prima della tappa 2):
+  - **Gino da colpire** ben visibile sul campo, come nel tavolo al neon (lì era al centro
+    in un cerchio e "molto carino"): ora è piccolo nella galleria alta e si vede poco.
+    Trovargli un posto sul campo principale (per esempio al posto o accanto al piolo
+    d'oro) con le sue animazioni (tremolio quando è colpito, saltello sui jackpot).
+  - **Colori**: il tavolo è troppo scuro, sembra di stare dentro un tronco. Deve sembrare
+    all'aperto, con colori allegri: prato e terra chiara al sole, cielo o luce calda,
+    radici e legno più chiari, fiori e foglie; le torce restano ma meno da grotta.
+    Controllare che ghiande, lampade e flipper si stacchino bene sul fondo chiaro.
 
 #### Notte al neon (versione 1, ora `neon/`)
 - **Decisioni prese**: titolo "Tino Flipper", sottotitolo "Notte al neon nel bosco";
