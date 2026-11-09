@@ -1465,7 +1465,35 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   la ghianda), `tiri`. I copioni non sono nel repository.
 - **Stato**: tappa 1 fatta e provata dal proprietario: "va bene". Dopo la prova: Gino
   spostato sul campo (al centro del piolo d'oro) e colori all'aperto (fatti, da far provare
-  al proprietario). Poi la tappa 2.
+  al proprietario). Poi i robivecchi (qui sotto), poi la tappa 2.
+- **Robivecchi** (da fare nella prossima sessione; modo approvato: "impresa + punto difficile").
+  Ogni robivecchio si guadagna con un'impresa; quando è fatta, l'oggetto compare in un punto
+  difficile del tavolo (con un messaggio e una freccia che lampeggia) e ci resta, anche da una
+  palla all'altra, finché la ghianda non ci passa sopra (+25.000). Se la partita finisce prima,
+  è perso: si rifà l'impresa in un'altra partita. Uno alla volta sul tavolo; gli altri
+  guadagnati aspettano in fila. Salvati appena presi in `localStorage`
+  `tino-flipper:radici:robivecchi`; a fine partita il pannello con quelli nuovi; nel menu la
+  collezione del tavolo (quelli mancanti in grigio, con l'impresa scritta sotto). Disegni di
+  `assets/oggetti/robivecchi/`; le Radici usano la serie del mondo 1 dell'avventura, ogni
+  tavolo futuro avrà la sua. Proposta di imprese (dalla più facile alla più difficile, da
+  confermare col proprietario):
+  1. Moneta (`moneta.svg`): tiro da maestro. Compare nella galleria alta, accanto al pozzo
+     (si prende salendo dal tunnel).
+  2. Bottone (`bottone.svg`): T·I·N·O completo due volte nella stessa palla. Compare in cima
+     all'orbita destra.
+  3. Graffetta (`graffetta.svg`): le tre torce accese nella stessa palla. Compare tra i nodi.
+  4. Fiocco (`fiocco.svg`): tre radici lunghe di fila nella stessa combo. Compare in cima alla
+     radice lunga, sul deviatore (si prende facendo la radice lunga).
+  5. Carta di credito scaduta (`carta-scaduta.svg`): agente acciuffato nell'avventura
+     Inseguimento. Compare sopra il sentiero dell'agente, alla sua destra (x ~430, y ~650).
+  6. Tappo a corona (`tappo.svg`): super jackpot su Gino. Compare in cima all'anello del giro
+     della morte (si prende facendo il giro).
+  7. Biglia (`biglia.svg`): finire la Ghianda d'Oro. Compare sul bordo del piolo d'oro e gira
+     con lui (bersaglio che si muove attorno a Gino).
+  Gli oggetti sui percorsi (fiocco, tappo) si prendono quando la ghianda passa per quel punto
+  del percorso. Da controllare con le partite simulate: il giocatore simulato deve riuscire a
+  prenderli tutti (`desiderati` col punto del robivecchio in cima quando ce n'è uno), e il
+  medio dovrebbe prenderne 2-4 nelle prime partite.
 
 #### Notte al neon (versione 1, ora `neon/`)
 - **Decisioni prese**: titolo "Tino Flipper", sottotitolo "Notte al neon nel bosco";
