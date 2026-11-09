@@ -1000,6 +1000,10 @@
     g.lineWidth = 1.6;
     g.lineCap = 'round';
     g.beginPath(); g.moveTo(mm, mm - R * 0.95); g.lineTo(mm + 1.5, mm - R - 0.8); g.stroke();
+    // contorno scuro: la ghianda si stacca anche dalla terra chiara
+    g.strokeStyle = 'rgba(45,22,5,0.85)';
+    g.lineWidth = 1.3;
+    g.beginPath(); g.arc(mm, mm, R - 0.5, 0, Math.PI * 2); g.stroke();
     return { c, k, m: mm };
   })();
   function disegnaGhianda(g, x, y, rot, s = 1) {
@@ -1056,14 +1060,16 @@
     } else {
       g.arc(0, 0, r, 0, Math.PI * 2);
     }
-    g.fillStyle = accesa ? colore : hexA(colore, 0.2);
+    // spenta: plastica scura con un velo del suo colore (si vede anche sul fondo chiaro)
+    if (!accesa) { g.fillStyle = 'rgba(55,32,12,0.5)'; g.fill(); }
+    g.fillStyle = accesa ? colore : hexA(colore, 0.35);
     g.fill();
-    g.lineWidth = 1.5;
-    g.strokeStyle = accesa ? '#fff8e0' : 'rgba(0,0,0,0.5)';
+    g.lineWidth = accesa ? 2 : 1.5;
+    g.strokeStyle = accesa ? '#fff8e0' : 'rgba(40,22,6,0.65)';
     g.stroke();
     if (testo) {
       g.rotate(-ang);
-      g.fillStyle = accesa ? '#2a1405' : 'rgba(255,240,210,0.45)';
+      g.fillStyle = accesa ? '#2a1405' : 'rgba(255,240,210,0.7)';
       g.font = `700 ${Math.round(r * (forma === 'pillola' ? 0.95 : testo.length > 1 ? 0.8 : 1.1))}px Fredoka, sans-serif`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
