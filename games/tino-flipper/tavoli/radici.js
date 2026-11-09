@@ -7,7 +7,8 @@
  * T·I·N·O, orbita destra con lo spinner, radice lunga (rampa di legno con il
  * deviatore verso la dispensa), giro della morte con la liana, buca del ghiro
  * (tunnel verso il pozzo, con il sasso che spunta davanti), sassi (bersagli che
- * cadono), cartelli (si abbattono e si rialzano), piolo d'oro (disco che gira),
+ * cadono), cartelli (si abbattono e si rialzano), piolo d'oro (disco che gira)
+ * con Gino seduto al centro (bersaglio),
  * resina (magnete), cunicolo del cece (palla prigioniera), agente col timbro
  * (giocattolo che cammina), terzo flipper, molla (rimbalzo), radice che spunta
  * (palo tra i flipper), dispensa (blocco con le ghiande in fila).
@@ -154,8 +155,10 @@
       return c;
     });
     // piolo d'oro (disco che gira)
-    const PIOLO = m.disco({ id: 'piolo', x: 300, y: 850, r: 48, w: 3.4, presa: 3 });
-    PIOLO.esito = 'piolo';
+    const PIOLO = m.disco({ id: 'piolo', x: 300, y: 850, r: 60, w: 3.4, presa: 3 });
+    // Gino seduto al centro del piolo d'oro: il bersaglio grande del campo
+    const GINO = { x: 300, y: 850, r: 30, trema: 0, salto: 0, colpi: 0 };
+    GINO.c = m.cerchio(GINO.x, GINO.y, GINO.r, { tipo: 'gino', id: 'gino', e: 0.6, spinta: 150, esito: 'gino' });
     // agente col timbro sulla radice
     const AG = m.mobile({ id: 'agente', x: 370, y: AGENTE.y, r: 24, tipo: 'agente', esito: 'agente', e: 0.6 });
     // resina (magnete)
@@ -217,8 +220,6 @@
       m.segmento(x - 13, 386, x + 13, 386, { tipo: 'torcia', id: 'torcia', r: 5, e: 0.4, piano: 1, dati: { i }, esito: 'torce' });
       return t;
     });
-    const GINO = { x: 150, y: 480, r: 20, trema: 0, salto: 0 };
-    GINO.c = m.cerchio(GINO.x, GINO.y, GINO.r, { tipo: 'gino', id: 'gino', piano: 1, e: 0.6, spinta: 220, esito: 'gino' });
     m.sensore('uscita', 236, 397, 236, 443, { piano: 1, verso: [1, 0], esito: 'uscita' });
     m.sensore('scivolo', 42, 660, 240, 660, { piano: 1, verso: [0, 1], esito: 'scivolo' });
     const POZZO = { x: 200, y: 566 };
@@ -260,12 +261,12 @@
       S.skill = { corsia: Math.floor(Math.random() * 4), attivo: true, t: 0 };
       S.palo = Math.max(S.palo, 0);
     }
-    const contatori = () => ({ bumper: 0, corsie: 0, rampe: 0, giri: 0, orbite: 0, sassi: 0, cartelli: 0, chiavi: 0, torce: 0, agente: 0, avventure: 0, spinner: 0 });
+    const contatori = () => ({ gino: 0, bumper: 0, corsie: 0, rampe: 0, giri: 0, orbite: 0, sassi: 0, cartelli: 0, chiavi: 0, torce: 0, agente: 0, avventure: 0, spinner: 0 });
     function righeBonus(c) {
       return [
         ['Nodi', c.bumper, 100], ['Corsie', c.corsie, 1000], ['Radice lunga', c.rampe, 4000], ['Giri della morte', c.giri, 5000],
         ['Orbite', c.orbite, 3000], ['Sassi', c.sassi, 1000], ['Cartelli', c.cartelli, 1000], ['Chiavi', c.chiavi, 5000],
-        ['Torce', c.torce, 2500], ['Agente', c.agente, 2000], ['Avventure', c.avventure, 25000],
+        ['Torce', c.torce, 2500], ['Gino', c.gino, 2500], ['Agente', c.agente, 2000], ['Avventure', c.avventure, 25000],
       ];
     }
 
@@ -356,10 +357,32 @@
           } else G.punti(1000);
           break;
         }
-        case 'gino':
-          if (info < 100) return;
+        case 'gino': {
+          if (info < 100 || GINO.attesa > 0) return;
           GINO.trema = 0.5;
-          G.punti(PUNTI.gino, GINO.x, GINO.y - 40);
+          GINO.attesa = 0.25;
+          c.gino++;
+          S.lampoPiolo = 1;
+          G.scintille(p.x, p.y, '#ffe27a', 10, 260);
+          G.tiro('gino', GINO.x, GINO.y);
+          if (st.multiball && S.superJackpot) {
+            S.superJackpot = false;
+            st.jackpot.fatti = 0;
+            const v = G.punti(PUNTI.superJackpot, GINO.x, GINO.y - 70, '#fff27a');
+            G.messaggio('SUPER JACKPOT!', '+' + numero(v), 2.6);
+            G.suoni.superJackpot();
+            G.flash(1); G.scossa(1.5); G.festa();
+            GINO.salto = 1.2;
+            break;
+          }
+          if (inAvv('ghianda')) {
+            const v = G.punti(250000, GINO.x, GINO.y - 70, '#fff27a');
+            G.messaggio('Gino d\'oro!', '+' + numero(v), 1.4);
+            G.suoni.jackpot();
+            GINO.salto = 1;
+            break;
+          }
+          G.punti(PUNTI.gino, GINO.x, GINO.y - 50);
           su.fisso();
           if (!S.resina) {
             S.resina = true;
@@ -367,6 +390,7 @@
             su.acceso();
           }
           break;
+        }
         case 'agente': colpoAgente(p, info); break;
         default: break;
       }
@@ -636,6 +660,7 @@
         G.messaggio('JACKPOT!', '+' + numero(v), 1.1);
         G.suoni.jackpot();
         G.flash(0.5);
+        GINO.salto = 1;
         return;
       }
       if (!st.multiball) return;
@@ -649,9 +674,10 @@
       G.flash(0.7);
       G.scossa(1);
       G.festa();
+      GINO.salto = 1;
       if (j.fatti >= 3 && !S.superJackpot) {
         S.superJackpot = true;
-        G.messaggio('Super jackpot acceso!', 'Passa sul piolo d\'oro', 2.2);
+        G.messaggio('Super jackpot acceso!', 'Colpisci Gino!', 2.2);
       }
     }
 
@@ -798,31 +824,19 @@
         st.lancio.scade -= dt;
         if (st.lancio.scade <= 0) S.skill.attivo = false;
       }
-      // piolo d'oro
+      // piolo d'oro: punti quando la ghianda ci passa sopra
       PIOLO.ang += PIOLO.w * dt;
       for (const p of st.palle) {
         if (p.stato !== 'campo' || p.piano !== 0) continue;
-        const dentro = Math.hypot(p.x - PIOLO.x, p.y - PIOLO.y) < 18;
+        const dentro = Math.hypot(p.x - PIOLO.x, p.y - PIOLO.y) < PIOLO.r;
         if (dentro && !S.inPiolo.has(p)) {
           S.inPiolo.add(p);
-          S.lampoPiolo = 1;
+          S.lampoPiolo = Math.max(S.lampoPiolo, 0.6);
           G.suoni.moneta(2);
-          if (st.multiball && S.superJackpot) {
-            S.superJackpot = false;
-            st.jackpot.fatti = 0;
-            const v = G.punti(PUNTI.superJackpot, PIOLO.x, PIOLO.y - 70, '#fff27a');
-            G.messaggio('SUPER JACKPOT!', '+' + numero(v), 2.6);
-            G.suoni.superJackpot();
-            G.flash(1); G.scossa(1.5); G.festa();
-          } else if (inAvv('ghianda')) {
-            const v = G.punti(250000, PIOLO.x, PIOLO.y - 70, '#fff27a');
-            G.messaggio('Piolo d\'oro!', '+' + numero(v), 1.4);
-            G.suoni.jackpot();
-          } else {
-            G.punti(PUNTI.piolo, PIOLO.x, PIOLO.y - 50);
-          }
+          G.punti(PUNTI.piolo);
         } else if (!dentro) S.inPiolo.delete(p);
       }
+      GINO.attesa = Math.max(0, (GINO.attesa || 0) - dt);
       // agente
       const a = S.agente;
       a.attesa = Math.max(0, a.attesa - dt);
@@ -900,8 +914,8 @@
       if (id === 'frana') lista.push('sassi');
       if (id === 'chiave') lista.push(S.chiaveAvv ? 'rampa' : 'cece');
       if (id === 'inseguimento') lista.push('agente');
-      if (id === 'ghianda') lista.push('rampa', 'giro', 'orbita', 'piolo');
-      if (st.multiball) lista.push(...(S.superJackpot ? ['piolo'] : []), 'rampa', 'giro');
+      if (id === 'ghianda') lista.push('gino', 'rampa', 'giro', 'orbita');
+      if (st.multiball) lista.push(...(S.superJackpot ? ['gino'] : []), 'rampa', 'giro');
       if (!st.multiball && (S.avventuraPronta || S.extraAccesa)) lista.push(S.sassoSu ? 'spunta' : 'tunnel');
       if (!st.multiball && S.dispensa.aperta) lista.push('rampa');
       if (!st.multiball && !S.dispensa.aperta && !id) lista.push('sassi');
@@ -914,9 +928,9 @@
     }
     const VALORE = {
       rampa: 5, giro: 5, tunnel: 5, orbita: 4, agente: 4, uscita: 4, torce: 4, cece: 3, sassi: 3, cartelli: 3,
-      gino: 3, piolo: 3, spunta: 3, corsie: 3, resina: 3, su: 2, niente: 1, scivolo: 1, persa: 0,
+      gino: 4, piolo: 3, spunta: 3, corsie: 3, resina: 3, su: 2, niente: 1, scivolo: 1, persa: 0,
     };
-    const MIRE = ['rampa', 'giro', 'orbita', 'agente', 'cece', 'tunnel'];
+    const MIRE = ['rampa', 'giro', 'orbita', 'agente', 'gino', 'cece', 'tunnel'];
     function esitoExtra(q) {
       if (q.piano === 0) {
         if (q.y > 1826) return 'persa';
@@ -927,12 +941,14 @@
 
     // ============================================================ disegno
     // Colori del legno e della terra
+    // All'aperto, al sole: prato, terra chiara, legno e radici chiare.
     const C = {
-      terra: ['#2b1a0d', '#3a2414', '#2f1d0f', '#22150a'],
-      radice: '#5c3b1d', radiceChiara: '#80552c', corteccia: '#4a2e15',
-      legno: '#8a5a2e', legnoChiaro: '#c79358', legnoScuro: '#3b2210',
-      asse: '#9c6a38', asseScura: '#6e4622', pietra: '#a9a29a', muschio: '#5f8a3a',
-      fiamma: '#ffb347', oro: '#ffcc33', neon: '#ffb347', neon2: '#ff7a3d', luce: '#ffe9a8',
+      prato: ['#a6d963', '#93cc55', '#86c24c', '#79b543'],
+      terra: '#e6c891', terraScura: '#cfa86a',
+      radice: '#a87444', radiceChiara: '#e0ae70', corteccia: '#8a5a2e',
+      legno: '#c08a4e', legnoChiaro: '#f4d49c', legnoScuro: '#6e4622',
+      asse: '#d9a868', asseScura: '#b07a42', pietra: '#c9c2b8', muschio: '#5f9a32',
+      fiamma: '#ffb347', oro: '#ffcc33', neon: '#ff961e', neon2: '#e8521e', luce: '#fff2c0',
     };
     // generatore a caso fisso (le decorazioni sono sempre uguali)
     let seme = 11;
@@ -961,7 +977,7 @@
       g.save();
       g.lineCap = 'round';
       g.lineJoin = 'round';
-      g.strokeStyle = 'rgba(0,0,0,0.35)';
+      g.strokeStyle = 'rgba(60,40,10,0.25)';
       g.lineWidth = spessore + 4;
       g.translate(3, 4); tratto(g, punti); g.stroke(); g.translate(-3, -4);
       g.strokeStyle = C.radice;
@@ -974,31 +990,80 @@
       g.restore();
     }
 
-    // Strato 1: il fondo di terra con le radici (disegnato una volta)
+    // fiorellino a cinque petali
+    function fiore(g, x, y, r, colore) {
+      g.fillStyle = colore;
+      for (let k = 0; k < 5; k++) {
+        const an = k * Math.PI * 2 / 5 + x;
+        g.beginPath(); g.arc(x + Math.cos(an) * r, y + Math.sin(an) * r, r * 0.8, 0, Math.PI * 2); g.fill();
+      }
+      g.fillStyle = '#ffd23f';
+      g.beginPath(); g.arc(x, y, r * 0.6, 0, Math.PI * 2); g.fill();
+    }
+    // foglia (di quercia, semplice) vista dall'alto
+    function foglia(g, x, y, l, an, colore) {
+      g.save();
+      g.translate(x, y); g.rotate(an);
+      g.fillStyle = colore;
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.bezierCurveTo(l * 0.3, -l * 0.42, l * 0.75, -l * 0.36, l, 0);
+      g.bezierCurveTo(l * 0.75, l * 0.36, l * 0.3, l * 0.42, 0, 0);
+      g.fill();
+      g.strokeStyle = 'rgba(40,70,10,0.45)'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(l * 0.9, 0); g.stroke();
+      g.restore();
+    }
+    // macchia morbida (terra, luce)
+    function macchia(g, x, y, rx, ry, colore, a) {
+      g.save();
+      g.translate(x, y); g.scale(1, ry / rx);
+      const gr = g.createRadialGradient(0, 0, rx * 0.2, 0, 0, rx);
+      gr.addColorStop(0, hexA(colore, a)); gr.addColorStop(0.7, hexA(colore, a * 0.8)); gr.addColorStop(1, hexA(colore, 0));
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+
+    // Strato 1: il prato al sole con la terra chiara e le radici (disegnato una volta)
     function disegnaFondo(g) {
       seme = 11;
       g.save();
       formaTavolo(g);
       g.clip();
       const gr = g.createLinearGradient(0, 0, 0, H);
-      gr.addColorStop(0, C.terra[0]); gr.addColorStop(0.35, C.terra[1]); gr.addColorStop(0.7, C.terra[2]); gr.addColorStop(1, C.terra[3]);
+      gr.addColorStop(0, C.prato[0]); gr.addColorStop(0.35, C.prato[1]); gr.addColorStop(0.7, C.prato[2]); gr.addColorStop(1, C.prato[3]);
       g.fillStyle = gr;
       g.fillRect(0, 0, W, H + 20);
-      // terriccio: puntini e sassolini
-      for (let i = 0; i < 2600; i++) {
-        const x = rnd() * W, y = rnd() * H, r = 0.6 + rnd() * 2.2;
-        const k = rnd();
-        g.fillStyle = k < 0.5 ? 'rgba(20,10,4,0.45)' : k < 0.85 ? 'rgba(120,80,45,0.35)' : 'rgba(180,170,160,0.35)';
-        g.beginPath(); g.ellipse(x, y, r, r * (0.6 + rnd() * 0.4), rnd() * 3, 0, Math.PI * 2); g.fill();
+      // sentieri di terra battuta dove corre la ghianda
+      const sentieri = [
+        [300, 230, 210, 150], [380, 520, 90, 170], [330, 800, 150, 130], [330, 1080, 170, 120], [300, 1300, 230, 170],
+        [300, 1560, 250, 130], [300, 1760, 200, 140], [110, 1660, 60, 180], [490, 1660, 60, 180], [545, 1180, 50, 160],
+      ];
+      for (const [x, y, rx, ry] of sentieri) macchia(g, x, y, rx, ry, C.terra, 0.85);
+      for (const [x, y, rx, ry] of sentieri) macchia(g, x + rx * 0.25, y + ry * 0.2, rx * 0.5, ry * 0.45, C.terraScura, 0.25);
+      // fili d'erba
+      g.lineCap = 'round';
+      for (let i = 0; i < 1500; i++) {
+        const x = 24 + rnd() * 592, y = rnd() * H, l = 4 + rnd() * 7, an = -Math.PI / 2 + (rnd() - 0.5) * 0.9;
+        g.strokeStyle = rnd() < 0.5 ? 'rgba(60,120,30,0.38)' : 'rgba(200,240,140,0.4)';
+        g.lineWidth = 1.2 + rnd();
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(an) * l, y + Math.sin(an) * l); g.stroke();
       }
-      // sassi piatti
-      for (let i = 0; i < 26; i++) {
-        const x = 40 + rnd() * 540, y = 120 + rnd() * 1700, r = 6 + rnd() * 12;
-        g.fillStyle = 'rgba(150,140,128,0.22)';
+      // sassolini e granelli chiari
+      for (let i = 0; i < 700; i++) {
+        const x = rnd() * W, y = rnd() * H, r = 0.6 + rnd() * 1.8;
+        g.fillStyle = rnd() < 0.5 ? 'rgba(150,110,60,0.35)' : 'rgba(255,250,235,0.45)';
+        g.beginPath(); g.ellipse(x, y, r, r * 0.7, rnd() * 3, 0, Math.PI * 2); g.fill();
+      }
+      for (let i = 0; i < 22; i++) {
+        const x = 40 + rnd() * 540, y = 120 + rnd() * 1700, r = 5 + rnd() * 9;
+        g.fillStyle = 'rgba(120,100,80,0.25)';
+        g.beginPath(); g.ellipse(x + 2, y + 3, r, r * 0.65, 0.3, 0, Math.PI * 2); g.fill();
+        g.fillStyle = rnd() < 0.5 ? '#e4ddd2' : '#cfc6b9';
         g.beginPath(); g.ellipse(x, y, r, r * 0.65, rnd() * 3, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = 'rgba(0,0,0,0.2)'; g.lineWidth = 1.5; g.stroke();
       }
-      // radici che attraversano la terra
+      // radici chiare che affiorano
       const radici = [
         [[20, 1240], [110, 1300], [170, 1420], [240, 1500], [280, 1610]],
         [[580, 1180], [500, 1260], [430, 1380], [380, 1520]],
@@ -1019,42 +1084,67 @@
           }
         }
         pts.push(r[r.length - 1]);
-        radice(g, pts, 14 + rnd() * 8);
-        // radichette
+        radice(g, pts, 10 + rnd() * 6);
         for (let i = 2; i < pts.length - 2; i += 4) {
           const [x, y] = pts[i];
           const a = rnd() * Math.PI * 2;
-          radice(g, [[x, y], [x + Math.cos(a) * 22, y + Math.sin(a) * 22], [x + Math.cos(a + 0.4) * 40, y + Math.sin(a + 0.4) * 40]], 4 + rnd() * 3);
+          radice(g, [[x, y], [x + Math.cos(a) * 22, y + Math.sin(a) * 22], [x + Math.cos(a + 0.4) * 40, y + Math.sin(a + 0.4) * 40]], 3 + rnd() * 3);
         }
       }
-      // ciuffi di muschio
-      for (let i = 0; i < 40; i++) {
-        const x = 40 + rnd() * 540, y = 140 + rnd() * 1700;
-        for (let k = 0; k < 7; k++) {
-          g.fillStyle = hexA(k % 2 ? '#6f9a42' : '#4d7a2a', 0.55);
-          g.beginPath(); g.arc(x + (rnd() - 0.5) * 16, y + (rnd() - 0.5) * 10, 2 + rnd() * 3, 0, Math.PI * 2); g.fill();
+      // trifogli e ciuffi d'erba più scura
+      for (let i = 0; i < 60; i++) {
+        const x = 34 + rnd() * 560, y = 130 + rnd() * 1760;
+        for (let k = 0; k < 3; k++) {
+          const an = k * Math.PI * 2 / 3 + rnd();
+          g.fillStyle = k % 2 ? '#4f9a2a' : '#5fae32';
+          g.beginPath(); g.arc(x + Math.cos(an) * 4, y + Math.sin(an) * 4, 4, 0, Math.PI * 2); g.fill();
         }
       }
-      // il corridoio di lancio: assi di legno
-      g.fillStyle = '#3b2412';
+      // foglie di quercia cadute
+      for (let i = 0; i < 26; i++) {
+        const x = 40 + rnd() * 540, y = 140 + rnd() * 1740;
+        foglia(g, x, y, 14 + rnd() * 8, rnd() * 6.28, ['#6fb53a', '#9ccc3c', '#e0a838', '#d9832a'][Math.floor(rnd() * 4)]);
+      }
+      // fiorellini bianchi, gialli, lilla e rossi
+      const colori = ['#ffffff', '#fff27a', '#c9a6ff', '#ff8aa0', '#ffffff'];
+      for (let i = 0; i < 120; i++) {
+        const x = 30 + rnd() * 580, y = 120 + rnd() * 1770;
+        fiore(g, x, y, 2.4 + rnd() * 1.8, colori[Math.floor(rnd() * colori.length)]);
+      }
+      // luce calda del sole dall'alto e chiazze di luce tra le foglie
+      const sole = g.createRadialGradient(320, 40, 20, 320, 120, 520);
+      sole.addColorStop(0, 'rgba(255,240,170,0.55)'); sole.addColorStop(1, 'rgba(255,240,170,0)');
+      g.fillStyle = sole;
+      g.fillRect(0, 0, W, 700);
+      for (let i = 0; i < 18; i++) macchia(g, 40 + rnd() * 540, 200 + rnd() * 1600, 30 + rnd() * 40, 20 + rnd() * 26, '#fff6c8', 0.22);
+      // ombra delle fronde lungo i bordi
+      const ombra = g.createLinearGradient(20, 0, 110, 0);
+      ombra.addColorStop(0, 'rgba(40,80,20,0.28)'); ombra.addColorStop(1, 'rgba(40,80,20,0)');
+      g.fillStyle = ombra; g.fillRect(0, 0, 110, H + 20);
+      const ombra2 = g.createLinearGradient(620, 0, 530, 0);
+      ombra2.addColorStop(0, 'rgba(40,80,20,0.28)'); ombra2.addColorStop(1, 'rgba(40,80,20,0)');
+      g.fillStyle = ombra2; g.fillRect(530, 0, 90, H + 20);
+      // il corridoio di lancio: assi di legno chiaro
+      g.fillStyle = '#c99a5e';
       g.fillRect(580, 330, 40, H);
-      g.strokeStyle = 'rgba(0,0,0,0.3)';
+      g.strokeStyle = 'rgba(90,55,20,0.4)';
       g.lineWidth = 1;
       for (let y = 360; y < H; y += 46) { g.beginPath(); g.moveTo(580, y); g.lineTo(620, y); g.stroke(); }
-      // sotto l'anello del giro: ombra
-      // la nicchia della buca (buio)
-      g.fillStyle = '#0b0603';
+      // la nicchia della buca (la tana del ghiro)
+      g.fillStyle = '#3a2410';
       g.beginPath(); g.arc(BUCA.x, BUCA.y, 22, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#140a03';
+      g.beginPath(); g.arc(BUCA.x, BUCA.y + 2, 17, 0, Math.PI * 2); g.fill();
       // base del piolo d'oro
-      g.fillStyle = 'rgba(0,0,0,0.45)';
+      g.fillStyle = 'rgba(60,40,10,0.25)';
       g.beginPath(); g.arc(PIOLO.x + 4, PIOLO.y + 5, PIOLO.r + 4, 0, Math.PI * 2); g.fill();
-      // cunicolo del cece: canaletta scura
-      g.fillStyle = '#140b05';
+      // cunicolo del cece: canaletta di legno
+      g.fillStyle = '#8a5a2e';
       g.fillRect(521, 1230, 38, 98);
-      // scritte incise
+      // scritta dipinta
       g.font = '700 22px Fredoka, sans-serif';
       g.textAlign = 'center';
-      g.fillStyle = 'rgba(255,220,160,0.12)';
+      g.fillStyle = 'rgba(110,70,30,0.3)';
       g.save(); g.translate(300, 1470); g.fillText('LE RADICI DELLA QUERCIA', 0, 0); g.restore();
       g.restore();
     }
@@ -1065,10 +1155,10 @@
       g.save();
       // la massa delle radici sotto la galleria
       g.save();
-      g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 18; g.shadowOffsetX = 6; g.shadowOffsetY = 8;
+      g.shadowColor = 'rgba(50,40,10,0.35)'; g.shadowBlur = 16; g.shadowOffsetX = 6; g.shadowOffsetY = 8;
       poligono(g, MASSA.concat(DIETRO_SASSI.slice(1)));
       const gm = g.createLinearGradient(0, 340, 240, 1150);
-      gm.addColorStop(0, '#5a381a'); gm.addColorStop(1, '#3d2410');
+      gm.addColorStop(0, '#b8844a'); gm.addColorStop(1, '#94643a');
       g.fillStyle = gm;
       g.fill();
       g.restore();
@@ -1076,27 +1166,40 @@
       poligono(g, MASSA.concat(DIETRO_SASSI.slice(1)));
       g.clip();
       // venature della corteccia
-      g.strokeStyle = 'rgba(25,12,4,0.45)';
+      g.strokeStyle = 'rgba(90,55,20,0.45)';
       g.lineWidth = 2;
       for (let i = 0; i < 46; i++) {
         const x = rnd() * 260, y = 330 + rnd() * 830;
         g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + 8, y + 30, x - 6, y + 60, x + 4, y + 90 + rnd() * 50); g.stroke();
       }
-      g.strokeStyle = 'rgba(200,150,90,0.18)';
+      g.strokeStyle = 'rgba(255,225,170,0.35)';
       for (let i = 0; i < 30; i++) {
         const x = rnd() * 260, y = 330 + rnd() * 830;
         g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + 6, y + 20, x - 4, y + 40, x + 2, y + 70); g.stroke();
       }
+      // muschio e foglioline sulla corteccia
+      for (let i = 0; i < 34; i++) {
+        const x = 30 + rnd() * 200, y = 400 + rnd() * 720;
+        for (let k = 0; k < 5; k++) {
+          g.fillStyle = hexA(k % 2 ? '#7fbf45' : '#5f9a32', 0.75);
+          g.beginPath(); g.arc(x + (rnd() - 0.5) * 14, y + (rnd() - 0.5) * 9, 2 + rnd() * 3, 0, Math.PI * 2); g.fill();
+        }
+      }
       g.restore();
+      // edera lungo il bordo della massa
+      for (let i = 2; i < MASSA.length - 1; i += 2) {
+        const [x, y] = MASSA[i];
+        foglia(g, x, y, 14, rnd() * 6.28, i % 4 ? '#6fb53a' : '#8fcf4a');
+      }
       // isola del giro della morte
       poligono(g, [[413, 953], [428, 895], [482, 909], [467, 967]]);
-      g.fillStyle = '#4a2c13';
+      g.fillStyle = '#a8743f';
       g.fill();
       // fionde: gomma chiara su un ceppo
       FIONDE.forEach((p) => {
         poligono(g, p);
         const gf = g.createLinearGradient(p[0][0], p[0][1], p[2][0], p[2][1]);
-        gf.addColorStop(0, '#9c6a38'); gf.addColorStop(1, '#6e4622');
+        gf.addColorStop(0, '#d9a466'); gf.addColorStop(1, '#a8743f');
         g.fillStyle = gf;
         g.fill();
         g.fillStyle = '#ffcf6b';
@@ -1113,7 +1216,7 @@
         g.stroke();
       };
       g.lineCap = 'round';
-      passa(11, 'rgba(0,0,0,0.45)', 3, 4);
+      passa(11, 'rgba(50,40,10,0.3)', 3, 4);
       passa(9, C.legnoScuro);
       passa(6, C.legno);
       passa(2, C.legnoChiaro, -1, -1);
@@ -1126,20 +1229,20 @@
       // paletti
       for (const c of m.cerchi[0]) {
         if (c.tipo !== 'paletto' && c.tipo !== 'muro') continue;
-        g.fillStyle = 'rgba(0,0,0,0.4)';
+        g.fillStyle = 'rgba(50,40,10,0.3)';
         g.beginPath(); g.arc(c.x + 2, c.y + 3, c.r + 2, 0, Math.PI * 2); g.fill();
         const gp = g.createRadialGradient(c.x - 2, c.y - 2, 1, c.x, c.y, c.r + 2);
-        gp.addColorStop(0, '#f6e0b8'); gp.addColorStop(1, '#8a5a2e');
+        gp.addColorStop(0, '#fff4dc'); gp.addColorStop(1, '#a8743f');
         g.fillStyle = gp;
         g.beginPath(); g.arc(c.x, c.y, c.r + 1, 0, Math.PI * 2); g.fill();
       }
       // cornice del tavolo
       g.lineWidth = 14;
-      g.strokeStyle = '#2a170a';
+      g.strokeStyle = '#6e4622';
       formaTavolo(g);
       g.stroke();
       g.lineWidth = 6;
-      g.strokeStyle = '#7a4e26';
+      g.strokeStyle = '#d9a466';
       formaTavolo(g);
       g.stroke();
       g.restore();
@@ -1150,7 +1253,7 @@
     function disegnaGalleria(g) {
       seme = 5;
       g.save();
-      g.shadowColor = 'rgba(0,0,0,0.7)'; g.shadowBlur = 22; g.shadowOffsetX = 10; g.shadowOffsetY = 14;
+      g.shadowColor = 'rgba(50,40,10,0.4)'; g.shadowBlur = 20; g.shadowOffsetX = 10; g.shadowOffsetY = 14;
       poligono(g, PIANO_GALLERIA);
       g.fillStyle = C.asse;
       g.fill();
@@ -1160,17 +1263,17 @@
       g.clip();
       // assi verticali
       for (let x = 40; x < 240; x += 25) {
-        g.fillStyle = (x / 25) % 2 ? '#a06e3b' : '#93632f';
+        g.fillStyle = (x / 25) % 2 ? '#e2b478' : '#d6a66a';
         g.fillRect(x, 368, 25, 290);
-        g.strokeStyle = 'rgba(40,20,5,0.55)';
+        g.strokeStyle = 'rgba(110,70,30,0.55)';
         g.lineWidth = 1.5;
         g.beginPath(); g.moveTo(x, 368); g.lineTo(x, 660); g.stroke();
-        g.strokeStyle = 'rgba(60,30,8,0.25)';
+        g.strokeStyle = 'rgba(130,85,40,0.3)';
         for (let k = 0; k < 3; k++) {
           const xx = x + 4 + rnd() * 17;
           g.beginPath(); g.moveTo(xx, 368); g.bezierCurveTo(xx + 3, 450, xx - 3, 560, xx + 1, 660); g.stroke();
         }
-        g.fillStyle = '#3b2210';
+        g.fillStyle = '#6e4622';
         g.beginPath(); g.arc(x + 12, 380, 1.8, 0, Math.PI * 2); g.arc(x + 12, 640, 1.8, 0, Math.PI * 2); g.fill();
       }
       // il pozzo
@@ -1183,7 +1286,7 @@
       // bordi di legno della galleria
       const linee = m.segmenti[1].filter((s) => s.tipo === 'muro' && s.ay < 690 && s.by < 690);
       g.lineCap = 'round';
-      for (const [w, col, d] of [[12, 'rgba(0,0,0,0.4)', 3], [9, '#3b2210', 0], [6, '#b07a42', 0], [2, '#e5b273', -1]]) {
+      for (const [w, col, d] of [[12, 'rgba(50,40,10,0.3)', 3], [9, '#6e4622', 0], [6, '#c99258', 0], [2, '#f6d8a4', -1]]) {
         g.strokeStyle = col; g.lineWidth = w;
         g.beginPath();
         for (const s of linee) { g.moveTo(s.ax + d, s.ay + d); g.lineTo(s.bx + d, s.by + d); }
@@ -1196,23 +1299,23 @@
       }
       // scivolo verso il campo
       g.lineCap = 'round';
-      g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 26;
+      g.strokeStyle = 'rgba(50,40,10,0.25)'; g.lineWidth = 26;
       tratto(g, m.percorsi.scivolo.punti.map(([x, y]) => [x + 4, y + 6])); g.stroke();
-      g.strokeStyle = '#6e4622'; g.lineWidth = 24;
+      g.strokeStyle = '#9c6a38'; g.lineWidth = 24;
       tratto(g, m.percorsi.scivolo.punti); g.stroke();
-      g.strokeStyle = '#a06e3b'; g.lineWidth = 16;
+      g.strokeStyle = '#d9a868'; g.lineWidth = 16;
       tratto(g, m.percorsi.scivolo.punti); g.stroke();
       // la dispensa: tubo di vetro con gli anelli
-      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.fillStyle = 'rgba(50,40,10,0.25)';
       g.beginPath(); g.roundRect ? g.roundRect(30, 662, 36, 228, 16) : g.rect(30, 662, 36, 228); g.fill();
-      g.fillStyle = 'rgba(200,230,255,0.12)';
-      g.strokeStyle = 'rgba(220,240,255,0.55)';
+      g.fillStyle = 'rgba(210,240,255,0.45)';
+      g.strokeStyle = 'rgba(255,255,255,0.85)';
       g.lineWidth = 2;
       g.beginPath(); g.roundRect ? g.roundRect(26, 656, 36, 228, 16) : g.rect(26, 656, 36, 228); g.fill(); g.stroke();
       g.fillStyle = '#8c8c8c';
       for (const y of [690, 780, 860]) g.fillRect(24, y, 40, 5);
       g.font = '700 11px Fredoka, sans-serif';
-      g.fillStyle = '#ffe9a8';
+      g.fillStyle = '#6e4622';
       g.textAlign = 'center';
       g.save(); g.translate(44, 770); g.rotate(-Math.PI / 2); g.fillText('DISPENSA', 0, 4); g.restore();
     }
@@ -1223,11 +1326,11 @@
       g.lineCap = 'round';
       g.lineJoin = 'round';
       const pista = (punti, w, a = 0.62) => {
-        g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = w + 6;
+        g.strokeStyle = 'rgba(50,40,10,0.22)'; g.lineWidth = w + 6;
         tratto(g, punti.map(([x, y]) => [x + 8, y + 12])); g.stroke();
-        g.strokeStyle = hexA('#7a4a20', a); g.lineWidth = w;
+        g.strokeStyle = hexA('#b07a42', a); g.lineWidth = w;
         tratto(g, punti); g.stroke();
-        g.strokeStyle = hexA('#c4884a', a + 0.1); g.lineWidth = 3;
+        g.strokeStyle = hexA('#f0c890', a + 0.2); g.lineWidth = 3;
         // due bordi: si ottengono spostando la linea a destra e a sinistra
         for (const lato of [-1, 1]) {
           const off = punti.map((p, i) => {
@@ -1245,14 +1348,14 @@
       const giro = m.percorsi.giro.punti;
       const salita = giro.slice(0, 15);
       pista(salita, 28);
-      g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 16;
+      g.strokeStyle = 'rgba(50,40,10,0.25)'; g.lineWidth = 16;
       g.beginPath(); g.arc(ANELLO.x + 8, ANELLO.y + 12, ANELLO.r, 0, Math.PI * 2); g.stroke();
       for (const [w, col] of [[14, '#6f7c86'], [9, '#b9c6cf'], [3, '#f1f6fa']]) {
         g.strokeStyle = col; g.lineWidth = w;
         g.beginPath(); g.arc(ANELLO.x, ANELLO.y, ANELLO.r, 0, Math.PI * 2); g.stroke();
       }
       const liana = giro.slice(giro.length - 25);
-      g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 9;
+      g.strokeStyle = 'rgba(50,40,10,0.22)'; g.lineWidth = 9;
       tratto(g, liana.map(([x, y]) => [x + 7, y + 10])); g.stroke();
       g.globalAlpha = 0.75;
       g.strokeStyle = '#3f6b22'; g.lineWidth = 6;
@@ -1270,7 +1373,7 @@
       g.globalAlpha = 1;
       // liana della dispensa (sottile)
       const disp = m.percorsi.dispensa.punti;
-      g.strokeStyle = 'rgba(80,130,50,0.35)'; g.lineWidth = 3;
+      g.strokeStyle = 'rgba(60,120,30,0.5)'; g.lineWidth = 3;
       tratto(g, disp); g.stroke();
       g.restore();
     }
@@ -1385,12 +1488,14 @@
       const st = G.stato;
       // bumper: nodi di legno col cappello d'ambra
       for (const b of BUMPER) {
-        g.fillStyle = 'rgba(0,0,0,0.4)';
+        g.fillStyle = 'rgba(50,40,10,0.3)';
         g.beginPath(); g.arc(b.x + 4, b.y + 6, 30, 0, Math.PI * 2); g.fill();
-        g.fillStyle = '#4a2c13';
+        g.fillStyle = '#8a5a2e';
         g.beginPath(); g.arc(b.x, b.y, 30, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#e2b478';
+        g.beginPath(); g.arc(b.x, b.y, 26, 0, Math.PI * 2); g.fill();
         // anelli del legno
-        g.strokeStyle = '#7a4e26'; g.lineWidth = 2;
+        g.strokeStyle = '#b07a42'; g.lineWidth = 2;
         for (const r of [26, 20, 14]) { g.beginPath(); g.arc(b.x, b.y, r, 0, Math.PI * 2); g.stroke(); }
         const k = b.lampo;
         const ga = g.createRadialGradient(b.x - 6, b.y - 7, 2, b.x, b.y, 18);
@@ -1409,7 +1514,7 @@
         g.save();
         g.translate((s.ax + s.bx) / 2, (s.ay + s.by) / 2);
         g.rotate(Math.atan2(s.by - s.ay, s.bx - s.ax));
-        g.fillStyle = 'rgba(0,0,0,0.4)';
+        g.fillStyle = 'rgba(50,40,10,0.3)';
         g.beginPath(); g.ellipse(3, 4, 15, 8, 0, 0, Math.PI * 2); g.fill();
         const gs = g.createLinearGradient(0, -8, 0, 8);
         gs.addColorStop(0, s.lampo > 0 ? '#ffffff' : '#d6cfc6'); gs.addColorStop(1, '#7b746c');
@@ -1424,7 +1529,7 @@
         g.save();
         g.translate(c.x, c.y);
         if (su) {
-          g.fillStyle = 'rgba(0,0,0,0.4)';
+          g.fillStyle = 'rgba(50,40,10,0.3)';
           g.fillRect(-15, 2, 34, 12);
           g.fillStyle = c.lampo > 0 ? '#fff3d6' : '#e7d3a8';
           g.fillRect(-17, -8, 34, 14);
@@ -1441,7 +1546,7 @@
       }
       // sasso che spunta davanti alla buca
       if (S.sassoSu) {
-        g.fillStyle = 'rgba(0,0,0,0.4)';
+        g.fillStyle = 'rgba(50,40,10,0.3)';
         g.beginPath(); g.ellipse(SASSO.ax + 27, 908, 26, 9, 0, 0, Math.PI * 2); g.fill();
         const gs = g.createLinearGradient(0, 895, 0, 912);
         gs.addColorStop(0, '#cfc8bf'); gs.addColorStop(1, '#6f6861');
@@ -1450,7 +1555,7 @@
         g.strokeStyle = '#3f3a35'; g.lineWidth = 1.5; g.stroke();
       }
       // cece nel cunicolo
-      g.fillStyle = 'rgba(255,255,255,0.08)';
+      g.fillStyle = 'rgba(255,240,210,0.35)';
       g.fillRect(525, 1238, 30, 90);
       const gc = g.createRadialGradient(CECE.x - 4, CECE.y - 5, 2, CECE.x, CECE.y, R);
       gc.addColorStop(0, '#fff6d6'); gc.addColorStop(1, '#c9a35a');
@@ -1496,10 +1601,14 @@
       const sp = Math.abs(Math.cos(SPINNER.ang));
       g.fillStyle = '#d9dee2';
       g.fillRect(SPINNER.x - 26, SPINNER.y - 3 * sp - 1, 52, 6 * sp + 2);
+      g.strokeStyle = '#4a5560'; g.lineWidth = 1.5;
+      g.strokeRect(SPINNER.x - 26, SPINNER.y - 3 * sp - 1, 52, 6 * sp + 2);
       g.fillStyle = '#6f7c86';
       g.fillRect(SPINNER.x - 28, SPINNER.y - 1, 4, 2); g.fillRect(SPINNER.x + 24, SPINNER.y - 1, 4, 2);
       // cancello in cima al corridoio
-      g.strokeStyle = '#d9dee2'; g.lineWidth = 3;
+      g.strokeStyle = '#4a5560'; g.lineWidth = 5;
+      g.beginPath(); g.moveTo(616, 394); g.lineTo(558, 452); g.stroke();
+      g.strokeStyle = '#e8edf0'; g.lineWidth = 3;
       g.beginPath(); g.moveTo(616, 394); g.lineTo(558, 452); g.stroke();
       g.strokeStyle = 'rgba(0,0,0,0.4)'; g.lineWidth = 1;
       for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(612 - k * 10, 398 + k * 10); g.lineTo(612 - k * 10, 404 + k * 10); g.stroke(); }
@@ -1515,8 +1624,44 @@
         g.fillStyle = '#9cd36b';
         g.beginPath(); g.arc(297, 1833, 4, 0, Math.PI * 2); g.fill();
       }
+      disegnaGino(g, ora);
       // flipper del piano 0
       for (const f of m.flipper) if (f.piano === 0) d.flipper(g, f);
+    }
+
+    // Gino seduto sul piolo d'oro: tremolio quando è colpito, saltello sui
+    // jackpot, cade di lato a fine partita
+    function disegnaGino(g, ora) {
+      const d = G.d;
+      const st = G.stato;
+      const pronto = S.superJackpot || inAvv('ghianda');
+      // cuscinetto: anello di gomma color crema col bordo arancione
+      g.fillStyle = 'rgba(50,40,10,0.3)';
+      g.beginPath(); g.arc(GINO.x + 3, GINO.y + 5, GINO.r + 2, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff6e0';
+      g.beginPath(); g.arc(GINO.x, GINO.y, GINO.r, 0, Math.PI * 2); g.fill();
+      g.lineWidth = 4;
+      g.strokeStyle = pronto && lampeggia(5) ? '#fff27a' : S.resina ? '#ff961e' : '#e8521e';
+      g.stroke();
+      if (GINO.trema > 0) d.luce(g, GINO.x, GINO.y, 70, '#ffd23f', GINO.trema * 1.6);
+      if (pronto) d.luce(g, GINO.x, GINO.y, 80, '#ffd23f', 0.5 + 0.3 * Math.sin(st.tempo * 10));
+      const img = G.immagini.gino;
+      if (!G.pronta(img)) return;
+      const hh = 78, ww = hh * img.naturalWidth / img.naturalHeight;
+      g.save();
+      g.translate(GINO.x + (GINO.trema > 0 ? Math.sin(ora * 70) * 4 * GINO.trema / 0.5 : 0), GINO.y + 2);
+      if (GINO.salto > 0) {
+        const k = Math.sin(GINO.salto * Math.PI * 3);
+        g.translate(0, -Math.abs(k) * 16);
+        g.scale(1 - k * 0.07, 1 + k * 0.07);
+      }
+      const perso = st.modo === 'gioco' && st.fase === 'finita';
+      if (perso) g.rotate(0.6);
+      else g.rotate(GINO.trema > 0 ? Math.sin(ora * 60) * 0.1 : Math.sin(ora * 1.5) * 0.05);
+      g.fillStyle = 'rgba(50,40,10,0.25)';
+      g.beginPath(); g.ellipse(4, hh * 0.38, ww * 0.38, 7, 0, 0, Math.PI * 2); g.fill();
+      g.drawImage(img, -ww / 2, -hh / 2 - 6, ww, hh);
+      g.restore();
     }
 
     function disegnaSopraGalleria(g, ora) {
@@ -1530,21 +1675,6 @@
         g.fillRect(t.x - 4, 370, 8, 14);
         const accesa = S.torce[t.i] || t.lampo > 0 || (inAvv('torce') && !S.torce[t.i] && lampeggia(4) && false);
         fiamma(g, t.x, 372, 1, accesa || (inAvv('torce') && lampeggia(2)), ora);
-      }
-      // Gino
-      const img = G.immagini.gino;
-      if (G.pronta(img)) {
-        const hh = 50, ww = hh * img.naturalWidth / img.naturalHeight;
-        g.save();
-        g.translate(GINO.x, GINO.y);
-        const s = GINO.salto > 0 ? Math.abs(Math.sin(GINO.salto * Math.PI * 3)) * 10 : 0;
-        g.translate(0, -s);
-        g.rotate(GINO.trema > 0 ? Math.sin(ora * 60) * 0.12 : Math.sin(ora * 1.5) * 0.06);
-        g.fillStyle = 'rgba(0,0,0,0.35)';
-        g.beginPath(); g.arc(4, 6, GINO.r + 2, 0, Math.PI * 2); g.fill();
-        g.drawImage(img, -ww / 2, -hh / 2 - 4, ww, hh);
-        g.restore();
-        if (S.resina && lampeggia(2)) d.luce(g, GINO.x, GINO.y, 50, '#ff9a1e', 0.4);
       }
       d.flipper(g, FL.alto);
     }
@@ -1575,7 +1705,7 @@
         <span><b>Galleria alta</b>: dal tunnel si sale nella galleria. Accendi le tre torce: campo ×2.</span>
         <span><b>Cece</b>: spingilo in fondo al cunicolo per le chiavi. Tre chiavi: palla extra.</span>
         <span><b>Cartelli</b>: abbattili tutti e spunta la radice che salva la ghianda tra i flipper.</span>
-        <span><b>Resina</b>: colpisci Gino e la resina al centro ferma la ghianda e la tira dove serve.</span>
+        <span><b>Gino</b>: è sul piolo d'oro. Colpiscilo e la <b>resina</b> ferma la ghianda e la tira dove serve; nel multiball, dopo tre jackpot, vale il <b>super jackpot</b>.</span>
         <span><b>Avventure</b>: le torce, la frana, la chiave, l'inseguimento. Poi la Ghianda d'Oro!</span>
       </div>`,
       frasi: {
@@ -1586,7 +1716,7 @@
     return {
       id: 'radici', nome: 'Le radici della Quercia', sotto: 'Legno, radici e torce sotto la grande quercia',
       W, H, CX, mondo: m, S, FL, gravita: 1450,
-      colori: { neon: C.neon, neon2: C.neon2, luce: C.luce, barra: '#2a170a', fondo: '#160c05', pannello: ['#2b1a0d', '#1a0f06'] },
+      colori: { neon: C.neon, neon2: C.neon2, luce: C.luce, barra: '#5c3a1c', fondo: '#9fd3ea', pannello: ['#8a5a2e', '#5c3a1c'] },
       lancio: { x: 600, y: 1834, xCorridoio: 582, yRitorno: 1780 },
       yPersa: 1925, salvaDa: 578,
       AVVENTURE, FINALE, PUNTI, AGENTE,

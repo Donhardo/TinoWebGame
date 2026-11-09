@@ -1400,10 +1400,12 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   fino alla corsia interna sinistra), buca del ghiro (nicchia a (200, 876) con il sasso che
   spunta davanti: tunnel sotto il campo fino al pozzo, che la fa salire nella galleria
   alta), galleria alta (piano 1, x 40-240, y 368-650: quarto flipper a (64, 592), tre
-  torce, Gino da colpire, uscita a destra verso i nodi, scolo verso lo scivolo che riporta
+  torce, uscita a destra verso i nodi, scolo verso lo scivolo che riporta
   sul campo), quattro sassi (bersagli che cadono, sotto la massa delle radici), tre
   cartelli (si abbattono, si rialzano dopo 8 s; si colpiscono solo da sotto, dall'alto si
-  passa: prima la ghianda ci si fermava sopra), piolo d'oro (disco che gira a (300, 850)),
+  passa: prima la ghianda ci si fermava sopra), piolo d'oro (disco che gira a (300, 850),
+  raggio 60) con Gino seduto al centro (bersaglio tondo di raggio 30, disegnato alto 78 su un
+  cuscinetto crema col bordo arancione: prima era piccolo nella galleria alta e non si vedeva),
   agente col timbro (cammina su y 692 tra x 296 e 462; con x più piccole schiacciava la
   ghianda dello scivolo contro la parete), resina (magnete a (300, 1290)), cunicolo del cece
   (palla prigioniera a x 540, sporge dall'imbocco: con i paletti sotto si poteva colpire
@@ -1413,30 +1415,44 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   lungo la liana fino alla corsia sinistra). Scivoli sopra i perni del terzo e del quarto
   flipper (la ghianda restava tra parete e perno).
 - **Regole** (tabella `PUNTI`): sassi giù = dispensa aperta, tre ghiande bloccate =
-  multiball (jackpot su radice lunga e giro; dopo tre, super jackpot passando sul piolo
-  d'oro; sassi giù nel multiball = jackpot doppio); agente colpito 3 volte (poi una in più
+  multiball (jackpot su radice lunga e giro; dopo tre, super jackpot colpendo Gino; sassi giù nel multiball = jackpot doppio); agente colpito 3 volte (poi una in più
   per avventura fatta, al massimo 6) = avventura pronta nella buca (il sasso si abbassa);
-  sasso colpito = tunnel aperto per 20 s; torce tutte accese = campo ×2 per 20 s; Gino =
-  resina pronta (la resina ferma la ghianda e la tira verso il tiro che serve, provando le
+  sasso colpito = tunnel aperto per 20 s; torce tutte accese = campo ×2 per 20 s; Gino
+  (7.500, poi 0,25 s di pausa) = resina pronta; passare sul piolo d'oro 2.000 (la resina ferma la ghianda e la tira verso il tiro che serve, provando le
   direzioni con `TF.simula`); cece in cima = chiave, tre chiavi (poi 5, 7…) = palla extra
   nella buca, e anche ogni 8 radici lunghe (poi 12); cartelli tutti giù = radice che spunta
   per 20 s; spinner = molla ricaricata. Avventure (tabella `AVVENTURE`, 35-40 s): Le torce
   (75.000 a torcia, tunnel aperto), La frana (sassi 25.000, banco intero 150.000 e si
   rialzano subito), La chiave (cece 60.000, poi la radice lunga apre la porta: 200.000),
   Inseguimento (agente veloce, 75.000 a colpo, cinque colpi 300.000); finale La Ghianda
-  d'Oro (quattro ghiande, ogni tiro jackpot 100.000, piolo d'oro 250.000). Combo con
+  d'Oro (quattro ghiande, ogni tiro jackpot 100.000, Gino 250.000). Combo con
   radice lunga, giro, orbita, tunnel, agente, cece e uscita della galleria.
-- **Disegno nel codice**: terra con sassolini, radici e muschio; pareti di legno a tre
-  passate; massa delle radici con le venature; galleria di assi con l'ombra; rampe di
+- **Disegno nel codice**, all'aperto al sole (prima era terra scura e "sembrava di stare
+  dentro un tronco"): prato verde chiaro con fili d'erba, sentieri di terra battuta chiara
+  dove corre la ghianda, radici chiare che affiorano, trifogli, foglie di quercia cadute,
+  fiorellini bianchi, gialli, lilla e rosa, luce calda del sole dall'alto e chiazze di luce,
+  ombra delle fronde lungo i bordi; ombre color terra leggere (non nere). Pareti di legno
+  chiaro a tre passate; massa delle radici di corteccia chiara con venature, muschio ed
+  edera; galleria di assi chiare; rampe di
   legno semitrasparenti, anello di metallo, liana con le foglie; nodi con gli anelli del
   legno e il cappello d'ambra; sassi di pietra; cartelli; piolo d'oro che gira; torce con
   la fiamma; agente (SVG) che cammina e cade stordito con le stelline; dispensa di vetro.
+  Gino tremola quando è colpito (con un lampo giallo), saltella sui jackpot e sulle feste,
+  cade di lato a fine partita; col super jackpot acceso il bordo lampeggia. Ghianda col
+  contorno scuro; lampade spente di plastica scura velata del loro colore (sul fondo chiaro
+  quelle quasi trasparenti non si vedevano); spinner e cancelletto con il bordo scuro.
+  Pagina con il cielo e il prato all'orizzonte, pannelli laterali di legno medio.
   Neon solo per le lampade accese e le scritte. Musica in Re minore con i legnetti (menu 92
   bpm, partita 112, avventure 116-134, multiball 130, finale 138).
 - **Taratura** (partite simulate, 6 per livello, fino a 20 minuti): nessuna ghianda esce
   dal tavolo, nessun incastro. Con errore 25 / 35 / 50 ms e mira 60 / 35 / 20% le partite
   durano in media ~15 / ~12 / ~5 minuti (molto variabili); il giocatore più preciso (4 ms)
   arriva al finale e fa il giro. Si perde soprattutto nella corsia esterna destra.
+  Con Gino sul campo (8 partite col giocatore medio, errore 30 ms e mira 45%, al massimo 12
+  minuti): ancora nessuna ghianda fuori o incastrata; partite di 7,7 minuti in media contro
+  10,1 di prima, con più punti (13,8 milioni contro 10,8) e più avventure (1,8 contro 1,5).
+  Il computer tira spesso a Gino (~32 colpi a partita) e un po' meno all'agente; radice lunga
+  uguale. Gino ha spinta 150 (con 300 rimandava la ghianda giù troppo forte).
 - **Provarlo su Claude**: in una cartella di appoggio `index.html` (senza doctype, html,
   head e body, percorsi `../../` tolti, link alla home `#`), `css/sito.css`, `stile.css`,
   `motore.js`, `tavoli/radici.js`, `gioco.js` (con `ASSETS = 'assets/'`),
@@ -1447,16 +1463,9 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   `avviaAvventura`, `nuovaPalla`, `cambiaVista`); con `stato.test` e `stato.iaGioca` come
   nella versione 1; `stato.statistiche.dove` (incastri e uscite), `scoli` (dove si perde
   la ghianda), `tiri`. I copioni non sono nel repository.
-- **Stato**: tappa 1 fatta e provata dal proprietario: "va bene". Da fare (prossima
-  sessione, prima della tappa 2):
-  - **Gino da colpire** ben visibile sul campo, come nel tavolo al neon (lì era al centro
-    in un cerchio e "molto carino"): ora è piccolo nella galleria alta e si vede poco.
-    Trovargli un posto sul campo principale (per esempio al posto o accanto al piolo
-    d'oro) con le sue animazioni (tremolio quando è colpito, saltello sui jackpot).
-  - **Colori**: il tavolo è troppo scuro, sembra di stare dentro un tronco. Deve sembrare
-    all'aperto, con colori allegri: prato e terra chiara al sole, cielo o luce calda,
-    radici e legno più chiari, fiori e foglie; le torce restano ma meno da grotta.
-    Controllare che ghiande, lampade e flipper si stacchino bene sul fondo chiaro.
+- **Stato**: tappa 1 fatta e provata dal proprietario: "va bene". Dopo la prova: Gino
+  spostato sul campo (al centro del piolo d'oro) e colori all'aperto (fatti, da far provare
+  al proprietario). Poi la tappa 2.
 
 #### Notte al neon (versione 1, ora `neon/`)
 - **Decisioni prese**: titolo "Tino Flipper", sottotitolo "Notte al neon nel bosco";
