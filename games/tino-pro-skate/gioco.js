@@ -158,7 +158,7 @@
     // Novoli
     'scalinata', 'corrimano', 'fioriera', 'monopattini',
     // i cantieri della tramvia
-    'ruspa', 'benna', 'fango', 'binari', 'tram',
+    'ruspa', 'benna', 'fango', 'binari', 'tram', 'barriera',
     // il centro
     'sampietrini', 'turista', 'bancarella', 'bici']) {
     disegni[n] = carica(DISEGNI + 'elementi/' + n + '.png');
@@ -1197,7 +1197,7 @@
     binari: { w: 850, h: 12, piano: true },                        // la massicciata (ci si sale da soli)
     rotaia: { w: 850, h: 32, grind: true, nascosto: true },
     tram: { w: 560, h: 92, solido: true, piano: true },
-    barriera: { w: 70, h: 50, solido: true },
+    barriera: { w: 130, h: 50, solido: true },
     // il centro
     sampietrini: { w: 600, h: 0, zona: 'sampietrini' },
     turista: { w: 40, h: 96, solido: true },
@@ -1348,12 +1348,12 @@
       fila(x + 40, x + o.w - 30, o.h, 44);
       return o.w;
     } },
-    { id: 'barriera', da: 0, peso: 2, q: ['cantieri'], crea: (x, v) => { ostacolo('barriera', x); arco(x + 35, v, 0, 5); return 70; } },
+    { id: 'barriera', da: 0, peso: 2, q: ['cantieri'], crea: (x, v) => { ostacolo('barriera', x); arco(x + 65, v, 0, 5); return 130; } },
     { id: 'barriere', da: 0, peso: 1, q: ['cantieri'], crea: (x, v) => {
-      const d = Math.round(v * 1.15);
+      const d = Math.round(v * 1.15) + 60;
       ostacolo('barriera', x); ostacolo('barriera', x + d);
-      arco(x + 35, v, 0, 4); arco(x + d + 35, v, 0, 4);
-      return d + 70;
+      arco(x + 65, v, 0, 4); arco(x + d + 65, v, 0, 4);
+      return d + 130;
     } },
 
     // ---- il centro
@@ -2812,6 +2812,7 @@
       }
       case 'cassette': piedi(x + o.w / 2, o.h + 2); return true;
       case 'transenna': piedi(x + o.w / 2, o.h + 2); return true;
+      case 'barriera': piedi(x + o.w / 2, (o.h + 2) * 64 / 61); return true; // il blocco è largo il 90% del disegno, in fondo c'è l'ombra
       case 'panchina': piedi(x + o.w / 2, o.h / 0.47, o.w + 4); return true; // seduta al 53% dall'alto
       case 'rampa': ctx.drawImage(im, x, y0 + 1 - (o.h + 2), o.w / 0.93, o.h + 2); return true; // la cima al 93%
       case 'banco': piedi(x + o.w / 2, o.h / 0.95, o.w + 10); return true; // tendone in cima

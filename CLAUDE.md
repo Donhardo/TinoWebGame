@@ -1038,8 +1038,17 @@ logica, su canvas), `ghianda.svg`.
   pezzi nuovi proposte nei prompt: le sagome si adattano ai disegni quando arrivano.
   Vantaggi e svantaggi delle tavole nei prompt sono solo una proposta.
   **Stato**: arrivate e preparate (come quelle delle Cascine, copione Python non nel
-  repository) le immagini da N1 a T4, tranne C11 (barriera di cemento) e P4 (bombolone), che
-  per ora sono disegnati nel codice. Mancano T5, T6, K1-K5, A1-A6, V1-V4 e S1. Decisioni prese
+  repository) tutte le immagini tranne A5 (il cono, Gemini ha rifatto il fulmine) e S1
+  (transenna alta, che resta disegnata nel codice). T5 e T6 al secondo tentativo (al primo la
+  tavola era vista da sotto): nel prompt va detto che è di profilo, "NOT from above, NOT from
+  below", allegando anche `tavole/giglio.png`. I caschi sono specchiati (Gemini li fa guardare
+  a sinistra, Tino guarda a destra). Nuovi file: `tavole/pop-corn.png`, `tavole/oro.png`,
+  `caschi/` stelle, ghianda, cresta, cupola (a cappello di ghianda), alato (K1-K5);
+  `adesivi/` ghianda, ruota, giglio, fulmine, tari; `poteri/bombolone.png`,
+  `elementi/barriera.png` (usata: la barriera è passata da 70 a 130 di larghezza per stare
+  alle proporzioni del disegno, e la coppia di barriere è più distanziata di 60 px; il
+  pianificatore non la urta mai in 20 incontri); `fondali/vignetta-novoli`, `-cantieri`,
+  `-centro`, `-finale` (V1-V4, 900 px; alla V4 tolta la cornice bianca). Decisioni prese
   sulle immagini: il tram C8 resta con le scritte della fiancata (va bene così al
   proprietario; tolte solo le perline e lo sfondo bianco sopra il tetto); turista F6 (la
   persona), non l'orsetto F6b; lo scavo C9 è tagliato sotto i bordi in prospettiva (i tubi sui
@@ -1078,7 +1087,7 @@ logica, su canvas), `ghianda.svg`.
     s, alta abbastanza da passarci sotto, scende 0,4 s; `angoloBenna`, `riquadroBenna`), fango
     (zona di 220-300 px: a terra la velocità ×0,62, `ZONE`), binari (massicciata a 12, su cui si
     sale da soli, e rotaia grind a 32), tram (solido e piano a 92, lungo 560: ci si salta sopra),
-    barriera di cemento (solida a 50, disegnata nel codice), lo scavo al posto della half pipe
+    barriera di cemento (solida a 50, larga 130, dipinta), lo scavo al posto della half pipe
     (stesse regole, `arte: 'scavo'`, `disegnaScavo`, `disegnaMuroCantiere`), più transenne alte.
   - **Centro**: sampietrini (zona di 520-820 px con un cono o le bici in mezzo: Tino trema, il
     rotolio rimbomba e niente manual), turisti (solidi alti 96, uno o due; saltarli senza urtarli
