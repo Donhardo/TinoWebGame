@@ -1324,6 +1324,115 @@ logica, su canvas), `ghianda.svg`.
   `prendiPotere(id, x, h)`, `stato.poteri`, `stato.statistiche.poteri` e `salvati` (urti
   parati dal casco).
 
+### Tino Flipper (`games/tino-flipper/`)
+Flipper al neon (meccaniche da classico del genere), senza storia: solo un passatempo.
+File: `index.html`, `stile.css`, `gioco.js` (tutta la logica, su canvas).
+- **Decisioni prese**: titolo "Tino Flipper", sottotitolo "Notte al neon nel bosco";
+  nessuna storia; la palla è una ghianda tonda col cappello; Gino al centro del tavolo come
+  bersaglio (la sua foto in un cerchio al neon), Tino sul grembiule in basso a sinistra (e
+  grande nel pannello di destra sugli schermi larghi); sei scenari a tempo che cambiano
+  colori, sfondo, musica e regole; tre palle a partita e classifica dei cinque migliori.
+  Sul telefono si gioca in verticale.
+- **Tavolo**: logico 600 × 1040 (campo x 20-540, centro `CX` = 280; corridoio di lancio
+  x 540-580). Volta in cima: semicerchio di centro (300, 300) e raggio 280. Sugli schermi
+  larghi il canvas è largo 600 + 2 × 260: a sinistra il display (punti, palla, bonus,
+  campo, combo, Tana, jackpot, rimbalzo, rampe, scenario in corso o prossimo, scenari
+  fatti), a destra Tino con il fumetto, i comandi e Gino. Senza pannelli lo scenario in
+  corso compare in una barra in cima al tavolo.
+- **Geometria** (in cima a `gioco.js`, funzioni `parete`, `segmento`, `cerchio`, `arco`,
+  `specchio` per il lato destro): orbita sinistra (canale x 20-70 fino a y 520, spinner a
+  y 440), sporgenze sulle pareti a y 540-700 (spingono in campo le ghiande che scendono
+  lungo i muri: senza, finivano dritte nelle corsie esterne), corsie esterne e interne,
+  fionde, flipper con perno a (178, 905) e (382, 905), corsie T·I·N·O in cima, tre bumper,
+  Gino a (280, 482), tre bersagli che cadono a y 612, la Tana a (115, 405) con la conca
+  aperta verso il flipper destro e un tettuccio sopra (senza, la ghianda si incastrava
+  tra la cupola e la parete dell'orbita), la bocca della rampa a destra (`BOCCA`) e il
+  percorso sopraelevato (`RAMPA`) che riporta la ghianda nella corsia interna sinistra.
+  Cancelletto a una via in cima al corridoio di lancio; il fondo del corridoio è lo
+  stantuffo.
+- **Fisica** (tabelle `FISICA`, `FLIPPER`, `LANCIO`, `BUMPER`, `FIONDA`): passo fisso di
+  1/960 s, gravità 1650, velocità massima 3300; urti cerchio-segmento e cerchio-cerchio,
+  flipper come capsula che si assottiglia (raggio 14 al perno, 7 in punta, lungo 92) che
+  trasmette la velocità della superficie; su 30 rad/s, giù 17. Bumper e fionde spingono
+  (980 e 820); le fionde variano un po' spinta e angolo a ogni colpo (con la spinta sempre
+  uguale la ghianda faceva ping-pong all'infinito tra le due fionde). Le ghiande del
+  multiball si urtano. Ghianda ferma per 3 s: scossone gratis.
+- **Comandi**: flipper ← → (o Z /, A D, i due Maiusc, tasto sinistro e destro del mouse;
+  sul telefono metà sinistra e metà destra dello schermo); lancio: tenere premuto ↓,
+  Spazio, S o Invio e lasciare (col mouse o col dito, se in campo non c'è nessuna ghianda,
+  si tiene premuto ovunque); scossone ↑ o W (sul telefono una strisciata veloce in su).
+  P o Esc pausa, M suoni, N musica.
+- **Regole** (tabella `PUNTI`): corsie T·I·N·O (i flipper spostano le lettere accese;
+  tutte e quattro: bonus ×2…×6); tiro da maestro al lancio (la lettera che lampeggia,
+  50.000); tre bersagli giù aprono la Tana, tre ghiande bloccate nella Tana = multiball a
+  3 ghiande con jackpot sulla rampa (150.000 + 50.000 a ogni jackpot; bersagli giù nel
+  multiball = jackpot doppio) e, dopo tre jackpot, super jackpot su Gino (500.000); combo
+  (rampa, orbita, Tana e Gino entro 3,6 s l'uno dall'altro): alla 3ª campo ×2, alla 5ª
+  ×3, alla 7ª ×4 per 20 s; palla salvata ("ANCORA") per 9 s dall'ingresso in campo (14 col
+  multiball); rimbalzo nella corsia esterna sinistra, che si riaccende con 30 giri di
+  spinner; palla extra accesa dopo 8 rampe (poi ogni 12) e presa nella Tana. Bonus a fine
+  palla (conteggio per bumper, corsie, rampe, orbite, bersagli, Gino, scenari) per il
+  moltiplicatore. Scossone: tre di fila = TILT (flipper spenti, niente bonus).
+- **Scenari** (tabelle `SCENARI`, `FESTA`, `TEMI`): colpendo Gino (3 volte, poi una in più
+  per ogni scenario fatto, al massimo 7) si accende lo scenario, che parte nella Tana e
+  dura 35 s: Disco nel bosco (bumper a 10.000, 25 colpi per il premio), Pioggia di ghiande
+  (ghiande d'oro sul tavolo, 25.000 l'una, 10 per il premio), Caccia alle lucciole (la
+  lucciola si posa su un tiro: 75.000 × quante prese), Temporale (rampa e orbita partono da
+  30.000 e raddoppiano a ogni colpo, fino a 480.000), Luna park (tutto ×3). Dopo i cinque,
+  la Gran festa di Gino: quattro ghiande in campo e ogni tiro è un jackpot da 100.000.
+  Finita la festa si ricomincia da capo con il tavolo più veloce (gravità +6% a giro, palla
+  salvata più corta, Gino e spinner chiedono di più). Ogni scenario ha il suo tema di
+  colori (neon, accento, lampade, sfondo) e uno sfondo animato (stelle, fasci di luce e
+  palla stroboscopica, ghiande che cadono, lucciole, pioggia e fulmini, ruota panoramica,
+  coriandoli); il tavolo sfuma da un tema all'altro.
+- **Disegno**: sfondo del tema, pareti al neon e pista della rampa si disegnano una volta
+  su tele a parte (`preparaStrati`) e si rifanno solo quando cambiano tema o misura; al neon
+  c'è l'alone (`neon`), le luci sono aloni sfumati già pronti disegnati in modo 'lighter'
+  (`luce`). Lampade sul campo (lettere, moltiplicatori, ANCORA, frecce dei tiri accese,
+  scenari attorno a Gino, colpi su Gino, blocchi della Tana, palla extra, rimbalzo); scia
+  della ghianda, scintille, punti che salgono, messaggio grande al centro, lampo bianco
+  sui jackpot, scossa dello schermo.
+- **Espressioni**: Tino arrabbiato quando perde una ghianda, all'avviso di tilt e
+  all'ultima palla; ferito nella corsia esterna e al tilt; ko a fine partita; saltella su
+  jackpot, combo grosse, scenari e palla extra. Gino trema quando è colpito, saltella sui
+  jackpot, si inclina a fine partita.
+- **Suoni e musica**: tutto Web Audio con un compressore (flipper, bumper con tre note,
+  fionde, corsie, spinner, rampa, Tana, jackpot, multiball, tuono, tilt, carica dello
+  stantuffo che sale di tono…). Musica synthwave in La minore (tabelle `BRANO`, `STILI`):
+  basso a ottavi, cassa dritta, arpeggi e melodia; ogni scenario ha la sua velocità, onda e
+  filtro (menu 100 bpm, partita 120, festa e multiball 138). `localStorage`
+  `tino-flipper:classifica`, `muto`, `musica-spenta`.
+- **Giocatore simulato** (`pilotaIA`, `provaColpo`, tabella `IA`): quando una ghianda
+  arriva sui flipper prova diversi istanti per battere con la stessa fisica del gioco
+  (stesso passo, senza effetti) e sceglie quello che la manda dove vuole (`desiderati`:
+  Tana accesa, rampa nel multiball, lucciola, Gino o bersagli…). Il colpo parte al passo di
+  fisica giusto (`flipper.prog`, orologio della fisica): con il colpo al fotogramma dopo
+  prevedeva 10 rampe e ne prendeva una. Fa la partita dimostrativa nel menu; sul telefono
+  prova meno istanti (`IA_LEGGERA`). `errore` = imprecisione in secondi, `bravura` =
+  probabilità di mirare.
+- **Prove automatiche**: `window.tinoFlipper` (`stato`, `iniziaPartita('gioco' | 'demo')`,
+  `aggiorna`, `lancia`, `premiFlipper`, `premiLancio`, `scossone`, `provaColpo`,
+  `avviaScenario`, `avviaMultiball`, `nuovaPalla`, `flipper`, tabelle); con
+  `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli, con
+  `stato.iaGioca = true` gioca il giocatore simulato anche la partita vera.
+  `stato.statistiche` conta palle, perse, salvate, uscite dal tavolo e incastri. I copioni
+  (Playwright, `aggiorna(1 / 60)` fino a `stato.fase === 'finita'`) non sono nel repository.
+- **Taratura** (partite simulate col giocatore simulato, 4-6 per livello, 1/60 s a passo):
+  nessuna ghianda esce mai dal tavolo. Incastri trovati e tolti: ping-pong tra le fionde,
+  ghianda tra Tana e parete dell'orbita, gradino tra guida della corsia interna e perno del
+  flipper, corsia interna troppo stretta tra guida e fionda (ora almeno ~30 px). Con
+  errore sul colpo di 25 / 35 / 50 ms e mira il 60 / 35 / 20% delle volte le partite durano
+  in media 12 / 6 / 8 minuti (da 1 a 25, molto variabili), con 1-5 multiball e 3-8 scenari;
+  con errore di 4-12 ms si arriva alla festa e si fanno due o tre giri. Le persone vere
+  sono molto meno precise (non vedono il futuro), quindi giocano meno a lungo.
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
+  `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `assets/tino/`,
+  `assets/gino/`; si pubblica con `files` e `root`.
+- **Stato**: giocabile. Possibili seguiti, non ancora decisi: altri tavoli (per esempio
+  uno al mare o negli uffici della Tari), una seconda rampa o un giro della morte, missioni
+  con gli agenti della Tari, classifica con le iniziali.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)
