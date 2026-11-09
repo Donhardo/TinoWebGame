@@ -116,6 +116,66 @@
     ripresa: 0.7,              // per secondo
   };
 
+  // Potenziamenti per strada (icone in disegni/poteri/<id>.png). Quelli buoni
+  // stanno in alto (si prendono saltando), la ruota sgonfia è un dispetto a
+  // terra (si evita saltandola). dur in secondi (0 = subito); peso: quanto spesso.
+  const POTERI = {
+    casco: { nome: 'Casco', spiega: 'il prossimo urto non conta', dur: 20, peso: 12, colore: '#7fd3ff' },
+    'ruote-oro': { nome: 'Ruote d\'oro', spiega: 'combo × 2', dur: 15, peso: 18, colore: '#ffd23f', combo: 2 },
+    calamita: { nome: 'Calamita', spiega: 'attira le ghiande', dur: 15, peso: 20, colore: '#ff6b5a', raggio: 170 },
+    bombolone: { nome: 'Bombolone', spiega: '+1 tacca di Grinta', dur: 0, peso: 15, colore: '#ff9a3c' },
+    schiacciata: { nome: 'Schiacciata all\'olio', spiega: 'salti più in alto', dur: 12, peso: 12, colore: '#7dd96a', salto: 1.06 },
+    lampredotto: { nome: 'Lampredotto', spiega: 'Grinta doppia', dur: 15, peso: 12, colore: '#c58cff', grinta: 2 },
+    'ruota-sgonfia': { nome: 'Ruota sgonfia', spiega: 'salti più bassi', dur: 8, peso: 0, colore: '#9aa0aa', dispetto: true, salto: 0.95, manual: 1 },
+  };
+  const COMPARSA = {
+    da: 150,                   // metri da cui compaiono
+    ogni: [300, 450],          // metri tra un potenziamento e l'altro
+    dispetto: 1 / 6,           // quanti sono ruote sgonfie
+    alto: 165,                 // quota dei buoni (si prendono saltando)
+    basso: 20,                 // quota della ruota sgonfia (si evita saltando)
+    bombolonePieno: 300,       // punti del bombolone con la Grinta già piena
+  };
+
+  // Il negozio: tavole (con piccoli poteri), caschi e adesivi (da guardare).
+  // Si compra con le ghiande raccolte; i pezzi con traguardo si sbloccano col
+  // record in metri, l'adesivo della Tari finendo la storia.
+  const TAVOLE = [
+    { id: 'classica', nome: 'Classica', prezzo: 0, piu: 'Equilibrata', file: 'elementi/tavola' },
+    { id: 'giglio', nome: 'Giglio', prezzo: 500, piu: 'Il Giglio è più svelto e vale 150', meno: 'Flip: −10% di punti', giglioDur: 0.3, giglioPunti: 150, flip: 0.9 },
+    { id: 'longboard', nome: 'Longboard', prezzo: 1000, piu: 'Fango e sampietrini non frenano; manual fino a 4,5 s', meno: 'Gira più piano in aria', fango: 0.8, sampietrini: true, manualMax: 4.5, giro: 0.85, largo: 104, ruote: 0.35 },
+    { id: 'leggera', nome: 'Leggera', prezzo: 1800, piu: 'Gira molto più svelta: flip più facili', meno: 'Atterraggio più preciso (30°)', giro: 1.2, tolleranza: 0.52 },
+    { id: 'pesante', nome: 'Pesante', prezzo: 2800, piu: 'Sfondamento più lungo, pestoni +50%', meno: 'Salta meno e gira più piano', sfondamento: 1.5, pestone: 1.5, salto: 0.985, giro: 0.9 },
+    { id: 'pop-corn', nome: 'Pop corn', prezzo: 4000, piu: 'Attira le ghiande vicine', meno: 'Grinta −10%', calamita: 90, grinta: 0.9 },
+    { id: 'oro', nome: 'Tavola d\'oro', traguardo: 5000, piu: 'Ghiande doppie', ghiande: 2 },
+  ];
+  const CASCHI = [
+    { id: 'nessuno', nome: 'Niente', prezzo: 0 },
+    { id: 'stelle', nome: 'Stelle', prezzo: 300 },
+    { id: 'ghianda', nome: 'Ghianda', prezzo: 700 },
+    { id: 'cresta', nome: 'Cresta punk', prezzo: 1200 },
+    { id: 'cupola', nome: 'Cappello di ghianda', prezzo: 1800 },
+    { id: 'alato', nome: 'Alato', traguardo: 3000 },
+  ];
+  const ADESIVI = [
+    { id: 'nessuno', nome: 'Niente', prezzo: 0 },
+    { id: 'ghianda', nome: 'Ghianda', prezzo: 150 },
+    { id: 'ruota', nome: 'Ruota di fuoco', prezzo: 300 },
+    { id: 'giglio', nome: 'Giglio', prezzo: 500 },
+    { id: 'fulmine', nome: 'Fulmine', prezzo: 750 },
+    { id: 'cono', nome: 'Cono', prezzo: 1000 },
+    { id: 'tari', nome: 'Abbasso la Tari', storia: true },
+  ];
+  // Casco e adesivo si appoggiano alle foto: [centro x, centro y, larghezza,
+  // rotazione in gradi] in pixel della foto originale, per ogni espressione.
+  const POSE = {
+    normale: { casco: [245, 88, 280, 6], adesivo: [150, 400, 100, -12] },
+    arrabbiato: { casco: [128, 92, 205, 0], adesivo: [78, 292, 72, -10] },
+    ferito: { casco: [124, 90, 212, -4], adesivo: [74, 330, 74, -10] },
+    ko: { casco: [80, 112, 150, -80], adesivo: [215, 150, 66, 0] },
+    gino: { casco: [195, 84, 380, 0] },
+  };
+
   const AGENTI = {
     larg: 46,
     alt: 100,
@@ -170,6 +230,11 @@
   disegni.ponteVecchio = carica(DISEGNI + 'fondali/ponte-vecchio.png');
   // i mezzi dell'ispettore capo (modalità storia)
   for (const n of ['ape', 'monopattino', 'carrello', 'golf']) disegni['mezzo-' + n] = carica(DISEGNI + 'mezzi/' + n + '.png');
+  // potenziamenti, tavole, caschi e adesivi del negozio
+  for (const n of Object.keys(POTERI)) disegni['potere-' + n] = carica(DISEGNI + 'poteri/' + n + '.png');
+  for (const x of TAVOLE) disegni['tavola-' + x.id] = x.id === 'classica' ? disegni.tavola : carica(DISEGNI + 'tavole/' + x.id + '.png');
+  for (const x of CASCHI) if (x.id !== 'nessuno') disegni['casco-' + x.id] = carica(DISEGNI + 'caschi/' + x.id + '.png');
+  for (const x of ADESIVI) if (x.id !== 'nessuno') disegni['adesivo-' + x.id] = carica(DISEGNI + 'adesivi/' + x.id + '.png');
   // Le foto dei personaggi restano quelle originali: per farle stare nel
   // fumetto si prepara una volta una copia con un contorno nero spesso e
   // un'ombra piena (sfalsata in basso a destra). hRif è l'altezza a cui si
@@ -309,7 +374,8 @@
       quartiere: 0,            // quanti quartieri sono passati (per il messaggio d'entrata)
       storia: null,            // nella storia: { cap, fase: strada | inseguimento | vinto, xFine, xVia }
       capo: null,              // l'ispettore capo sul suo mezzo (inseguimento)
-      statistiche: { cause: {}, urti: 0, cadute: 0, pestoni: 0, trick: 0, comboMax: 0, sfondamenti: 0, botte: 0 },
+      poteri: {},              // potenziamenti attivi: { id: secondi che restano } (casco: finché non si urta, al massimo 20 s)
+      statistiche: { cause: {}, urti: 0, cadute: 0, pestoni: 0, trick: 0, comboMax: 0, sfondamenti: 0, botte: 0, poteri: {}, salvati: 0 },
       risultato: null,
     };
   }
@@ -438,6 +504,9 @@
     lancio: () => fruscio(0.18, 0.12, 'bandpass', 2000, 0, 800),
     rete: () => fruscio(0.25, 0.12, 'bandpass', 500, 0, 1500),
     combo: (molt) => [784, 988, 1175, 1568].slice(0, clamp(molt - 1, 1, 4)).forEach((f, i) => tono(f, 0.1, 'triangle', 0.05, null, i * 0.07)),
+    potere: () => [523, 659, 784, 1046, 1318].forEach((f, i) => tono(f, 0.08, 'square', 0.04, null, i * 0.05)),
+    dispetto: () => { fruscio(0.6, 0.25, 'highpass', 3000, 0, 800); [523, 415, 330].forEach((f, i) => tono(f, 0.14, 'square', 0.035, f * 0.85, 0.1 + i * 0.12)); },
+    bonk: () => { tono(900, 0.08, 'square', 0.06, 300); tono(240, 0.2, 'triangle', 0.08, 120, 0.03); },
     ruota: () => [523, 784, 1046].forEach((f, i) => tono(f, 0.1, 'triangle', 0.06, null, i * 0.07)),
     record: () => [523, 659, 784, 1046, 1318].forEach((f, i) => tono(f, 0.14, 'square', 0.04, null, i * 0.1)),
     ko: () => [392, 330, 262, 196].forEach((f, i) => tono(f, 0.22, 'square', 0.05, f * 0.9, i * 0.16)),
@@ -480,7 +549,7 @@
     const on = !muto && !stato.test && stato.fase === 'corsa' && !document.hidden && stato.tino;
     const ti = stato.tino;
     let ruote = on && ti.terra && ti.grind === 0 ? 0.05 + 0.08 * clamp(ti.v / 600, 0, 1) : 0;
-    if (on && ti.zona === 'sampietrini') ruote *= 1.6 + Math.sin(stato.tempo * 90) * 0.6; // il rombo dei sampietrini
+    if (on && ti.zona === 'sampietrini' && !pTav('sampietrini', false)) ruote *= 1.6 + Math.sin(stato.tempo * 90) * 0.6; // il rombo dei sampietrini
     const grind = on && ti.grind > 0 ? 0.09 : 0;
     continui.ruote.g.gain.setTargetAtTime(ruote, t, 0.05);
     continui.ruote.f.frequency.setTargetAtTime(on ? 200 + ti.v * 0.5 : 200, t, 0.1);
@@ -727,6 +796,7 @@
 
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === 'Escape' && pannello.querySelector('.negozio')) { vaiAlMenu(); return; }
     if (e.code === 'KeyP' || e.code === 'Escape') {
       if (stato.fase === 'pausa') riprendi();
       else if (inGioco()) pausa();
@@ -883,7 +953,7 @@
     stato.x0 = -da * LUNGO_QUARTIERE * PX_M;
     stato.metri = da * LUNGO_QUARTIERE;
     stato.quartiere = da;
-    stato.gen = { x: 1100, n: 0, ultimo: '', ruota: stato.metri + 600 };
+    stato.gen = { x: 1100, n: 0, ultimo: '', ruota: stato.metri + 600, potere: stato.metri + COMPARSA.da + tra(0, 150), ultimoPotere: '' };
     stato.cam.x = stato.tino.x - xTino();
     // all'inizio una fila di ghiande per prendere confidenza
     for (let i = 0; i < 6; i++) stato.ghiande.push({ x: 380 + i * 60, h: 45, tipo: 'ghianda' });
@@ -944,13 +1014,14 @@
     const metri = Math.floor(stato.metri);
     const nuovoMetri = metri > recordMetri;
     const nuovoPunti = punti > recordPunti;
+    const sbloccati = nuovoMetri ? [...TAVOLE, ...CASCHI].filter((x) => x.traguardo && recordMetri < x.traguardo && metri >= x.traguardo).map((x) => (TAVOLE.includes(x) ? x.nome : 'Casco ' + x.nome.toLowerCase())) : [];
     if (!stato.test) {
       if (nuovoMetri) { recordMetri = metri; scrivi('record-metri', metri); }
       if (nuovoPunti) { recordPunti = punti; scrivi('record-punti', punti); }
       ghiandeTotali += stato.preseGhiande;
       scrivi('ghiande-totali', ghiandeTotali);
     }
-    stato.risultato = { quartiere: QUARTIERI[quartiereA(stato.tino.x).id].nome, metri, punti, ghiande: stato.preseGhiande, nuovoMetri, nuovoPunti, comboMax: stato.statistiche.comboMax };
+    stato.risultato = { quartiere: QUARTIERI[quartiereA(stato.tino.x).id].nome, metri, punti, ghiande: stato.preseGhiande, nuovoMetri, nuovoPunti, comboMax: stato.statistiche.comboMax, sbloccati };
     stato.fase = 'fine';
     if (!stato.test) {
       if (nuovoMetri || nuovoPunti) suoni.record();
@@ -983,7 +1054,7 @@
     if (t.pipe) { pompa(); return; }
     if (!t.terra || t.botta) return;
     t.bloccaGiro = stato.input.avanti || stato.input.indietro;
-    t.vy = FISICA.salto;
+    t.vy = forzaSalto();
     t.terra = false;
     t.appoggio = -1;
     t.tenuta = 0;
@@ -1002,7 +1073,7 @@
     if (t.trick) {
       if (t.trick.tipo === 'presa') { chiudiPresa(); } else { t.prossimo = tipo; return; }
     }
-    t.trick = { tipo, t: 0, dur: TRICK[tipo].dur };
+    t.trick = { tipo, t: 0, dur: tipo === 'giglio' ? pTav('giglioDur', TRICK.giglio.dur) : TRICK[tipo].dur };
     suoni.trick();
   }
   function chiudiPresa() {
@@ -1014,7 +1085,7 @@
   function trickFatto(tipo) {
     const t = stato.tino;
     const tr = TRICK[tipo];
-    aggiungi(tr.nome, tr.punti);
+    aggiungi(tr.nome, tipo === 'giglio' ? pTav('giglioPunti', tr.punti) : tr.punti);
     caricaGrinta(tr.grinta);
     stato.statistiche.trick++;
     suoni.trickFatto(stato.combo ? stato.combo.azioni.length : 1);
@@ -1036,12 +1107,13 @@
     if (!c) return;
     stato.combo = null;
     const molt = c.azioni.length;
-    const tot = Math.round(c.punti * molt);
+    const oro = attivo('ruote-oro') ? POTERI['ruote-oro'].combo : 1;
+    const tot = Math.round(c.punti * molt * oro);
     if (tot <= 0) return;
     stato.punti += tot;
     if (molt > 1) caricaGrinta(4 * (molt - 1));
     stato.statistiche.comboMax = Math.max(stato.statistiche.comboMax, molt);
-    stato.ultimaCombo = { testo: molt > 1 ? `${Math.round(c.punti)} × ${molt} = ${tot}` : `+${tot}`, t: 0, molt };
+    stato.ultimaCombo = { testo: (molt > 1 ? `${Math.round(c.punti)} × ${molt}${oro > 1 ? ' × ' + oro : ''} = ${tot}` : `+${tot}`), t: 0, molt };
     if (molt > 1) suoni.combo(molt);
     if (molt >= 4) messaggio(molt >= 7 ? 'Combo pazzesca!' : 'Bella combo!', 1.1, '#ffd23f');
     stato.tino.saltello = 0.5;
@@ -1054,7 +1126,67 @@
     stato.combo = null;
   }
 
-  function caricaGrinta(n) {
+  // ---------------------------------------------------------------- potenziamenti
+  const attivo = (id) => (stato.poteri[id] || 0) > 0;
+  // il salto con la tavola e i potenziamenti attivi
+  function forzaSalto() {
+    let k = pTav('salto');
+    for (const id of Object.keys(stato.poteri)) if (attivo(id) && POTERI[id].salto) k *= POTERI[id].salto;
+    return FISICA.salto * k;
+  }
+  function prendiPotere(id, x, h) {
+    const P = POTERI[id], t = stato.tino;
+    stato.statistiche.poteri[id] = (stato.statistiche.poteri[id] || 0) + 1;
+    if (id === 'bombolone') {
+      if (stato.grinta >= GRINTA.tacca * GRINTA.tacche) { stato.punti += COMPARSA.bombolonePieno; scritta('+' + COMPARSA.bombolonePieno, x, h + 40, '#ffd23f'); }
+      else caricaGrinta(GRINTA.tacca, true);
+    } else stato.poteri[id] = P.dur;
+    if (P.dispetto) {
+      suoni.dispetto();
+      t.ferito = Math.max(t.ferito, 0.5);
+      botto('PSSST!', x + 20, h + 30, '#fff', '#5d636e', 28);
+      messaggio(P.nome + ': ' + P.spiega + '!', 1.6, '#c9ced6');
+    } else {
+      suoni.potere();
+      t.saltello = 0.5;
+      t.contento = 0.5;
+      const cibo = id === 'bombolone' || id === 'schiacciata' || id === 'lampredotto';
+      botto(cibo ? 'GNAM!' : id === 'casco' ? 'CLIC!' : 'TOP!', x + 20, h + 30, '#fff', P.colore, 28);
+      messaggio(P.nome + ': ' + P.spiega + '!', 1.6, P.colore);
+    }
+    coriandoli(x, h, P.colore, 10);
+  }
+  function aggiornaPoteri(dt) {
+    for (const id of Object.keys(stato.poteri)) {
+      if (id === 'casco') continue; // il casco dura finché non si urta (al massimo 20 s)
+      stato.poteri[id] = Math.max(0, stato.poteri[id] - dt);
+      if (stato.poteri[id] <= 0) delete stato.poteri[id];
+    }
+    if (stato.poteri.casco !== undefined) {
+      stato.poteri.casco -= dt;
+      if (stato.poteri.casco <= 0) delete stato.poteri.casco;
+    }
+    // sbuffi viola col lampredotto, gocce d'olio in aria con la schiacciata (solo decorazione)
+    const ti = stato.tino;
+    if (attivo('lampredotto') && Math.random() < dt * 9) stato.particelle.push({ tipo: 'pezzo', x: ti.x + vis(-24, 10), h: ti.h + vis(50, 95), vx: vis(-160, -60), vy: vis(60, 160), t: 0, dur: 0.6, colore: Math.random() < 0.5 ? '#c58cff' : '#8f5bd6', r: vis(3, 5), rot: 0, vr: 0 });
+    if (attivo('schiacciata') && !ti.terra && Math.random() < dt * 22) stato.particelle.push({ tipo: 'pezzo', x: ti.x + vis(-20, 20), h: ti.h + vis(0, 10), vx: vis(-120, 0), vy: vis(-40, 60), t: 0, dur: 0.5, colore: '#e8c547', r: vis(2, 4), rot: 0, vr: 0 });
+    // la calamita (e la tavola pop corn) attira le ghiande
+    const r = Math.max(attivo('calamita') ? POTERI.calamita.raggio : 0, pTav('calamita', 0));
+    if (r > 0) {
+      const t = stato.tino, cx = t.x, ch = t.h + 45;
+      for (const g of stato.ghiande) {
+        if (g.preso || g.tipo !== 'ghianda') continue;
+        const dx = cx - g.x, dh = ch - g.h, d = Math.hypot(dx, dh);
+        if (d > r || d < 1) continue;
+        const v = Math.min(d, (500 + t.v) * dt);
+        g.x += dx / d * v; g.h += dh / d * v;
+        g.attratta = true;
+      }
+    }
+  }
+
+  function caricaGrinta(n, diretta = false) {
+    if (!diretta && n > 0) n *= pTav('grinta') * (attivo('lampredotto') ? POTERI.lampredotto.grinta : 1);
     const prima = Math.floor(stato.grinta / GRINTA.tacca);
     stato.grinta = clamp(stato.grinta + n, 0, GRINTA.tacca * GRINTA.tacche);
     const dopo = Math.floor(stato.grinta / GRINTA.tacca);
@@ -1068,7 +1200,7 @@
     const t = stato.tino;
     if (stato.grinta < GRINTA.tacca || t.sfondamento > 0 || t.botta) return;
     stato.grinta -= GRINTA.tacca;
-    t.sfondamento = GRINTA.sfondamento;
+    t.sfondamento = GRINTA.sfondamento * pTav('sfondamento');
     stato.statistiche.sfondamenti++;
     suoni.sfondamento();
     messaggio('Sfondamento!', 0.9, '#ff9a3c');
@@ -1141,7 +1273,7 @@
     botto('CRASH!', o.x + o.w / 2, o.h + 50, '#8a4b1f', '#ffe08a', 28);
     if (dallAlto) {
       const tr = TRICK.sfasciata;
-      aggiungi(tr.nome, tr.punti);
+      aggiungi(tr.nome, Math.round(tr.punti * pTav('pestone')));
       caricaGrinta(tr.grinta);
       scritta(tr.nome, o.x + o.w / 2, o.h + 80, '#ffb36b');
     }
@@ -1151,6 +1283,25 @@
   function urto(causa = '?') {
     const t = stato.tino;
     if (t.invulnerabile > 0 || t.sfondamento > 0 || t.botta || stato.fase !== 'corsa') return false;
+    if (attivo('casco')) {
+      // il casco salta via: niente ruota persa
+      delete stato.poteri.casco;
+      stato.statistiche.salvati++;
+      stato.statistiche.cause[causa + '-casco'] = (stato.statistiche.cause[causa + '-casco'] || 0) + 1;
+      t.invulnerabile = VITA.invulnerabile;
+      t.mod = Math.min(t.mod, 0.75);
+      t.ferito = 0.5;
+      t.trick = null; t.prossimo = null; t.presa = 0;
+      t.manual = 0;
+      perdiCombo();
+      stato.scossa = 0.2;
+      suoni.bonk();
+      botto('BONK!', t.x + 30, t.h + 90, '#fff', '#2b7fd8', 32);
+      stato.particelle.push({ tipo: 'pezzo', x: t.x, h: t.h + 90, vx: vis(-260, -120), vy: vis(420, 560), t: 0, dur: 1.1, colore: '#d8342c', r: 10, rot: 0, vr: vis(-12, 12) });
+      messaggio('Il casco ti ha salvato!', 1.2, '#7fd3ff');
+      if (t.terra && t.grind === 0) { t.terra = false; t.appoggio = -1; t.vy = 330; t.tenendo = false; }
+      return true;
+    }
     t.ruote--;
     stato.statistiche.urti++;
     stato.statistiche.cause[causa] = (stato.statistiche.cause[causa] || 0) + 1;
@@ -1477,6 +1628,23 @@
         g.x += 200;
         continue;
       }
+      // un potenziamento ogni tanto (in alto da prendere saltando, o la ruota sgonfia a terra)
+      if (m > g.potere) {
+        g.potere = m + tra(COMPARSA.ogni[0], COMPARSA.ogni[1]);
+        let id;
+        if (casuale() < COMPARSA.dispetto) id = 'ruota-sgonfia';
+        else {
+          const ids = Object.keys(POTERI).filter((k) => POTERI[k].peso > 0 && k !== g.ultimoPotere);
+          let r = casuale() * ids.reduce((a, k) => a + POTERI[k].peso, 0);
+          id = ids[ids.length - 1];
+          for (const k of ids) { r -= POTERI[k].peso; if (r <= 0) { id = k; break; } }
+        }
+        g.ultimoPotere = id;
+        const xp = g.x + v * 0.4;
+        stato.ghiande.push({ x: xp, h: POTERI[id].dispetto ? COMPARSA.basso : COMPARSA.alto, tipo: 'potere', id });
+        g.x = xp + v * 1.0;
+        continue;
+      }
       const q = quartiereA(g.x).id;
       const possibili = PEZZI.filter((p) => m >= p.da && p.id !== g.ultimo && (!p.q || p.q.includes(q)));
       const peso = (p) => (p.pesi && p.pesi[q] !== undefined ? p.pesi[q] : p.peso);
@@ -1535,12 +1703,31 @@
   ];
   let storiaFatta = leggi('storia-capitolo', 0);      // capitoli finiti (4 = storia finita)
   let storiaPunti = leggi('storia-punti', [0, 0, 0, 0]); // i punti migliori di ogni capitolo
+
+  // ---------------------------------------------------------------- negozio: cosa si possiede e cosa si usa
+  const LISTE = { tavola: TAVOLE, casco: CASCHI, adesivo: ADESIVI };
+  const presi = { tavola: leggi('tavole', ['classica']), casco: leggi('caschi', ['nessuno']), adesivo: leggi('adesivi', ['nessuno']) };
+  const scelti = { tavola: leggi('tavola', 'classica'), casco: leggi('casco', 'nessuno'), adesivo: leggi('adesivo', 'nessuno') };
+  const trova = (lista, id) => lista.find((x) => x.id === id) || lista[0];
+  // un pezzo è disponibile se è comprato, o se il record (o la storia finita) lo ha sbloccato
+  function posseduto(tipo, id) {
+    const x = trova(LISTE[tipo], id);
+    if (x.traguardo) return recordMetri >= x.traguardo;
+    if (x.storia) return storiaFatta >= 4;
+    return !x.prezzo || presi[tipo].includes(id);
+  }
+  for (const tipo of Object.keys(scelti)) if (!posseduto(tipo, scelti[tipo])) scelti[tipo] = LISTE[tipo][0].id;
+  // la tavola in uso (con i suoi poteri): pTav('salto') dà il moltiplicatore, 1 se non c'è
+  const tav = () => trova(TAVOLE, scelti.tavola);
+  const pTav = (k, def = 1) => { const v = tav()[k]; return v === undefined ? def : v; };
   let puntoInseguimento = null;                         // lo stato all'inizio dell'inseguimento (per riprovarlo)
 
   function iniziaInseguimento() {
     const st = stato.storia, t = stato.tino;
     const S = STORIA[st.cap];
     st.fase = 'inseguimento';
+    stato.poteri = {}; // nell'inseguimento niente potenziamenti
+    stato.ghiande = stato.ghiande.filter((g) => g.tipo !== 'potere');
     stato.capo = {
       mezzo: S.mezzo, max: S.colpi, colpi: 0,
       x: t.x + larg - xTino() + MEZZI[S.mezzo].w, v: 0,
@@ -1865,7 +2052,7 @@
     // fango (rallenta) e sampietrini (si trema, niente manual): solo sulla strada
     t.zona = ko ? null : zonaSotto(t);
     if (t.zona === 'fango') {
-      v *= ZONE.fango;
+      v *= pTav('fango', ZONE.fango);
       if (Math.random() < dt * 24) stato.particelle.push({ tipo: 'pezzo', x: t.x + vis(-20, 10), h: 4, vx: vis(-220, 40), vy: vis(160, 360), t: 0, dur: 0.6, colore: Math.random() < 0.5 ? '#7a4a22' : '#9a6232', r: vis(3, 6), rot: 0, vr: 0 });
     }
     if (ko) v = Math.max(0, (t.v || 0) - 500 * dt);
@@ -1879,6 +2066,8 @@
     t.caduta = Math.max(0, t.caduta - dt);
     t.sfondamento = Math.max(0, t.sfondamento - dt);
     t.saltello = Math.max(0, t.saltello - dt);
+    t.contento = Math.max(0, (t.contento || 0) - dt);
+    if (!ko) aggiornaPoteri(dt);
     t.schiacciaVis *= Math.exp(-dt * 10);
     if (t.pipe) { t.accucciato = false; muoviPipe(dt); return; }
 
@@ -1985,7 +2174,8 @@
     const av = stato.input.avanti, ind = stato.input.indietro;
     if (t.bloccaGiro && !av && !ind) t.bloccaGiro = false;
     const dir = t.bloccaGiro ? 0 : (av ? 1 : 0) - (ind ? 1 : 0);
-    if (dir) t.vang = clamp(t.vang + dir * GIRO.spinta * dt, -GIRO.max, GIRO.max);
+    const kg = pTav('giro');
+    if (dir) t.vang = clamp(t.vang + dir * GIRO.spinta * kg * dt, -GIRO.max * kg, GIRO.max * kg);
     else t.vang *= Math.exp(-GIRO.smorza * dt);
     t.ang += t.vang * dt;
   }
@@ -1999,7 +2189,7 @@
   function controllaAtterraggio(pend, conManual = true) {
     const t = stato.tino;
     const { n, resto } = restoGiro(pend);
-    let ok = Math.abs(resto) <= GIRO.tolleranza;
+    let ok = Math.abs(resto) <= pTav('tolleranza', GIRO.tolleranza);
     // un po' storti (fino a 45°): si atterra su due ruote, in manual
     const salvo = conManual && !ok && Math.abs(resto) <= GIRO.manual;
     if (salvo) ok = true;
@@ -2030,7 +2220,7 @@
     const base = n > 0 ? 'Frontflip' : 'Backflip';
     const nome = k === 1 ? base : (k === 2 ? 'Doppio ' : k === 3 ? 'Triplo ' : k + ' × ') + base;
     const f = TRICK.flip;
-    aggiungi(nome, Math.round(f.punti * k * (k > 1 ? f.doppio : 1)));
+    aggiungi(nome, Math.round(f.punti * k * (k > 1 ? f.doppio : 1) * pTav('flip')));
     caricaGrinta(f.grinta * k);
     stato.statistiche.trick += k;
     stato.statistiche.flip = (stato.statistiche.flip || 0) + k;
@@ -2263,7 +2453,7 @@
     t.manualForzato = Math.max(0, (t.manualForzato || 0) - dt);
     const tieni = stato.input.indietro || stato.input.avanti || (t.manual > 0 && t.manualForzato > 0);
     if (!tieni) t.manualFinito = false;
-    const puoManual = tieni && !t.manualFinito && t.caduta <= 0 && !t.botta && !t.accucciato && t.zona !== 'sampietrini';
+    const puoManual = tieni && !t.manualFinito && t.caduta <= 0 && !t.botta && !t.accucciato && (t.zona !== 'sampietrini' || pTav('sampietrini', false));
     if (puoManual) {
       if (t.manual === 0) {
         t.manualPunta = !stato.input.indietro;
@@ -2274,7 +2464,7 @@
       t.grazia = 0;
       puntiCombo(TRICK.manual.puntiSec * dt);
       caricaGrinta(TRICK.manual.grintaSec * dt);
-      if (t.manual >= TRICK.manual.max) {
+      if (t.manual >= (attivo('ruota-sgonfia') ? POTERI['ruota-sgonfia'].manual : pTav('manualMax', TRICK.manual.max))) {
         // troppo a lungo: la tavola torna giù e la combo si chiude
         t.manual = 0;
         t.manualFinito = true;
@@ -2358,7 +2548,7 @@
     t.schiaccia = false;
     t.h = Math.max(t.h, e.base + AGENTI.alt - 10);
     const tr = TRICK.pestone;
-    aggiungi(doppio ? 'Superpestone' : tr.nome, tr.punti * (doppio ? 2 : 1));
+    aggiungi(doppio ? 'Superpestone' : tr.nome, Math.round(tr.punti * (doppio ? 2 : 1) * pTav('pestone')));
     caricaGrinta(tr.grinta * (doppio ? 1.5 : 1));
     stato.statistiche.pestoni++;
     suoni.pestone();
@@ -2402,8 +2592,10 @@
           t.ruote = Math.min(VITA.ruote, t.ruote + 1);
           suoni.ruota();
           messaggio('Ruota di scorta!', 1.2, '#9ee7ff');
+        } else if (g.tipo === 'potere') {
+          prendiPotere(g.id, g.x, g.h);
         } else {
-          stato.preseGhiande++;
+          stato.preseGhiande += pTav('ghiande');
           stato.punti += 10;
           suoni.ghianda();
         }
@@ -3503,6 +3695,23 @@
       const x = sx(g.x);
       if (x < -30 || x > larg + 30) continue;
       const y = sy(g.h) + Math.sin(stato.tempo * 4 + g.x * 0.01) * 3;
+      if (g.tipo === 'potere') {
+        const P = POTERI[g.id], im = disegni['potere-' + g.id], r = 23;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.sin(stato.tempo * 3 + g.x) * 0.12);
+        const pulsa = 1 + Math.sin(stato.tempo * 8) * 0.05;
+        ctx.scale(pulsa, pulsa);
+        ctx.shadowColor = P.dispetto ? 'rgba(20,20,20,0.6)' : P.colore; ctx.shadowBlur = P.dispetto ? 6 : 16;
+        if (pronta(im)) ctx.drawImage(im, -r, -r, 2 * r, 2 * r);
+        else {
+          ctx.fillStyle = P.colore; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+          ctx.shadowBlur = 0; ctx.lineWidth = 3; ctx.strokeStyle = '#1c1f27'; ctx.stroke();
+          testo(P.nome[0], 0, 9, 24, '#fff');
+        }
+        ctx.restore();
+        continue;
+      }
       if (g.tipo === 'ruota') {
         ctx.save();
         ctx.translate(x, y);
@@ -3727,12 +3936,12 @@
   }
 
   // la tavola: centro del piano in (0, 0); giro = schiacciamento verticale (Giglio)
-  function tavola(k, giro = 1) {
+  function tavola(k, giro = 1, id = scelti.tavola) {
     k.save();
     k.scale(1, giro);
-    const im = disegni.tavola;
+    const im = disegni['tavola-' + id] || disegni.tavola;
     if (pronta(im)) {
-      const w = 90, h = w * im.naturalHeight / im.naturalWidth;
+      const w = trova(TAVOLE, id).largo || 90, h = w * im.naturalHeight / im.naturalWidth;
       k.drawImage(im, -w / 2, -4, w, h);
       k.restore();
       return;
@@ -3761,11 +3970,29 @@
     k.restore();
   }
 
+  // casco e adesivo del negozio sopra la foto (disegnata in x, y, w, h)
+  function vesti(k, posa, x, y, w, casco = scelti.casco, adesivo = scelti.adesivo) {
+    const P = POSE[posa], foto = immagini[posa];
+    if (!P || !pronta(foto)) return;
+    const sc = w / foto.naturalWidth;
+    const pezzo = (im, [cx, cy, ww, r]) => {
+      if (!pronta(im)) return;
+      const hh = ww * im.naturalHeight / im.naturalWidth;
+      k.save();
+      k.translate(x + cx * sc, y + cy * sc);
+      k.rotate(r * Math.PI / 180);
+      k.drawImage(im, -ww * sc / 2, -hh * sc / 2, ww * sc, hh * sc);
+      k.restore();
+    };
+    if (adesivo !== 'nessuno' && P.adesivo) pezzo(disegni['adesivo-' + adesivo], P.adesivo);
+    if (casco !== 'nessuno' && P.casco) pezzo(disegni['casco-' + casco], P.casco);
+  }
+
   function facciaTino() {
     const t = stato.tino;
     if (stato.fase === 'ko' || stato.fase === 'fine') return 'ko';
     if (t.ferito > 0 || t.caduta > 0) return 'ferito';
-    if (t.botta || stato.grinta >= GRINTA.tacca * GRINTA.tacche || t.ruote === 1) return 'arrabbiato';
+    if (t.botta || stato.grinta >= GRINTA.tacca * GRINTA.tacche || t.ruote === 1 || attivo('ruota-sgonfia')) return 'arrabbiato';
     return 'normale';
   }
 
@@ -3803,15 +4030,18 @@
           ctx.rotate(ko ? t.rot : 1.2 + Math.sin(stato.tempo * 30) * 0.1);
           const hh = 58, w = hh * im.naturalWidth / im.naturalHeight;
           fumetto(ctx, im, 62, -w / 2, -hh / 2, w, hh);
+          vesti(ctx, 'gino', -w / 2, -hh / 2, w);
         } else if (ko) {
           const hh = 58, w = hh * im.naturalWidth / im.naturalHeight;
           ctx.translate(x, y);
           fumetto(ctx, im, 94, -w / 2, -hh, w, hh, CONTORNO_TINO);
+          vesti(ctx, 'ko', -w / 2, -hh, w);
         } else {
           ctx.translate(x, y - 6);
           ctx.rotate(-1.25);
           const hh = 88, w = hh * im.naturalWidth / im.naturalHeight;
           fumetto(ctx, im, 94, -w / 2, -hh + 26, w, hh, CONTORNO_TINO);
+          vesti(ctx, faccia, -w / 2, -hh + 26, w);
         }
         ctx.restore();
       }
@@ -3846,10 +4076,10 @@
     // in aria: la tavola si illumina di rosso se si atterrerebbe storti
     const resto = Math.abs(restoGiro().resto);
     const storto = !t.terra && t.vy < 0 && resto > GIRO.manual;
-    const quasi = !storto && !t.terra && t.vy < 0 && resto > GIRO.tolleranza; // si atterra in manual
+    const quasi = !storto && !t.terra && t.vy < 0 && resto > pTav('tolleranza', GIRO.tolleranza); // si atterra in manual
 
     ctx.translate(x, y);
-    if (t.zona === 'sampietrini') ctx.translate(Math.sin(stato.tempo * 83) * 1.2, Math.abs(Math.sin(stato.tempo * 61)) * -3); // i sampietrini fanno tremare
+    if (t.zona === 'sampietrini' && !pTav('sampietrini', false)) ctx.translate(Math.sin(stato.tempo * 83) * 1.2, Math.abs(Math.sin(stato.tempo * 61)) * -3); // i sampietrini fanno tremare
     if (t.verso < 0) ctx.scale(-1, 1);
     ctx.rotate(base);
     if (manualRot) {
@@ -3878,10 +4108,38 @@
     ctx.save();
     ctx.translate(0, -11 + tavY);
     ctx.rotate(tavRot);
+    if (attivo('ruota-sgonfia')) ctx.rotate(0.07 + Math.sin(stato.tempo * 22) * 0.04); // la ruota sgonfia: la tavola pende e traballa
     if (storto) { ctx.shadowColor = 'rgba(255,40,40,0.95)'; ctx.shadowBlur = 14; }
     else if (quasi) { ctx.shadowColor = 'rgba(255,210,60,0.95)'; ctx.shadowBlur = 12; }
+    else if (attivo('ruote-oro')) { ctx.shadowColor = 'rgba(255,215,60,1)'; ctx.shadowBlur = 10 + Math.sin(stato.tempo * 12) * 4; }
     tavola(ctx, Math.abs(giro) < 0.12 ? 0.12 * Math.sign(giro || 1) : giro);
+    if (attivo('ruote-oro')) {
+      // le ruote d'oro: due ruote dorate che luccicano
+      ctx.shadowBlur = 0;
+      const rx = (tav().largo || 90) * (tav().ruote || 0.267);
+      for (const dx of [-rx, rx]) {
+        ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#8a5a00'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(dx, 9, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#fff6c9'; ctx.beginPath(); ctx.arc(dx - 1.5, 7.5, 1.6, 0, Math.PI * 2); ctx.fill();
+      }
+    }
     ctx.restore();
+    // casco: alone azzurro; calamita: anelli rossi
+    if (attivo('casco')) {
+      ctx.save();
+      ctx.globalAlpha = 0.35 + Math.sin(stato.tempo * 6) * 0.1;
+      ctx.strokeStyle = '#7fd3ff'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.ellipse(0, -52, 40, 56, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    if (attivo('calamita')) {
+      ctx.save();
+      const f = (stato.tempo * 1.6) % 1;
+      ctx.globalAlpha = 0.5 * (1 - f);
+      ctx.strokeStyle = '#ff5a4a'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, -50, 30 + f * 60, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
 
     if (pronta(im)) {
       ctx.save();
@@ -3897,9 +4155,12 @@
         ctx.translate(dx, dy);
         ctx.rotate(r);
         fumetto(ctx, im, 62, -w / 2, -hh, w, hh);
+        vesti(ctx, 'gino', -w / 2, -hh, w);
       } else {
         const hh = 94, w = hh * im.naturalWidth / im.naturalHeight;
+        if (t.contento > 0) ctx.translate(0, -Math.sin((1 - t.contento / 0.5) * Math.PI) * 10); // saltello col potenziamento
         fumetto(ctx, im, 94, -w / 2 - 2, -hh, w, hh, CONTORNO_TINO);
+        vesti(ctx, faccia, -w / 2 - 2, -hh, w);
       }
       ctx.restore();
     }
@@ -4086,6 +4347,27 @@
       }
     }
     testo('GRINTA', gx + 6, gy + gh + 18, 13, '#ffd9a8', 'left', 3);
+    // potenziamenti attivi: icona e anello del tempo (il casco resta finché non si urta)
+    let px = gx + 18;
+    for (const id of Object.keys(stato.poteri)) {
+      const P = POTERI[id], resta = stato.poteri[id], im = disegni['potere-' + id];
+      const py = gy + gh + 50, r = 17;
+      ctx.save();
+      if (resta < 2 && id !== 'casco' && Math.floor(stato.tempo * 8) % 2) ctx.globalAlpha = 0.45;
+      ctx.fillStyle = '#1c1f27';
+      ctx.beginPath(); ctx.arc(px, py, r + 5, 0, Math.PI * 2); ctx.fill();
+      if (id !== 'casco') {
+        ctx.strokeStyle = P.dispetto ? '#ff5a4a' : P.colore; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(px, py, r + 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(resta / P.dur, 0, 1)); ctx.stroke();
+      } else {
+        ctx.strokeStyle = P.colore; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(px, py, r + 3, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (pronta(im)) ctx.drawImage(im, px - r, py - r, 2 * r, 2 * r);
+      else { ctx.fillStyle = P.colore; ctx.beginPath(); ctx.arc(px, py, r - 2, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+      px += 50;
+    }
     if (!touch) testo('E Sfondamento · Q Botta', gx + 70, gy + gh + 18, 12, 'rgba(255,255,255,0.75)', 'left', 3);
     if (touch) {
       // pulsanti della Grinta
@@ -4175,11 +4457,13 @@
         <p><b>Metà sinistra:</b> salto (tieni premuto per saltare più in alto).</p>
         <p><b>Metà destra:</b> in aria un tocco è il Giglio, tenendo premuto la presa, trascinando a destra o a sinistra Tino gira (frontflip, backflip), trascinando in giù la schiacciata; a terra tenendo premuto il manual, trascinando in giù ti accucci (sotto le transenne alte). Nella half pipe trascina a destra per uscire.</p>
         <p><b>Pulsanti in alto:</b> SFONDA (1 tacca di Grinta) e BOTTA (3 tacche).</p>
+        <p><b>Potenziamenti:</b> salta per prendere le icone in alto (casco, ruote d'oro, calamita, bombolone, schiacciata, lampredotto); la ruota sgonfia a terra va saltata.</p>
       </div>`;
     }
     return `<div class="comandi">
       <p><kbd>Spazio</kbd> o <kbd>↑</kbd> salto (tieni premuto: più alto) · in aria <kbd>←</kbd> <kbd>→</kbd> backflip e frontflip: atterra con la tavola dritta! · <kbd>X</kbd> Giglio, tenendolo premuto la presa</p>
       <p><kbd>←</kbd> a terra manual (<kbd>→</kbd> di punta) · <kbd>↓</kbd> a terra ti accucci (passi sotto le transenne alte e prendi velocità), in aria schiacciata (sfonda le cassette) · nella half pipe tieni <kbd>→</kbd> per uscire · <kbd>E</kbd> Sfondamento (1 tacca) · <kbd>Q</kbd> Botta di Grinta (3 tacche)</p>
+      <p><b>Potenziamenti:</b> salta per prendere le icone in alto (casco, ruote d'oro, calamita, bombolone, schiacciata, lampredotto); la ruota sgonfia a terra va saltata.</p>
       <p>Mouse: tasto sinistro salto, destro trick · <kbd>P</kbd> pausa · <kbd>M</kbd> suoni · <kbd>N</kbd> musica</p>
     </div>`;
   }
@@ -4204,6 +4488,7 @@
       <div class="partenze"><span>Parti da:</span>${GIRO_QUARTIERI.map((id, i) => `<button class="partenza${partenza === i ? ' attivo' : ''}" data-azione="partenza" data-id="${i}" aria-pressed="${partenza === i}"${quartiereAperto(i) ? '' : ' disabled title="Arriva fin qui per sbloccarlo"'}>${QUARTIERI[id].breve}</button>`).join('')}</div>
       <div class="scelte">
         <button class="bottone secondario" data-azione="gioca">Corsa infinita</button>
+        <button class="bottone secondario" data-azione="negozio"><img src="ghianda.svg" alt="" class="ico-ghianda"> Negozio · ${ghiandeTotali}</button>
       </div>
       ${testoComandi()}
     </div>`;
@@ -4295,6 +4580,7 @@
       <p>Al tramonto, sul Ponte Vecchio, Tino e Gino guardano l'Arno con i loro skate.</p>
       ${datiCapitolo(r)}
       <p class="record">I punti migliori di ogni capitolo: <b>${totale.toLocaleString('it-IT')}</b></p>
+      <p class="sbloccato">Premio: l'adesivo <b>Abbasso la Tari</b>! Lo trovi nel negozio.</p>
       <div class="scelte">
         <button class="bottone" data-azione="menu" data-primo>Menu</button>
         <button class="bottone secondario" data-azione="capitolo" data-id="0">Ricomincia la storia</button>
@@ -4349,12 +4635,110 @@
         <div><b>${r.comboMax ? '× ' + r.comboMax : '–'}</b><span>combo più lunga</span></div>
       </div>
       ${record}
-      <p class="record">Record: ${recordMetri} m · ${recordPunti.toLocaleString('it-IT')} punti · ghiande raccolte in tutto: ${ghiandeTotali}</p>
+      ${r.sbloccati.length ? `<p class="sbloccato">Sbloccato: <b>${r.sbloccati.join(', ')}</b>! Lo trovi nel negozio.</p>` : ''}
+      <p class="record">Record: ${recordMetri} m · ${recordPunti.toLocaleString('it-IT')} punti · ghiande da spendere: ${ghiandeTotali}</p>
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Riparti</button>
+        <button class="bottone secondario" data-azione="negozio"><img src="ghianda.svg" alt="" class="ico-ghianda"> Negozio</button>
         <button class="bottone secondario" data-azione="menu">Menu</button>
       </div>
     </div>`;
+  }
+
+  // ---------------------------------------------------------------- negozio
+  // Tre schede: tavole (con i poteri), caschi e adesivi (da guardare). Si compra
+  // con le ghiande raccolte; alcuni pezzi si sbloccano col record o con la storia.
+  let schedaNegozio = 'tavola';
+  const SCHEDE = { tavola: 'Tavole', casco: 'Caschi', adesivo: 'Adesivi' };
+  function pannelloNegozio() {
+    const tipo = schedaNegozio, lista = LISTE[tipo], scelto = scelti[tipo];
+    const voci = lista.map((x) => {
+      const mio = posseduto(tipo, x.id);
+      let bottone;
+      if (x.id === scelto) bottone = '<span class="in-uso-etichetta">In uso</span>';
+      else if (mio) bottone = `<button class="bottone piccolo" data-azione="usa" data-id="${x.id}">Usa</button>`;
+      else if (x.traguardo) bottone = `<span class="traguardo">Record di ${x.traguardo} m</span>`;
+      else if (x.storia) bottone = '<span class="traguardo">Finisci la storia</span>';
+      else bottone = `<button class="bottone piccolo" data-azione="compra" data-id="${x.id}" ${ghiandeTotali < x.prezzo ? 'disabled' : ''}><img src="ghianda.svg" alt="ghiande" class="ico-ghianda"> ${x.prezzo}</button>`;
+      const potere = tipo === 'tavola'
+        ? `<span class="potere"><span class="piu">${x.piu}</span>${x.meno ? `<span class="meno">${x.meno}</span>` : ''}</span>` : '';
+      const file = tipo === 'tavola' ? (x.file || 'tavole/' + x.id) : (tipo === 'casco' ? 'caschi/' : 'adesivi/') + x.id;
+      const fig = x.id === 'nessuno' ? '<span class="niente">–</span>' : `<img class="fig-${tipo}" src="${DISEGNI}${file}.png" alt="">`;
+      return `<li class="pezzo${x.id === scelto ? ' scelto' : ''}${mio ? '' : ' chiuso'}">
+        <span class="figura">${fig}</span>
+        <span class="nome">${x.nome}</span>
+        ${potere}
+        ${bottone}
+      </li>`;
+    }).join('');
+    const note = {
+      tavola: 'Ogni tavola ha un piccolo potere: un vantaggio e un piccolo svantaggio.',
+      casco: 'I caschi sono solo da guardare: Tino (e Gino) li porta in corsa.',
+      adesivo: 'Gli adesivi sono solo da guardare: Tino se li attacca sul fianco.',
+    };
+    return `<div class="riquadro negozio">
+      <h2>Negozio</h2>
+      <canvas class="anteprima-tino" data-anteprima="tino" width="260" height="150"></canvas>
+      <p class="borsa"><img src="ghianda.svg" alt="" class="ico-ghianda"> <b>${ghiandeTotali}</b> ghiande da spendere · record ${recordMetri} m</p>
+      <div class="schede" role="tablist">${Object.keys(SCHEDE).map((k) => `<button role="tab" class="scheda${k === tipo ? ' attiva' : ''}" aria-selected="${k === tipo}" data-azione="scheda" data-scheda="${k}">${SCHEDE[k]}</button>`).join('')}</div>
+      <p class="nota">${note[tipo]}</p>
+      <ul class="merce">${voci}</ul>
+      <div class="scelte">
+        <button class="bottone" data-azione="gioca" data-primo>Corsa infinita</button>
+        <button class="bottone secondario" data-azione="storia">La storia</button>
+        <button class="bottone secondario" data-azione="menu">Menu</button>
+      </div>
+    </div>`;
+  }
+  function mostraNegozio(fuoco) {
+    const scroll = pannello.querySelector('.merce') ? pannello.scrollTop : 0;
+    mostraPannello(pannelloNegozio());
+    pannello.scrollTop = scroll;
+    if (fuoco && !touch) { const b = pannello.querySelector(fuoco); if (b) b.focus({ preventScroll: true }); }
+    disegnaAnteprima();
+  }
+  function compra(tipo, id) {
+    const x = trova(LISTE[tipo], id);
+    if (x.traguardo || x.storia || posseduto(tipo, id) || ghiandeTotali < x.prezzo) return false;
+    ghiandeTotali -= x.prezzo;
+    scrivi('ghiande-totali', ghiandeTotali);
+    presi[tipo].push(id);
+    scrivi({ tavola: 'tavole', casco: 'caschi', adesivo: 'adesivi' }[tipo], presi[tipo]);
+    usa(tipo, id);
+    suoni.record();
+    return true;
+  }
+  function usa(tipo, id) {
+    scelti[tipo] = id;
+    scrivi(tipo, id);
+  }
+  // in cima al negozio: Tino sulla tavola scelta, con casco e adesivo (e Gino col casco)
+  function disegnaAnteprima() {
+    const c = pannello.querySelector('canvas[data-anteprima]');
+    if (!c) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = +c.getAttribute('width'), H = +c.getAttribute('height');
+    c.style.width = W + 'px'; c.style.height = H + 'px';
+    c.width = W * dpr; c.height = H * dpr;
+    const k = c.getContext('2d');
+    k.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const foto = immagini.normale;
+    k.save();
+    k.translate(W * 0.38, H - 14);
+    k.scale(1.35, 1.35);
+    k.save(); k.translate(0, -11); tavola(k); k.restore();
+    if (pronta(foto)) {
+      const hh = 94, w = hh * foto.naturalWidth / foto.naturalHeight;
+      k.drawImage(foto, -w / 2 - 2, -hh - 13, w, hh);
+      vesti(k, 'normale', -w / 2 - 2, -hh - 13, w);
+    }
+    k.restore();
+    const gino = immagini.gino;
+    if (pronta(gino)) {
+      const hh = 64, w = hh * gino.naturalWidth / gino.naturalHeight;
+      k.drawImage(gino, W * 0.8 - w / 2, H - 8 - hh, w, hh);
+      vesti(k, 'gino', W * 0.8 - w / 2, H - 8 - hh, w);
+    }
   }
 
   pannello.addEventListener('click', (e) => {
@@ -4362,6 +4746,10 @@
     if (!btn) return;
     switch (btn.dataset.azione) {
       case 'gioca': nuovaCorsa(); break;
+      case 'negozio': mostraNegozio(); break;
+      case 'scheda': schedaNegozio = btn.dataset.scheda; mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
+      case 'usa': usa(schedaNegozio, btn.dataset.id); mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
+      case 'compra': if (compra(schedaNegozio, btn.dataset.id)) mostraNegozio(`[data-scheda="${schedaNegozio}"]`); break;
       case 'storia': mostraPannello(pannelloStoria()); break;
       case 'capitolo': nuovaStoria(+btn.dataset.id); break;
       case 'riprova-inseguimento': riprovaInseguimento(); break;
@@ -4425,5 +4813,10 @@
     rimetti: (s) => { stato = s; },
     larghezza: () => larg,
     FISICA, CURVE, TRICK, GRINTA, VITA, AGENTI, PEZZI, FORME, PX_M, MEZZI, INSEGUIMENTO, STORIA,
+    POTERI, COMPARSA, TAVOLE, CASCHI, ADESIVI, POSE,
+    // negozio: scegliere senza comprare, regalare ghiande, comprare
+    prova: (tipo, id) => { scelti[tipo] = id; },
+    regalaGhiande: (n) => { ghiandeTotali += n; },
+    compra, posseduto, prendiPotere, vesti,
   };
 })();

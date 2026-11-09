@@ -81,3 +81,6 @@ e poi si visita http://localhost:8000.
   capitoli (uno per quartiere), ognuno con l'inseguimento finale dell'ispettore capo su un
   mezzo (Ape, monopattino, carrello del cantiere, golf cart): quando il mezzo si inceppa gli
   si salta in testa; vignette tra un capitolo e l'altro e finale sul Ponte Vecchio.
+  Lungo la strada ci sono potenziamenti da prendere saltando (casco, ruote d'oro, calamita,
+  bombolone, schiacciata all'olio, lampredotto) e una ruota sgonfia da evitare; con le
+  ghiande raccolte si comprano nel negozio tavole con piccoli poteri, caschi e adesivi.
