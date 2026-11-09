@@ -310,3 +310,10 @@ kbd {
 .partenza.attivo { background: var(--marrone); color: #fff; }
 .partenza:disabled { opacity: 0.4; cursor: not-allowed; border-style: dashed; }
 .partenza:focus-visible { outline: 3px solid #ffd59a; }
+
+/* Il menu: la storia sopra, la corsa infinita sotto */
+.riquadro h2.sottotitolo { margin: 14px 0 0; font-size: 1.4rem; color: var(--marrone); }
+.vignetta.finale { height: auto; aspect-ratio: 900 / 491; max-height: 40vh; }
+.vignetta.finale .sfondo { object-position: 50% 20%; }
+.fumetto .salta { animation: saltello 1.2s ease-in-out infinite; }
+.fumetto .trema { animation: trema 0.5s ease-in-out infinite; transform-origin: 50% 100%; }

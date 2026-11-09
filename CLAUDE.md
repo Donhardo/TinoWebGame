@@ -965,8 +965,8 @@ logica, su canvas), `ghianda.svg`.
 - **Tappe**: 1 motore (fatta: corsa, salti, trick, combo, grind, manual, schiacciata,
   Grinta, agenti col retino e col timbro, quartiere delle Cascine, corsa infinita,
   musica punk, Gino giocabile); 2 contenuti (fatti i quattro quartieri: Novoli, cantieri
-  della tramvia e centro con ostacoli propri; da fare: modalità storia con gli inseguimenti dell'ispettore capo,
-  potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
+  della tramvia e centro con ostacoli propri; fatta la modalità storia con gli inseguimenti
+  dell'ispettore capo; da fare: potenziamenti per strada: casco, ruote d'oro, calamita, bombolone, schiacciata
   all'olio, lampredotto, ruota sgonfia; negozio); grafica a fumetto delle Cascine e della
   half pipe (fatta, prima della tappa 2); 3
   rifinitura (suoni, taratura con persone vere).
@@ -1065,8 +1065,8 @@ logica, su canvas), `ghianda.svg`.
   monopattini, ruspa, benna, fango, binari, tram, sampietrini, turista, bancarella, bici;
   `pipe/scavo.png`, `pipe/muro-cantiere.png`; `mezzi/` ape, monopattino, carrello, golf
   (I1-I4); `poteri/` casco, ruote-oro, calamita, schiacciata, lampredotto, ruota-sgonfia
-  (P1-P3, P5-P7); `tavole/` giglio, longboard, leggera, pesante (T1-T4). Mezzi, poteri e
-  tavole non sono ancora usati nel codice.
+  (P1-P3, P5-P7); `tavole/` giglio, longboard, leggera, pesante (T1-T4). Mezzi e vignette
+  sono usati dalla storia; poteri, tavole, caschi e adesivi non ancora.
 - **Quartieri** (tabella `QUARTIERI`, `GIRO_QUARTIERI`, `quartiereA(x)`): Cascine → Novoli →
   cantieri della tramvia → centro, 750 m l'uno (`LUNGO_QUARTIERE`), poi si ricomincia dalle
   Cascine (sempre più veloci). Ogni quartiere ha nome, colori (cielo, colline, palazzi,
@@ -1100,6 +1100,45 @@ logica, su canvas), `ghianda.svg`.
     si passa sotto), bici nella rastrelliera (solide a 54, larghe 170).
   - Tolti dopo le prove: l'agente col timbro sopra la fioriera e sopra la bancarella (atterrando
     sulla fioriera ci si scivolava contro; sulla bancarella la tettoia lo copriva).
+- **Storia** (tabelle `STORIA`, `MEZZI`, `INSEGUIMENTO`; `nuovaStoria(cap)`, `stato.storia` =
+  `{ cap, fase: strada | inseguimento | vinto, xFine, xVia }`, `stato.capo`): nel menu "La
+  storia" (prima), sotto la corsa infinita con personaggio e partenza. Quattro capitoli, uno
+  per quartiere, solo con Tino: 750 m di strada (il generatore si ferma a `xFine`, il
+  quartiere resta quello del capitolo anche dopo), poi l'inseguimento dell'ispettore capo.
+  Pannelli: introduzione (vignetta delle Cascine, scelta del capitolo tra quelli aperti), tra un
+  capitolo e l'altro la vignetta del quartiere dopo col titolo sul cartello, punti e battute
+  (`DOPO`), finale con la vignetta del Ponte Vecchio (Gino riprende lo skate) e il totale dei
+  punti migliori. Se Tino è KO sulla strada si rifà il capitolo; nell'inseguimento si riprova
+  dall'inizio dell'inseguimento con le ruote piene (`riprovaInseguimento`, copia dello stato
+  presa all'inizio), senza limiti.
+- **Inseguimento**: l'ispettore (SVG, non si specchia) sul mezzo dipinto: Ape (Cascine, sacchi
+  di bollette), monopattino (Novoli, in piedi, più alto da colpire: 124, bollette e coni),
+  carrello del cantiere (cartacce rovesciate dalla benna: ci si sale sopra; monopattino e
+  carrello sono dipinti verso sinistra e si disegnano specchiati, `specchia`) e golf cart con lo
+  skate di Gino (centro, tutti gli attacchi). Entra da destra, poi il ciclo: **fuga** (5,5 →
+  4,8 → 4,2 → 3,8 s secondo i colpi presi; sta 460 px avanti a Tino e attacca col braccio alzato
+  e il "!" 0,45 s prima: bollette basse o alte che vanno 330 px/s più piano di lui, disegnate 1,4 volte più
+  grandi delle altre (urti ×1,2; `INSEGUIMENTO.grandezza`), oppure
+  lascia cadere sacco / cartacce / cono; niente attacchi nei primi 0,8 s e negli ultimi 1,3),
+  **avviso** (0,9 s di fumo), **inceppo** (torna indietro verso Tino a 270 px/s, con la freccia
+  gialla sopra): saltandogli in testa (cima `alto` del mezzo) è un colpo (+500, rimbalzo come il
+  pestone, ghiande e, se manca, una ruota di scorta); urtarlo di lato toglie una ruota e lui
+  riparte ridendo; se Tino lo supera senza colpirlo riparte. Lo Sfondamento addosso vale un
+  colpo, la Botta di Grinta lo fa incepparsi subito. Colpi: 3, 3, 3, 4. All'ultimo il mezzo si
+  schianta (+2000) e l'ispettore vola all'indietro. Durata ~29 s (centro ~36) giocando bene.
+  Musica intensa per tutto l'inseguimento; HUD in alto a destra: "Ispettore tra N m", poi i
+  colpi che mancano (bollette).
+- **Taratura della storia** (copioni Playwright non nel repository; `giocaCapitolo` gioca un
+  capitolo intero con i tentativi): il pianificatore (4 mosse per tratti da 0,15 s, 5 tratti
+  avanti, con l'ispettore inceppato cerca prima le sequenze che lo colpiscono) vince tutti gli
+  inseguimenti senza urti (12 semi per capitolo). I giocatori "umani" (finestra della mossa che
+  supera il pericolo, fatta a metà con l'errore: principiante 0,12 s, medio 0,08, bravo 0,05;
+  ↓ tenuto fino a dopo il pericolo) su capitoli interi (8 semi): bravo vince quasi sempre al
+  primo tentativo (0-0,1 KO a capitolo); medio 0-0,4 KO sulla strada e 0-0,25 nell'inseguimento;
+  principiante vince tutti i capitoli entro pochi tentativi (KO sulla strada 0,1-1,6, nel centro
+  3,1; nell'inseguimento 0,1-0,4). Solo inseguimento con 3 ruote (16 semi): principiante
+  81-100%, medio 94-100%, bravo 94-100%. Prima di separare le coppie del monopattino (attacchi
+  ogni 1,15 s, ora 1,3) i coni lì erano la causa di urto più frequente.
 - **Mondo**: x verso destra, h verso l'alto (0 = strada), 40 px = 1 m. Schermo logico
   alto 540, largo 760-1300 secondo lo schermo; Tino sta a 0,26 della larghezza.
 - **Fisica** (tabella `FISICA`): gravità 2300, ollie 780 (~132 px; tenendo premuto la
@@ -1196,7 +1235,8 @@ logica, su canvas), `ghianda.svg`.
   testa) saltella quando chiude una combo, trema quando urta, rotola quando cade.
 - **Punteggio**: punti delle combo + 10 per ghianda + 50 per ogni cosa sfondata;
   `localStorage` `tino-pro-skate:record-metri`, `record-punti`, `ghiande-totali`,
-  `storia-vista` (il dialogo della storia compare la prima volta).
+  `storia-capitolo` (capitoli finiti, 4 = storia finita), `storia-punti` (i punti migliori
+  di ogni capitolo).
 - **Difficoltà tarata** con corse simulate (Playwright, solo salti, senza trick né
   Grinta): un giocatore che pianifica (ricerca in profondità sul futuro copiato con
   `clona`/`rimetti`, 7 tratti da 0,15 s) arriva a 4500 m con 0-3 urti in 10 corse su 10;
@@ -1217,7 +1257,7 @@ logica, su canvas), `ghianda.svg`.
   bravo ~7150 m. Il copione di prima dava numeri un po' diversi (1500 / 2700 / 5150): i due
   copioni non sono confrontabili tra loro, solo con sé stessi. Prima di accorciarli le bici
   (196 px) e i monopattini (175) lasciavano una finestra di salto di meno di 0,1 s.
-- **Prove automatiche**: `window.tinoProSkate` (`stato` (getter), `nuovaCorsa(seme, da)` (da = quartiere di partenza, 0-3),
+- **Prove automatiche**: `window.tinoProSkate` (`stato` (getter), `nuovaCorsa(seme, da)` (da = quartiere di partenza, 0-3), `nuovaStoria(cap, seme)`, `riprovaInseguimento()`, tabelle `MEZZI`, `INSEGUIMENTO`, `STORIA`; `stato.statistiche.colpiCapo`,
   `aggiorna`, `premi(azione, giu)` con azione `salto`, `trick`, `giu`, `avanti`,
   `indietro`, `sfondamento`, `botta`, `clona()`, `rimetti(s)`, `supporto`, `curva`, tabelle); con
   `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli. Lo stato
@@ -1235,7 +1275,8 @@ logica, su canvas), `ghianda.svg`.
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti),
   `css/sito.css`, `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`,
   `disegni/`, `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e
-  `root`. Per provare i quartieri, nella copia di `gioco.js` `quartiereAperto = () => true`.
+  `root`. Per provare i quartieri, nella copia di `gioco.js` `quartiereAperto = () => true`; per
+  aprire tutti i capitoli della storia `leggi('storia-capitolo', 3)`.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
