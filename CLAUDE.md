@@ -1610,10 +1610,11 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   codice. I prompt 2 e 3 di `prompt.md` sono stati riscritti (un prato "a mappa", non un
   tavolo da flipper) con la chat nuova di Gemini la metà alta è venuta giusta
   (`piano-radici-alto.png`, 848 × 1264, colori pieni, nessuna deformazione: in una chat
-  già usata Gemini ritoccava il tavolo intero di prima). Si aspetta la metà bassa; intanto
-  `pianoDipinto` usa anche una metà sola: sotto c'è il prato del codice e la metà dipinta
-  sfuma su di lui dal lato che manca.
-  **Prossimo**: preparare le due metà del piano quando arrivano, farle provare, poi
+  già usata Gemini ritoccava il tavolo intero di prima). Poi, nella stessa chat, anche la metà
+  bassa (`piano-radici-basso.png`, 848 × 1264): le due metà si uniscono senza giunta.
+  `pianoDipinto` usa anche una metà sola (sotto il prato del codice, la metà dipinta
+  sfuma sul lato che manca).
+  **Prossimo**: far provare backglass e piano al proprietario, poi
   decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
   sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.
