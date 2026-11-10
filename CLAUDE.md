@@ -55,6 +55,20 @@ altre immagini, seguiranno lo schema normale, arrabbiato, ferito, ko.
   e `.bottone.secondario`, animazioni `saltello` e `oscilla`). Ogni pagina lo
   include; ogni gioco aggiunge il proprio `stile.css`.
 - Font: Fredoka da Google Fonts, con font di sistema come riserva.
+- **Sito installabile come app** (sul telefono "Aggiungi alla schermata Home" / "Installa
+  app": si apre a schermo intero, senza la barra del browser): `manifest.webmanifest`
+  (nome "I giochi di Tino", `display: fullscreen`, avvio e ambito `./`, icone in
+  `assets/icone/`: 192, 512, 512 maskable, `apple-touch-icon` 180 per iPhone, fatte dalla
+  foto originale di Tino su un cerchio crema col bordo verde) e `sw.js` (service worker che
+  non mette niente da parte: tutto arriva sempre dalla rete; senza rete mostra un avviso).
+  Prima Chrome su Android diceva che il sito non si poteva installare e aggiungeva solo un
+  collegamento con la barra. `js/sito.js` registra il service worker e nelle pagine dei
+  giochi aggiunge in testa a `.barra-destra` il pulsante **schermo intero** (classe
+  `barra-btn barra-schermo`, Fullscreen API; non compare dove il browser non la ha, cioè su
+  iPhone, né quando il sito è già aperto come app a schermo intero). Ogni pagina ha nel
+  `<head>` il link al manifest, `theme-color`, i meta per iPhone, l'`apple-touch-icon` e
+  `<script src="…js/sito.js" defer>` (con `../../` nei giochi). Chrome non segnala errori
+  di installazione su nessuna pagina (provato con Playwright sotto `/TinoWebGame/`).
 - `assets/tino/` e `assets/gino/`: PNG già ritagliati, max 512 px, palette
   ottimizzata (30–50 KB l'uno).
 
@@ -1787,6 +1801,8 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
+  copiare dalle altre pagine le righe del `<head>` per l'app (manifest, meta, icona,
+  `js/sito.js`);
   riusare `css/sito.css`, la barra in alto e i pannelli (menu, pausa, fine)
   di Botta e Ghianda come modello.
 - Aggiungere la scheda nella home e una voce in questo file e nel README.

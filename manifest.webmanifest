@@ -1,0 +1,19 @@
+{
+  "name": "I giochi di Tino",
+  "short_name": "Tino",
+  "description": "Minigiochi per browser con Tino, lo scoiattolo di peluche, e suo figlio Gino.",
+  "lang": "it",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#fff8ec",
+  "theme_color": "#4f9a3f",
+  "icons": [
+    { "src": "assets/icone/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icone/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icone/icona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
