@@ -1103,22 +1103,31 @@
       backglass: { src: 'disegni/backglass-radici.png', display: [0.165, 0.798, 0.671, 0.09], tino: [0.36, 0.672, 0.36], gino: [0.705, 0.655, 0.17] },
     };
     const pronto = (d) => !!(d && d.img && d.img.complete && d.img.naturalWidth > 0);
+    // Se c'è solo una delle due metà, l'altra resta il prato del codice e la metà
+    // dipinta sfuma su di lui dal lato che manca.
     function pianoDipinto(g) {
       const pezzi = DIPINTI.piano;
-      if (!pezzi.every(pronto)) return false;
+      if (!pezzi.some(pronto)) return false;
+      if (!pezzi.every(pronto)) disegnaPrato(g);
       const k = g.getTransform ? g.getTransform().a : 1;
       pezzi.forEach((p, i) => {
-        const prec = pezzi[i - 1];
-        const sfuma = prec ? prec.y + prec.h - p.y : 0;
-        if (sfuma <= 0) { g.drawImage(p.img, p.x, p.y, p.w, p.h); return; }
-        // tela a parte col bordo alto che sfuma nella metà di sopra
+        if (!pronto(p)) return;
+        const prec = pezzi[i - 1], dopo = pezzi[i + 1];
+        const sopra = prec ? prec.y + prec.h - p.y : 0;
+        const sotto = dopo && !pronto(dopo) ? p.y + p.h - dopo.y : 0;
+        if (sopra <= 0 && sotto <= 0) { g.drawImage(p.img, p.x, p.y, p.w, p.h); return; }
+        // tela a parte coi bordi che sfumano su quello che c'è sotto
         const c = document.createElement('canvas');
         c.width = Math.round(p.w * k); c.height = Math.round(p.h * k);
         const t = c.getContext('2d');
         t.drawImage(p.img, 0, 0, c.width, c.height);
         t.globalCompositeOperation = 'destination-in';
-        const gr = t.createLinearGradient(0, 0, 0, sfuma * k);
-        gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
+        const gr = t.createLinearGradient(0, 0, 0, c.height);
+        const a = Math.max(0, sopra) / p.h, b = Math.max(0, sotto) / p.h;
+        gr.addColorStop(0, a ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,1)');
+        if (a) gr.addColorStop(a, 'rgba(0,0,0,1)');
+        if (b) gr.addColorStop(1 - b, 'rgba(0,0,0,1)');
+        gr.addColorStop(1, b ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,1)');
         t.fillStyle = gr;
         t.fillRect(0, 0, c.width, c.height);
         g.drawImage(c, p.x, p.y, p.w, p.h);

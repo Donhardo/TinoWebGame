@@ -1608,7 +1608,11 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   completo in 2:3, con fionde e corsie) invece che in due metà; allungato fino all'1:3 del
   tavolo era troppo deformato (al proprietario non va) e non si usa: resta il prato del
   codice. I prompt 2 e 3 di `prompt.md` sono stati riscritti (un prato "a mappa", non un
-  tavolo da flipper) e si aspettano le due metà nuove.
+  tavolo da flipper) con la chat nuova di Gemini la metà alta è venuta giusta
+  (`piano-radici-alto.png`, 848 × 1264, colori pieni, nessuna deformazione: in una chat
+  già usata Gemini ritoccava il tavolo intero di prima). Si aspetta la metà bassa; intanto
+  `pianoDipinto` usa anche una metà sola: sotto c'è il prato del codice e la metà dipinta
+  sfuma su di lui dal lato che manca.
   **Prossimo**: preparare le due metà del piano quando arrivano, farle provare, poi
   decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
   sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
