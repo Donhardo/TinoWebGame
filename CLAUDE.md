@@ -1602,7 +1602,17 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   rimisurare sull'immagine vera. Col backglass la lista delle avventure sparisce durante
   un'avventura e la mini mappa si stringe; sul telefono il backglass compare piccolo nel
   menu (`anteprimaBackglass`) al posto dei ritratti. Senza i file tutto resta com'era.
-  **Prossimo**: preparare le immagini quando arrivano, poi
+  **Immagini arrivate e preparate** (novembre 2026): il backglass è venuto come chiesto
+  (ritagliato il bordo bianco, 600 × 812, 256 colori; finestra del display e posti di Tino
+  e Gino rimisurati in `DIPINTI.backglass`). Il piano invece Gemini l'ha dipinto **intero**
+  in 2:3 (848 × 1264) invece che in due metà, con le fionde e le corsie in fondo: si usa un
+  solo `piano-radici.png` (760 × 2188, colori pieni) allungato in verticale, le prime 878
+  righe fino a y 1580 (dove iniziano le corsie) e il resto fino in fondo, così fionde e
+  corsie dipinte cadono quasi sotto quelle del gioco; foglie e fiori sono allungati ~2,3
+  volte. Delle due versioni avute si usa la prima: la seconda aveva tre corsie dipinte in
+  cima che non combaciavano con le quattro T·I·N·O. Se l'allungamento non piace, si
+  rifanno le due metà (nel prompt va detto più chiaro che è solo metà tavolo).
+  **Prossimo**: far provare le immagini al proprietario, poi
   decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
   sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.

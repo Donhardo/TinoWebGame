@@ -11,6 +11,11 @@ com'è. Allegati da mettere insieme al testo:
 - piano, metà bassa: `guide/guida-piano-basso.png` **e** la metà alta già fatta
   (per lo stesso stile e gli stessi colori).
 
+**Com'è andata** (novembre 2026): il backglass è venuto bene al primo colpo; il piano
+Gemini l'ha fatto intero (tavolo completo in 2:3) invece che in due metà, e il gioco lo
+usa allungato in verticale (`piano-radici.png`). Se si rifanno le metà, dire più chiaro
+"ONLY THE TOP HALF of the playfield, the flippers are NOT in this picture".
+
 Se un'immagine non va, si rifà: il gioco usa i PNG solo se ci sono, altrimenti
 resta il disegno nel codice.
 

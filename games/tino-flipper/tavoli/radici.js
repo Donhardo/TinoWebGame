@@ -1095,12 +1095,14 @@
     // finiscono sotto la cornice). Se manca un file resta il prato del codice.
     const DIPINTI = {
       piano: [
-        { src: 'disegni/piano-radici-alto.png', x: -10, y: 0, w: 660, h: 990 },
-        { src: 'disegni/piano-radici-basso.png', x: -10, y: 910, w: 660, h: 990 },
+        // Gemini ha dipinto il tavolo intero in 2:3 invece delle due metà: il PNG è
+        // allungato in verticale (le prime 878 righe del disegno fino a y 1580, dove
+        // iniziano le corsie, il resto fino in fondo)
+        { src: 'disegni/piano-radici.png', x: -10, y: 0, w: 660, h: 1900 },
       ],
       // backglass: misure in frazioni del disegno (3:4). display = finestra del
       // display a puntini [x, y, w, h]; tino e gino = [centro x, piedi y, altezza]
-      backglass: { src: 'disegni/backglass-radici.png', display: [0.08, 0.705, 0.84, 0.205], tino: [0.33, 0.645, 0.4], gino: [0.73, 0.63, 0.19] },
+      backglass: { src: 'disegni/backglass-radici.png', display: [0.165, 0.798, 0.671, 0.09], tino: [0.36, 0.672, 0.36], gino: [0.705, 0.655, 0.17] },
     };
     const pronto = (d) => !!(d && d.img && d.img.complete && d.img.naturalWidth > 0);
     function pianoDipinto(g) {
