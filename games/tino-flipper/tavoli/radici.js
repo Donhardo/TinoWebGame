@@ -3,7 +3,8 @@
  *
  * Tavolo logico 640 × 1900 (il corridoio di lancio è a destra, x 580-620).
  * Campo (piano 0) e galleria alta (piano 1, mini campo di assi in alto a
- * sinistra con il quarto flipper). Elementi: fionde, bumper (nodi), corsie
+ * sinistra con il quarto flipper). Elementi: fionde, bumper (tre funghi e due
+ * funghetti), fila di formiche sul prato (scappano quando passa la ghianda), corsie
  * T·I·N·O, orbita destra con lo spinner, radice lunga (rampa di legno con il
  * deviatore verso la dispensa), giro della morte con la liana, buca del ghiro
  * (tunnel verso il pozzo, con il sasso che spunta davanti), sassi (bersagli che
@@ -23,7 +24,7 @@
   const R = TF.R;
 
   const PUNTI = {
-    bumper: 1000, fionda: 110, corsia: 5000, corsieTutte: 25000, corsiaInterna: 1000, corsiaEsterna: 5000,
+    bumper: 1000, funghetto: 750, formica: 250, formicaio: 25000, fionda: 110, corsia: 5000, corsieTutte: 25000, corsiaInterna: 1000, corsiaEsterna: 5000,
     sasso: 3000, sassiTutti: 25000, cartello: 3000, cartelliTutti: 25000, spunta: 5000, tunnel: 10000,
     torcia: 5000, torceTutte: 50000, gino: 7500, uscita: 5000, agente: 5000, stordito: 25000,
     chiave: 15000, spinner: 300, orbita: 15000, rampa: 20000, rampaInPiu: 5000, giro: 25000,
@@ -49,7 +50,7 @@
   const ROBIVECCHI = [
     { id: 'moneta', nome: 'Moneta', impresa: 'Fai un tiro da maestro', dove: 'nella galleria alta, accanto al pozzo', x: 200, y: 500, piano: 1, mira: ['tunnel'] },
     { id: 'bottone', nome: 'Bottone', impresa: 'Completa T·I·N·O due volte nella stessa palla', dove: 'in cima all\'orbita destra', x: 550, y: 500, piano: 0, mira: ['orbita'] },
-    { id: 'graffetta', nome: 'Graffetta', impresa: 'Accendi le tre torce nella stessa palla', dove: 'tra i nodi', x: 352, y: 284, piano: 0, freccia: false, mira: ['robivecchio'] },
+    { id: 'graffetta', nome: 'Graffetta', impresa: 'Accendi le tre torce nella stessa palla', dove: 'tra i funghi', x: 352, y: 284, piano: 0, freccia: false, mira: ['robivecchio'] },
     { id: 'fiocco', nome: 'Fiocco', impresa: 'Tre radici lunghe di fila nella stessa combo', dove: 'in cima alla radice lunga, sul deviatore', x: 270, y: 438, piano: 0, percorso: 'rampa', s: 'fine', mira: ['rampa'] },
     { id: 'carta', nome: 'Carta di credito scaduta', file: 'carta-scaduta', impresa: 'Acciuffa l\'agente nell\'avventura Inseguimento', dove: 'sopra il sentiero dell\'agente', x: 430, y: 648, piano: 0, mira: ['robivecchio'] },
     { id: 'tappo', nome: 'Tappo a corona', impresa: 'Fai un super jackpot su Gino', dove: 'in cima all\'anello del giro della morte', x: 455, y: 505, piano: 0, percorso: 'giro', mira: ['giro'] },
@@ -124,12 +125,51 @@
     m.segmento(236, 38, 250, 112, { tipo: 'muro', r: 3, e: 0.12 });
     CORSIE.forEach((x, i) => m.sensore('corsia', x - 22, 140, x + 22, 140, { verso: [0, 1], dati: { i }, esito: 'corsie' }));
 
-    // nodi (bumper)
-    const BUMPER = [{ x: 300, y: 255 }, { x: 405, y: 248 }, { x: 352, y: 338 }].map((b, i) => {
-      b.c = m.cerchio(b.x, b.y, 27, { tipo: 'bumper', id: 'bumper', spinta: 980, dati: { i } });
+    // funghi (bumper): tre grandi tra le corsie e il sentiero, due funghetti
+    // più piccoli a destra, sotto la volta (prendono la ghianda che scende
+    // dall'orbita o rimbalza fuori dai funghi grandi)
+    const BUMPER = [
+      { x: 300, y: 255 }, { x: 405, y: 248 }, { x: 352, y: 338 },
+      { x: 455, y: 380, r: 18, spinta: 820, piccolo: true }, { x: 500, y: 318, r: 18, spinta: 820, piccolo: true },
+    ].map((b, i) => {
+      b.r = b.r || 27;
+      b.c = m.cerchio(b.x, b.y, b.r, { tipo: 'bumper', id: 'bumper', spinta: b.spinta || 980, dati: { i } });
       b.lampo = 0; b.i = i;
       return b;
     });
+
+    // Formiche: una fila che va dal formicaio (a sinistra, sotto le radici)
+    // alle briciole (in mezzo al prato, prima del terzo flipper) e torna con
+    // una briciola ciascuna. Non urtano la ghianda: se passa vicino scappano
+    // (punti) e poi tornano in fila. Solo disegno e punti, niente fisica.
+    const FORMICAIO = { x: 86, y: 1238 };
+    const BRICIOLE = { x: 452, y: 1214 };
+    const FILA = (() => {
+      const andata = [[100, 1236], [160, 1258], [230, 1248], [300, 1224], [370, 1236], [440, 1216]];
+      const ritorno = [[440, 1230], [372, 1250], [300, 1238], [232, 1262], [160, 1272], [100, 1248]];
+      const punti = [...andata, ...ritorno];
+      const lun = [0];
+      for (let i = 1; i <= punti.length; i++) {
+        const a = punti[i - 1], b = punti[i % punti.length];
+        lun.push(lun[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1]));
+      }
+      let mezzo = 0;
+      for (let i = 1; i < andata.length; i++) mezzo += Math.hypot(andata[i][0] - andata[i - 1][0], andata[i][1] - andata[i - 1][1]);
+      return { punti, lun, tot: lun[lun.length - 1], mezzo };
+    })();
+    function puntoFila(s) {
+      s = ((s % FILA.tot) + FILA.tot) % FILA.tot;
+      let i = 1;
+      while (FILA.lun[i] < s) i++;
+      const a = FILA.punti[i - 1], b = FILA.punti[i % FILA.punti.length];
+      const t = (s - FILA.lun[i - 1]) / (FILA.lun[i] - FILA.lun[i - 1] || 1);
+      return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t };
+    }
+    const FORMICHE = Array.from({ length: 26 }, (_, i) => ({
+      base: i * (FILA.tot / 26), dx: 0, dy: 0, vx: 0, vy: 0, paura: 0,
+      x: FORMICAIO.x, y: FORMICAIO.y, dir: 0, fase: i * 1.7, vede: 0,
+    }));
+    const formiche = { marcia: 0 };
 
     // Massa delle radici sotto la galleria: faccia destra, buca del ghiro
     // (nicchia), bocca della radice lunga, sassi.
@@ -289,7 +329,7 @@
         corsie: [false, false, false, false], skill: { corsia: Math.floor(Math.random() * 4), attivo: false, t: 0 },
         rampe: 0, prossimaExtra: 8, extraAccesa: false, superJackpot: false, deviatore: 0,
         lampoCorsie: 0, lampoFionda: [0, 0], lampoPiolo: 0, lampoResina: 0, inPiolo: new Set(),
-        tinoPalla: 0, torcePalla: [false, false, false],
+        tinoPalla: 0, torcePalla: [false, false, false], formiche: 0,
         // animazioni meccaniche (solo disegno): 1 = su, 0 = giù
         visSassi: [1, 1, 1, 1], visCartelli: [1, 1, 1], visSasso: 1, devAng: -0.4, devW: 0,
       });
@@ -304,12 +344,12 @@
       S.tinoPalla = 0;
       S.torcePalla = [false, false, false];
     }
-    const contatori = () => ({ gino: 0, bumper: 0, corsie: 0, rampe: 0, giri: 0, orbite: 0, sassi: 0, cartelli: 0, chiavi: 0, torce: 0, agente: 0, avventure: 0, spinner: 0 });
+    const contatori = () => ({ gino: 0, bumper: 0, formiche: 0, corsie: 0, rampe: 0, giri: 0, orbite: 0, sassi: 0, cartelli: 0, chiavi: 0, torce: 0, agente: 0, avventure: 0, spinner: 0 });
     function righeBonus(c) {
       return [
-        ['Nodi', c.bumper, 100], ['Corsie', c.corsie, 1000], ['Radice lunga', c.rampe, 4000], ['Giri della morte', c.giri, 5000],
+        ['Funghi', c.bumper, 100], ['Corsie', c.corsie, 1000], ['Radice lunga', c.rampe, 4000], ['Giri della morte', c.giri, 5000],
         ['Orbite', c.orbite, 3000], ['Sassi', c.sassi, 1000], ['Cartelli', c.cartelli, 1000], ['Chiavi', c.chiavi, 5000],
-        ['Torce', c.torce, 2500], ['Gino', c.gino, 2500], ['Agente', c.agente, 2000], ['Avventure', c.avventure, 25000],
+        ['Torce', c.torce, 2500], ['Gino', c.gino, 2500], ['Agente', c.agente, 2000], ['Avventure', c.avventure, 25000], ['Formiche', c.formiche, 50],
       ];
     }
 
@@ -337,7 +377,7 @@
           const b = BUMPER[o.dati.i];
           b.lampo = 1;
           c.bumper++;
-          G.punti(PUNTI.bumper, b.x, b.y - 34);
+          G.punti(b.piccolo ? PUNTI.funghetto : PUNTI.bumper, b.x, b.y - b.r - 7);
           G.scintille(p.x, p.y, '#ffcf6b', 8, 300);
           su.bumper(b.i);
           break;
@@ -818,8 +858,68 @@
     }
 
     // ============================================================ aggiornamento
+    function aggiornaFormiche(dt) {
+      const st = G.stato;
+      formiche.marcia += dt * 26;
+      const palle = st.palle.filter((p) => p.stato === 'campo' && p.piano === 0 && p.y > 1150 && p.y < 1340);
+      let spaventate = 0, sx = 0, sy = 0;
+      for (const f of FORMICHE) {
+        const s = f.base + formiche.marcia;
+        const q = puntoFila(s);
+        const prima = { x: f.x, y: f.y };
+        if (f.paura <= 0) {
+          for (const p of palle) {
+            const dx = f.x - p.x, dy = f.y - p.y, d = Math.hypot(dx, dy);
+            if (d > R + 30) continue;
+            const a = d > 0.1 ? Math.atan2(dy, dx) : casuale(0, Math.PI * 2);
+            const fuga = casuale(170, 270);
+            f.vx = Math.cos(a + casuale(-0.5, 0.5)) * fuga;
+            f.vy = Math.sin(a + casuale(-0.5, 0.5)) * fuga;
+            f.paura = casuale(0.8, 1.2);
+            spaventate++; sx += f.x; sy += f.y;
+            break;
+          }
+        }
+        if (f.paura > 0) {
+          f.paura -= dt;
+          f.dx += f.vx * dt; f.dy += f.vy * dt;
+          f.vx *= 1 - 2.5 * dt; f.vy *= 1 - 2.5 * dt;
+        } else {
+          const passo = 60 * dt, d = Math.hypot(f.dx, f.dy);
+          if (d <= passo) { f.dx = 0; f.dy = 0; } else { f.dx -= f.dx / d * passo; f.dy -= f.dy / d * passo; }
+        }
+        f.x = q.x + f.dx + Math.sin(formiche.marcia * 0.08 + f.fase) * 1.5;
+        f.y = q.y + f.dy;
+        // vicino al formicaio entrano sotto terra (si nascondono)
+        const sm = ((s % FILA.tot) + FILA.tot) % FILA.tot;
+        const fuori = Math.min(sm, FILA.tot - sm) > 12 || f.paura > 0;
+        f.vede = clamp(f.vede + (fuori ? 6 : -6) * dt, 0, 1);
+        f.briciola = sm > FILA.mezzo + 8;
+        const mx = f.x - prima.x, my = f.y - prima.y;
+        if (Math.hypot(mx, my) > 0.2 && Math.hypot(mx, my) < 30) {
+          let diff = Math.atan2(my, mx) - f.dir;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          f.dir += diff * Math.min(1, dt * 12);
+        }
+      }
+      if (spaventate && pronti()) {
+        const c = st.contatori;
+        if (c) c.formiche += spaventate;
+        G.punti(PUNTI.formica * spaventate, sx / spaventate, sy / spaventate - 18);
+        G.suoni.formiche();
+        const prima = Math.floor(S.formiche / 25);
+        S.formiche += spaventate;
+        if (Math.floor(S.formiche / 25) > prima) {
+          const v = G.punti(PUNTI.formicaio);
+          G.messaggio('Formiche in subbuglio!', '+' + numero(v), 1.6);
+        }
+      }
+    }
+
     function aggiorna(dt) {
       const st = G.stato;
+      aggiornaFormiche(dt);
       // sassi
       if (S.sassiT > 0) {
         S.sassiT -= dt;
@@ -1620,10 +1720,55 @@
       });
     }
 
+    function disegnaFormiche(g) {
+      // formicaio: mucchietto di terra col buco; briciole: pane e semi
+      g.fillStyle = 'rgba(60,40,15,0.25)';
+      g.beginPath(); g.ellipse(FORMICAIO.x + 3, FORMICAIO.y + 4, 20, 13, 0, 0, Math.PI * 2); g.fill();
+      const gm = g.createRadialGradient(FORMICAIO.x - 5, FORMICAIO.y - 6, 2, FORMICAIO.x, FORMICAIO.y, 19);
+      gm.addColorStop(0, '#d8a86a'); gm.addColorStop(1, '#9a6a36');
+      g.fillStyle = gm;
+      g.beginPath(); g.ellipse(FORMICAIO.x, FORMICAIO.y, 19, 13, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#3a2412';
+      g.beginPath(); g.ellipse(FORMICAIO.x + 5, FORMICAIO.y - 1, 4.5, 3.2, 0, 0, Math.PI * 2); g.fill();
+      for (const [bx, by, br, c] of [[0, 0, 4, '#f0c878'], [7, -3, 3, '#e8b860'], [-6, 3, 3.2, '#f4d48c'], [4, 6, 2.4, '#d9a44c'], [-3, -6, 2.2, '#f0c878']]) {
+        g.fillStyle = c;
+        g.beginPath(); g.ellipse(BRICIOLE.x + bx, BRICIOLE.y + by, br, br * 0.8, 0.5, 0, Math.PI * 2); g.fill();
+      }
+      const t = formiche.marcia * 0.6;
+      g.strokeStyle = '#2b1a12'; g.fillStyle = '#2b1a12'; g.lineWidth = 1.1;
+      for (const f of FORMICHE) {
+        if (f.vede <= 0.02) continue;
+        g.save();
+        g.globalAlpha = f.vede;
+        g.translate(f.x, f.y);
+        g.rotate(f.dir);
+        g.scale(0.85, 0.85);
+        const z = Math.sin(t + f.fase) * 2.2 * (f.paura > 0 ? 1.6 : 1);
+        g.beginPath();
+        for (const [x, sg] of [[-3, 1], [0, -1], [3, 1]]) {
+          g.moveTo(x, 0); g.lineTo(x + z * sg, -6);
+          g.moveTo(x, 0); g.lineTo(x - z * sg, 6);
+        }
+        g.moveTo(7, -1); g.quadraticCurveTo(10, -3, 12, -5);
+        g.moveTo(7, 1); g.quadraticCurveTo(10, 3, 12, 5);
+        g.stroke();
+        g.beginPath(); g.ellipse(-5.5, 0, 4, 3, 0, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.ellipse(0.5, 0, 2.6, 1.9, 0, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.ellipse(5.5, 0, 2.4, 2.2, 0, 0, Math.PI * 2); g.fill();
+        if (f.briciola && f.paura <= 0) {
+          g.fillStyle = '#e8b860';
+          g.beginPath(); g.ellipse(9.5, 0, 3.4, 2.8, 0.4, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#2b1a12';
+        }
+        g.restore();
+      }
+    }
+
     function disegnaPavimento(g) {
       const d = G.d;
       const st = G.stato;
       lampade(g);
+      disegnaFormiche(g);
       // piolo d'oro: disco che gira
       g.save();
       g.translate(PIOLO.x, PIOLO.y);
@@ -1687,30 +1832,46 @@
     function disegnaCampo(g, ora) {
       const d = G.d;
       const st = G.stato;
-      // bumper: nodi di legno col cappello d'ambra
+      // bumper: funghi visti dall'alto (cappello rosso a pois bianchi, con il
+      // bordo chiaro delle lamelle); al colpo il cappello si gonfia e l'anello
+      // di luce "salta". I funghetti piccoli sono porcinelli marroni.
       for (const b of BUMPER) {
+        const k = b.lampo, r = b.r + 3, rc = r * (1 + 0.1 * k);
         g.fillStyle = 'rgba(50,40,10,0.3)';
-        g.beginPath(); g.arc(b.x + 4, b.y + 6, 30, 0, Math.PI * 2); g.fill();
-        g.fillStyle = '#8a5a2e';
-        g.beginPath(); g.arc(b.x, b.y, 30, 0, Math.PI * 2); g.fill();
-        g.fillStyle = '#e2b478';
-        g.beginPath(); g.arc(b.x, b.y, 26, 0, Math.PI * 2); g.fill();
-        // anelli del legno
-        g.strokeStyle = '#b07a42'; g.lineWidth = 2;
-        for (const r of [26, 20, 14]) { g.beginPath(); g.arc(b.x, b.y, r, 0, Math.PI * 2); g.stroke(); }
-        const k = b.lampo;
-        // il colpo: l'anello del nodo "salta" (si allarga e sbiadisce) e il cappello d'ambra si gonfia
+        g.beginPath(); g.arc(b.x + 4, b.y + 6, r, 0, Math.PI * 2); g.fill();
+        // lamelle che spuntano sotto il cappello
+        g.fillStyle = b.piccolo ? '#efe0bf' : '#f6ead2';
+        g.beginPath(); g.arc(b.x, b.y, r, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = b.piccolo ? '#c7ad80' : '#d9c6a2'; g.lineWidth = 1;
+        for (let i = 0; i < 24; i++) {
+          const a = i * Math.PI / 12;
+          g.beginPath(); g.moveTo(b.x + Math.cos(a) * r * 0.78, b.y + Math.sin(a) * r * 0.78); g.lineTo(b.x + Math.cos(a) * r, b.y + Math.sin(a) * r); g.stroke();
+        }
+        // cappello
+        const gc = g.createRadialGradient(b.x - rc * 0.3, b.y - rc * 0.35, 2, b.x, b.y, rc * 0.85);
+        if (b.piccolo) {
+          gc.addColorStop(0, k > 0 ? '#f4c890' : '#c98a4a'); gc.addColorStop(1, k > 0 ? '#b0642a' : '#7a4520');
+        } else {
+          gc.addColorStop(0, k > 0 ? '#ff9a7a' : '#ff5a3c'); gc.addColorStop(1, k > 0 ? '#e0281a' : '#b3180e');
+        }
+        g.fillStyle = gc;
+        g.beginPath(); g.arc(b.x, b.y, rc * 0.8, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = b.piccolo ? '#5a3214' : '#7a0f08'; g.lineWidth = 1.5;
+        g.stroke();
+        if (!b.piccolo) {
+          // pois bianchi
+          g.fillStyle = '#fff8ec';
+          for (const [px, py, pr] of [[-0.38, -0.3, 0.13], [0.22, -0.42, 0.1], [0.4, 0.08, 0.12], [-0.08, 0.05, 0.11], [-0.42, 0.28, 0.09], [0.12, 0.42, 0.1], [0.02, -0.12, 0.06]]) {
+            g.beginPath(); g.arc(b.x + px * rc, b.y + py * rc, pr * rc, 0, Math.PI * 2); g.fill();
+          }
+        }
+        g.fillStyle = 'rgba(255,255,255,0.4)';
+        g.beginPath(); g.ellipse(b.x - rc * 0.3, b.y - rc * 0.38, rc * 0.22, rc * 0.12, -0.6, 0, Math.PI * 2); g.fill();
         if (k > 0) {
           g.strokeStyle = hexA('#fff6d0', 0.85 * k); g.lineWidth = 4 * k + 1;
-          g.beginPath(); g.arc(b.x, b.y, 30 + 24 * (1 - k), 0, Math.PI * 2); g.stroke();
+          g.beginPath(); g.arc(b.x, b.y, r + 24 * (1 - k) * (b.r / 27), 0, Math.PI * 2); g.stroke();
+          d.luce(g, b.x, b.y, 70 * b.r / 27, b.piccolo ? '#ffc070' : '#ff8a5a', k);
         }
-        const ga = g.createRadialGradient(b.x - 6, b.y - 7, 2, b.x, b.y, 18);
-        ga.addColorStop(0, k > 0 ? '#fffbe0' : '#ffe2a0'); ga.addColorStop(1, k > 0 ? '#ffb000' : '#c9781a');
-        g.fillStyle = ga;
-        g.beginPath(); g.arc(b.x, b.y, 15 + 4 * k, 0, Math.PI * 2); g.fill();
-        g.fillStyle = 'rgba(255,255,255,0.45)';
-        g.beginPath(); g.ellipse(b.x - 5, b.y - 6, 5 + k, 3 + k, -0.6, 0, Math.PI * 2); g.fill();
-        if (k > 0) d.luce(g, b.x, b.y, 70, '#ffb347', k);
       }
       // sassi (bersagli che cadono)
       // cadono ruotando all'indietro (verso le radici) e si rialzano con un saltino
@@ -1961,6 +2122,7 @@
         <span><b>Cece</b>: spingilo in fondo al cunicolo per le chiavi. Tre chiavi: palla extra.</span>
         <span><b>Cartelli</b>: abbattili tutti e spunta la radice che salva la ghianda tra i flipper.</span>
         <span><b>Gino</b>: è sul piolo d'oro. Colpiscilo e la <b>resina</b> ferma la ghianda e la tira dove serve; nel multiball, dopo tre jackpot, vale il <b>super jackpot</b>.</span>
+        <span><b>Funghi e formiche</b>: i funghi fanno rimbalzare la ghianda; sul prato in basso le formiche scappano quando passa (25 formiche: formiche in subbuglio!).</span>
         <span><b>Avventure</b>: le torce, la frana, la chiave, l'inseguimento. Poi la Ghianda d'Oro!</span>
       </div>`,
       frasi: {
