@@ -30,6 +30,13 @@
     attrito: 0.04,       // frazione di velocità persa al secondo (rotolamento)
     pareti: 0.42,        // rimbalzo sulle pareti
     gomme: 0.7,          // rimbalzo su gomme e paletti
+    // attrito di Coulomb negli urti veri (non nei contatti di appoggio, che
+    // altrimenti fermano la ghianda sulle superfici inclinate): la spinta
+    // tangenziale è al massimo μ volte quella normale; la ghianda che picchia
+    // di striscio perde un po' di velocità lungo la superficie e prende spin
+    attritoPareti: 0.12, attritoGomme: 0.2, attritoFlipper: 0.25,
+    urtoMinimo: 120,     // velocità normale minima perché l'urto conti come urto
+    spinCala: 0.6,       // frazione di spin persa al secondo in volo
   };
   TF.FISICA = FISICA;
   const FLIPPER = {
@@ -94,7 +101,7 @@
       W, H, R,
       segmenti: [[], []], cerchi: [[], []],
       flipper: [], sensori: [], prese: [], bocche: [], percorsi: {},
-      prigioniere: [], magneti: [], dischi: [], mobili: [],
+      prigioniere: [], magneti: [], dischi: [], mobili: [], zone: [],
       tempo: 0, tiltato: false, gravita: 1650, griglia: null,
       ev: null,                         // (tipo, oggetto, palla, info) → regole
     };
@@ -204,6 +211,14 @@
       m.dischi.push(d);
       return d;
     };
+    // Zona: un cerchio che non urta, ma sente la ghianda che ci passa sopra
+    // (robivecchi da raccogliere, punti del campo da attraversare). Nelle prove
+    // del giocatore simulato vale come esito.
+    m.zona = (id, x, y, r, o = {}) => {
+      const z = { id, x, y, r, piano: o.piano || 0, attivo: o.attivo || null, esito: o.esito || id, dati: o.dati || null };
+      m.zone.push(z);
+      return z;
+    };
     // Giocattolo che si muove: un cerchio che le regole spostano.
     m.mobile = (o) => {
       const c = m.cerchio(o.x, o.y, o.r, { tipo: o.tipo || 'mobile', id: o.id, e: o.e ?? 0.55, attivo: o.attivo, piano: o.piano, esito: o.esito, dati: o.dati });
@@ -267,9 +282,18 @@
     const vn = rvx * nx + rvy * ny;
     if (vn < 0) {
       const k = (1 + f.e) * vn;
-      p.vx = rvx - k * nx + sx;
-      p.vy = rvy - k * ny + sy;
-      if (!sim && m.ev && -vn > 900 && Math.abs(f.w) > 1) m.ev('flipperColpo', f, p, -vn);
+      // attrito lungo la gomma del flipper (solo negli urti veri): la ghianda
+      // rallenta lungo la superficie e rotola (spin = velocità tangenziale / raggio)
+      const tx = -ny, ty = nx;
+      const vt0 = rvx * tx + rvy * ty;
+      const jt = vn < -FISICA.urtoMinimo ? Math.min(Math.abs(vt0), FISICA.attritoFlipper * -k) * Math.sign(vt0) : 0;
+      const vt = vt0 - jt;
+      p.vx = rvx - k * nx + sx - jt * tx;
+      p.vy = rvy - k * ny + sy - jt * ty;
+      if (!sim) {
+        p.spin = vt / R;
+        if (m.ev && -vn > 900 && Math.abs(f.w) > 1) m.ev('flipperColpo', f, p, -vn);
+      }
     }
   }
 
@@ -318,6 +342,15 @@
     if (vn < 0) {
       p.vx -= (1 + o.e) * vn * nx;
       p.vy -= (1 + o.e) * vn * ny;
+      // attrito lungo la superficie negli urti veri (e spin per il disegno)
+      const tx = -ny, ty = nx;
+      const vt = p.vx * tx + p.vy * ty;
+      if (vn < -FISICA.urtoMinimo) {
+        const mu = o.attrito ?? (o.tipo === 'muro' || o.tipo === 'stantuffo' ? FISICA.attritoPareti : FISICA.attritoGomme);
+        const jt = Math.min(Math.abs(vt), mu * (1 + o.e) * -vn) * Math.sign(vt);
+        p.vx -= jt * tx; p.vy -= jt * ty;
+        if (!sim) p.spin = (vt - jt) / R;
+      } else if (!sim) p.spin = vt / R;
     }
     if (sim) {
       if (o.spinta && !(o.tipo === 'fionda' && -vn < FIONDA.soglia)) {
@@ -428,6 +461,7 @@
     p.vy += m.gravita * h;
     const k = 1 - FISICA.attrito * h;
     p.vx *= k; p.vy *= k;
+    if (p.spin) p.spin *= 1 - FISICA.spinCala * h;
     // disco che gira
     for (const d of m.dischi) {
       if (d.piano !== p.piano) continue;
@@ -483,6 +517,13 @@
       const vv = p.vx * b.verso[0] + p.vy * b.verso[1];
       if (vv < b.velMin) continue;
       if (sim) { if (!p.esito) p.esito = b.esito; } else return { bocca: b, vel: vv };
+    }
+    // zone
+    for (const z of m.zone) {
+      if (z.piano !== p.piano || (z.attivo && !z.attivo())) continue;
+      const dx = p.x - z.x, dy = p.y - z.y;
+      if (dx * dx + dy * dy > z.r * z.r) continue;
+      if (sim) { if (!p.esito) p.esito = z.esito; } else if (m.ev) m.ev('zona', z, p, 0);
     }
     // buche
     for (const q of m.prese) {
@@ -552,6 +593,29 @@
       A.rumore = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
       const d = A.rumore.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      // riverbero del mobile: una risposta all'impulso breve generata nel
+      // codice (rumore che si spegne in 0,45 s, un po' più scuro col tempo);
+      // gli effetti ci mandano una piccola parte, così suonano "dentro" il flipper
+      try {
+        const n = Math.floor(c.sampleRate * 0.45);
+        const ir = c.createBuffer(2, n, c.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+          const b = ir.getChannelData(ch);
+          let filtro = 0;
+          for (let i = 0; i < n; i++) {
+            const t = i / n;
+            filtro += ((Math.random() * 2 - 1) - filtro) * (0.55 - 0.35 * t);
+            b[i] = filtro * Math.pow(1 - t, 2.2) * (i < 200 ? i / 200 : 1);
+          }
+        }
+        const conv = c.createConvolver();
+        conv.buffer = ir;
+        A.mandata = c.createGain();
+        A.mandata.gain.value = 0.16;
+        A.uscita.connect(A.mandata);
+        A.mandata.connect(conv);
+        conv.connect(comp);
+      } catch (e) { /* senza riverbero */ }
     }
     if (A.ctx.state === 'suspended') A.ctx.resume();
     return A.ctx;
@@ -602,9 +666,29 @@
   const PENTA = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760, 2093];
   let ultimoClic = 0, caricaOsc = null;
   const EFFETTI = A.effetti = {
+    // il solenoide del flipper: scatto secco, con la botta della bobina
     flipper() {
-      rumore(0.05, { tipo: 'bandpass', f: 1400, q: 1.5, vol: 0.12 });
+      rumore(0.035, { tipo: 'highpass', f: 2500, vol: 0.1 });
+      rumore(0.06, { tipo: 'bandpass', f: 1200, q: 1.5, vol: 0.12 });
       tono(95, 0.07, { tipo: 'square', f2: 60, vol: 0.06, filtro: 600 });
+    },
+    // il flipper che ricade: clack più morbido
+    flipperGiu() {
+      rumore(0.04, { tipo: 'bandpass', f: 900, q: 1.2, vol: 0.06 });
+      tono(70, 0.05, { tipo: 'triangle', f2: 50, vol: 0.04 });
+    },
+    // il knocker: il colpo di legno dei flipper veri (palla extra, match)
+    knocker() {
+      rumore(0.05, { tipo: 'highpass', f: 1500, vol: 0.3 });
+      rumore(0.12, { tipo: 'bandpass', f: 500, q: 1, vol: 0.2 });
+      tono(180, 0.08, { tipo: 'triangle', f2: 55, vol: 0.3, scivola: 0.04 });
+    },
+    // lo scolo: la ghianda cade nella vaschetta e rotola fino in fondo
+    scolo() {
+      tono(110, 0.12, { tipo: 'triangle', f2: 60, vol: 0.18 });
+      rumore(0.1, { f: 900, vol: 0.12 });
+      rumore(0.5, { f: 500, f2: 180, vol: 0.06, rit: 0.1 });
+      tono(90, 0.08, { tipo: 'triangle', f2: 55, vol: 0.08, rit: 0.32 });
     },
     colpo: (k) => tono(150, 0.06, { tipo: 'triangle', f2: 80, vol: 0.05 + 0.08 * k }),
     parete: (k) => tono(220, 0.04, { tipo: 'triangle', f2: 160, vol: 0.02 + 0.05 * k }),
@@ -615,11 +699,16 @@
       ultimoClic = ora;
       tono(1800, 0.03, { tipo: 'square', vol: 0.015, filtro: 4000 });
     },
+    // i nodi (bumper): la botta del solenoide più la campanella di metallo
+    // (due parziali inarmoniche, come una campana vera)
     bumper(i) {
       const f = [392, 494, 587][i % 3];
-      tono(f, 0.14, { tipo: 'square', f2: f * 1.6, scivola: 0.05, vol: 0.05, filtro: 3000 });
+      tono(f, 0.14, { tipo: 'square', f2: f * 1.6, scivola: 0.05, vol: 0.045, filtro: 3000 });
       tono(f * 0.5, 0.12, { tipo: 'sine', vol: 0.12 });
       rumore(0.05, { tipo: 'highpass', f: 3500, vol: 0.06 });
+      const c = [1568, 1760, 2093][i % 3];
+      tono(c, 0.5, { tipo: 'sine', vol: 0.035, attacco: 0.002 });
+      tono(c * 2.76, 0.28, { tipo: 'sine', vol: 0.014, attacco: 0.002 });
     },
     fionda() {
       rumore(0.06, { tipo: 'bandpass', f: 900, q: 1, vol: 0.12 });
@@ -688,6 +777,11 @@
     lascia: () => tono(160, 0.2, { tipo: 'triangle', f2: 600, vol: 0.08 }),
     prigioniera: () => { tono(500, 0.06, { tipo: 'triangle', vol: 0.06 }); tono(700, 0.05, { tipo: 'triangle', vol: 0.04, rit: 0.02 }); },
     chiave: () => note([1047, 1319, 1568, 2093], 0.06, { tipo: 'triangle', vol: 0.07, d: 0.14 }),
+    robivecchio() {
+      note([1175, 1568, 1976, 2349, 2637], 0.07, { tipo: 'triangle', vol: 0.07, d: 0.18 });
+      rumore(0.5, { tipo: 'highpass', f: 6000, vol: 0.03, rit: 0.15 });
+    },
+    impresa: () => note([659, 784, 988, 1319], 0.08, { tipo: 'square', vol: 0.04, filtro: 3500, d: 0.2 }),
     torcia() {
       rumore(0.5, { tipo: 'bandpass', f: 1500, f2: 400, q: 0.7, vol: 0.1 });
       tono(523, 0.2, { tipo: 'triangle', f2: 784, vol: 0.05 });
@@ -723,20 +817,26 @@
     },
     fineAvventura: () => note([784, 659, 523], 0.1, { tipo: 'triangle', vol: 0.06, d: 0.18 }),
     moneta: (n) => { tono(PENTA[n % 8 + 2], 0.08, { tipo: 'square', vol: 0.035, filtro: 4000 }); tono(PENTA[n % 8 + 4], 0.18, { tipo: 'square', vol: 0.035, filtro: 4000, rit: 0.07 }); },
-    extra: () => note([523, 659, 784, 1047, 1319], 0.1, { tipo: 'triangle', vol: 0.08, d: 0.22 }),
+    extra: () => { EFFETTI.knocker(); note([523, 659, 784, 1047, 1319], 0.1, { tipo: 'triangle', vol: 0.08, d: 0.22, rit: 0.12 }); },
     salvata: () => note([659, 880, 1319], 0.07, { tipo: 'triangle', vol: 0.06, d: 0.14 }),
     persa() {
-      tono(440, 0.9, { tipo: 'sawtooth', f2: 70, vol: 0.06, filtro: 1500 });
-      rumore(0.4, { f: 800, f2: 150, vol: 0.06, rit: 0.2 });
+      EFFETTI.scolo();
+      tono(440, 0.9, { tipo: 'sawtooth', f2: 70, vol: 0.05, filtro: 1500, rit: 0.25 });
     },
     scossone: () => { tono(55, 0.15, { tipo: 'sine', vol: 0.25 }); rumore(0.12, { f: 400, vol: 0.12 }); },
     avviso: () => note([880, 660], 0.12, { tipo: 'square', vol: 0.04, filtro: 2500, d: 0.12 }),
     tilt() {
-      tono(110, 1.2, { tipo: 'sawtooth', vol: 0.07, filtro: 900 });
-      tono(116, 1.2, { tipo: 'sawtooth', vol: 0.07, filtro: 900 });
+      // i flipper che cadono (clack) e il ronzio del tilt
+      rumore(0.06, { tipo: 'bandpass', f: 800, q: 1, vol: 0.14 });
+      tono(60, 0.08, { tipo: 'triangle', f2: 40, vol: 0.12 });
+      tono(110, 1.2, { tipo: 'sawtooth', vol: 0.07, filtro: 900, rit: 0.08 });
+      tono(116, 1.2, { tipo: 'sawtooth', vol: 0.07, filtro: 900, rit: 0.08 });
     },
     tic: () => tono(1320, 0.03, { tipo: 'square', vol: 0.02, filtro: 4000 }),
+    // lo stantuffo: la molla che scatta (twang che sale) e la ghianda che parte
     lancio(k) {
+      tono(60 + 40 * k, 0.16, { tipo: 'sawtooth', f2: 160 + 120 * k, vol: 0.05 + 0.04 * k, filtro: 900, scivola: 0.1 });
+      rumore(0.03, { tipo: 'highpass', f: 2000, vol: 0.1 });
       rumore(0.2 + 0.2 * k, { tipo: 'bandpass', f: 500, f2: 3000, q: 1, vol: 0.06 + 0.06 * k });
       tono(90, 0.12, { tipo: 'sine', f2: 50, vol: 0.2 });
     },
@@ -772,6 +872,31 @@
       }
     },
   });
+
+  // ---------------------------------------------------------------- suoni continui
+  // Il rotolamento della ghianda: rumore filtrato che cresce con la velocità
+  // (più grave sul legno delle rampe). gioco.js lo aggiorna a ogni fotogramma
+  // con la velocità della ghianda più veloce in campo; con 0 si spegne.
+  const CONT = A.continui = { rotola: null };
+  A.rotola = function rotola(vel, rampa) {
+    const on = vel > 60 && A.ctx && A.ctx.state === 'running' && !A.muto && A.abilitato();
+    if (!CONT.rotola) {
+      if (!on) return;
+      const c = A.ctx;
+      const s = c.createBufferSource();
+      s.buffer = A.rumore; s.loop = true;
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 0.7; f.frequency.value = 300;
+      const g = c.createGain(); g.gain.value = 0;
+      s.connect(f).connect(g).connect(A.uscita);
+      s.start();
+      CONT.rotola = { s, f, g };
+    }
+    const r = CONT.rotola;
+    const t = A.ctx.currentTime;
+    const k = on ? Math.pow(Math.min(1, vel / 3000), 0.7) : 0;
+    r.g.gain.setTargetAtTime(k * (rampa ? 0.075 : 0.05), t, 0.05);
+    r.f.frequency.setTargetAtTime(rampa ? 180 + 300 * k : 250 + 1400 * k, t, 0.08);
+  };
 
   // ---------------------------------------------------------------- musica
   // brano: battute { radice, accordo, melodia }; stili: { bpm, cassa, arpeggio,

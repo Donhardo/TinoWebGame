@@ -41,6 +41,21 @@
   ];
   const FINALE = { id: 'ghianda', nome: 'La Ghianda d\'Oro', durata: 45, testo: 'Quattro ghiande in campo: ogni tiro è un jackpot!', tinta: '#ffd700', stile: 'finale' };
 
+  // Robivecchi: ognuno si guadagna con un'impresa; poi compare in un punto
+  // difficile del tavolo e ci resta finché la ghianda non ci passa sopra.
+  // x, y: dove si disegna; piano: su che piano sta; percorso + s: sta su una
+  // rampa (si prende passando per quel punto del percorso); pos(): si muove.
+  // mira: gli esiti che il giocatore simulato cerca per prenderlo.
+  const ROBIVECCHI = [
+    { id: 'moneta', nome: 'Moneta', impresa: 'Fai un tiro da maestro', dove: 'nella galleria alta, accanto al pozzo', x: 200, y: 500, piano: 1, mira: ['tunnel'] },
+    { id: 'bottone', nome: 'Bottone', impresa: 'Completa T·I·N·O due volte nella stessa palla', dove: 'in cima all\'orbita destra', x: 550, y: 500, piano: 0, mira: ['orbita'] },
+    { id: 'graffetta', nome: 'Graffetta', impresa: 'Accendi le tre torce nella stessa palla', dove: 'tra i nodi', x: 352, y: 284, piano: 0, freccia: false, mira: ['robivecchio'] },
+    { id: 'fiocco', nome: 'Fiocco', impresa: 'Tre radici lunghe di fila nella stessa combo', dove: 'in cima alla radice lunga, sul deviatore', x: 270, y: 438, piano: 0, percorso: 'rampa', s: 'fine', mira: ['rampa'] },
+    { id: 'carta', nome: 'Carta di credito scaduta', file: 'carta-scaduta', impresa: 'Acciuffa l\'agente nell\'avventura Inseguimento', dove: 'sopra il sentiero dell\'agente', x: 430, y: 648, piano: 0, mira: ['robivecchio'] },
+    { id: 'tappo', nome: 'Tappo a corona', impresa: 'Fai un super jackpot su Gino', dove: 'in cima all\'anello del giro della morte', x: 455, y: 505, piano: 0, percorso: 'giro', mira: ['giro'] },
+    { id: 'biglia', nome: 'Biglia', impresa: 'Finisci la Ghianda d\'Oro', dove: 'sul bordo del piolo d\'oro, che gira', x: 300, y: 802, piano: 0, mira: ['robivecchio'] },
+  ];
+
   const BRANO = TF.brano([
     ['D3', 'm', 'D5 - F5 - A5 - - G5 F5 - E5 - D5 - - -'],
     ['Bb2', 'M', 'D5 - - F5 Bb5 - A5 - G5 - F5 - D5 - - -'],
@@ -97,9 +112,12 @@
     m.sensore('orbita', 522, 560, 578, 560, { verso: [0, -1], esito: 'orbita' });
     const SPINNER = { x: 550, y: 760, ang: 0, vel: 0 };
 
-    // corsie T·I·N·O
+    // corsie T·I·N·O; la guida a sinistra delle corsie prende la ghianda che
+    // arriva lungo la volta e la fa scendere nelle corsie (senza, seguiva
+    // tutto l'arco e scendeva a sinistra: il tiro da maestro era impossibile)
     const CORSIE = [275, 325, 375, 425];
     for (const x of [250, 300, 350, 400, 450]) m.segmento(x, 112, x, 158, { tipo: 'paletto', r: 4, e: 0.5 });
+    m.segmento(236, 38, 250, 112, { tipo: 'muro', r: 3, e: 0.12 });
     CORSIE.forEach((x, i) => m.sensore('corsia', x - 22, 140, x + 22, 140, { verso: [0, 1], dati: { i }, esito: 'corsie' }));
 
     // nodi (bumper)
@@ -236,6 +254,22 @@
     m.percorso('tunnel', [[BUCA.x, BUCA.y], [200, 780], [204, 640], [POZZO.x, POZZO.y]], { sotto: true, costante: 800 });
     m.percorso('scivolo', [[146, 664], [196, 676], [258, 682]], { tipo: 'scivolo', uscita: 280 });
     m.percorso('dispensa', curva([44, 884], [26, 1100], [104, 1300], [107, 1562], 20), { tipo: 'liana', uscita: 300, costante: 1000 });
+    // dove stanno i robivecchi sui percorsi: il fiocco in fondo alla radice
+    // lunga, il tappo in cima all'anello (il punto del giro più vicino alla cima)
+    const sDelPunto = (per, x, y) => {
+      let meglio = 0, dist = Infinity;
+      for (let s = 0; s <= per.lung; s += 3) {
+        const q = m.puntoPercorso(per, s);
+        const d = Math.hypot(q.x - x, q.y - y);
+        if (d < dist) { dist = d; meglio = s; }
+      }
+      return meglio;
+    };
+    for (const r of ROBIVECCHI) {
+      if (r.s === 'fine') r.s = m.percorsi[r.percorso].lung;
+      else if (r.percorso) r.s = sDelPunto(m.percorsi[r.percorso], r.x, r.y);
+    }
+    ROBIVECCHI.find((r) => r.id === 'biglia').pos = () => [300 + Math.cos(PIOLO.ang + 1.2) * 48, 850 + Math.sin(PIOLO.ang + 1.2) * 48];
 
     // ============================================================ stato
     function nuovaPartita() {
@@ -251,6 +285,7 @@
         corsie: [false, false, false, false], skill: { corsia: Math.floor(Math.random() * 4), attivo: false, t: 0 },
         rampe: 0, prossimaExtra: 8, extraAccesa: false, superJackpot: false, deviatore: 0,
         lampoCorsie: 0, lampoFionda: [0, 0], lampoPiolo: 0, lampoResina: 0, inPiolo: new Set(),
+        tinoPalla: 0, torcePalla: [false, false, false],
       });
       CECE.y = CECE.giu; CECE.vy = 0;
       AG.x = S.agente.x;
@@ -260,6 +295,8 @@
     function nuovaPalla() {
       S.skill = { corsia: Math.floor(Math.random() * 4), attivo: true, t: 0 };
       S.palo = Math.max(S.palo, 0);
+      S.tinoPalla = 0;
+      S.torcePalla = [false, false, false];
     }
     const contatori = () => ({ gino: 0, bumper: 0, corsie: 0, rampe: 0, giri: 0, orbite: 0, sassi: 0, cartelli: 0, chiavi: 0, torce: 0, agente: 0, avventure: 0, spinner: 0 });
     function righeBonus(c) {
@@ -337,6 +374,8 @@
           TORCE[k].lampo = 1;
           su.torcia();
           c.torce++;
+          S.torcePalla[k] = true;
+          if (S.torcePalla.every(Boolean)) G.impresa('graffetta');
           if (inAvv('torce')) {
             if (!S.torce[k]) {
               S.torce[k] = true;
@@ -373,6 +412,7 @@
             G.suoni.superJackpot();
             G.flash(1); G.scossa(1.5); G.festa();
             GINO.salto = 1.2;
+            G.impresa('tappo');
             break;
           }
           if (inAvv('ghianda')) {
@@ -408,10 +448,12 @@
           if (S.skill.attivo) {
             S.skill.attivo = false;
             if (S.skill.corsia === i) {
+              st.statistiche.skill = (st.statistiche.skill || 0) + 1;
               const v = G.punti(PUNTI.skill, CORSIE[i], 190, '#fff27a');
               G.messaggio('Tiro da maestro!', '+' + numero(v), 2);
               su.skill();
               G.festa();
+              G.impresa('moneta');
             }
           }
           if (!S.corsie[i]) {
@@ -425,6 +467,7 @@
               G.messaggio('T·I·N·O!', `Bonus ×${st.bonusMolt}`, 1.8);
               su.tino();
               S.lampoCorsie = 1;
+              if (++S.tinoPalla >= 2) G.impresa('bottone');
             }
           } else {
             G.punti(500);
@@ -535,7 +578,7 @@
       if (inAvv('inseguimento')) {
         avv().conto++;
         G.punti(75000, AG.x, AG.y - 50, '#cfe0ff');
-        if (avv().conto === 5) { G.obiettivo('Agente acciuffato!', 300000); a.stordito = AGENTE.stordito; }
+        if (avv().conto === 5) { G.obiettivo('Agente acciuffato!', 300000); a.stordito = AGENTE.stordito; G.impresa('carta'); }
         return;
       }
       G.punti(PUNTI.agente, AG.x, AG.y - 50);
@@ -623,6 +666,7 @@
             G.suoni.acceso();
           }
           G.tiro('rampa', x, y);
+          if (st.combo.fila >= 3) G.impresa('fiocco');
           const blocca = S.dispensa.aperta && !st.multiball && !avv();
           if (blocca) S.deviatore = 1;
           G.suoni.deviatore();
@@ -891,9 +935,10 @@
     function inizioAvventura(def) {
       if (def.id === 'inseguimento') S.agente.stordito = 0;
     }
-    function fineAvventura() {
+    function fineAvventura(a) {
       S.torce = [false, false, false];
       S.chiaveAvv = false;
+      if (a && a.id === FINALE.id) G.impresa('biglia');
     }
     function fineBiglia() {
       S.palo = 0;
@@ -910,6 +955,8 @@
       const st = G.stato;
       const lista = [];
       const id = st.avventura && st.avventura.id;
+      const rob = st.robivecchi && st.robivecchi.attivo;
+      if (rob) lista.push(...(rob.id === 'moneta' && S.sassoSu ? ['spunta'] : []), ...rob.mira);
       if (id === 'torce') lista.push(...(S.torce.some((x) => !x) ? ['torce'] : []), 'tunnel');
       if (id === 'frana') lista.push('sassi');
       if (id === 'chiave') lista.push(S.chiaveAvv ? 'rampa' : 'cece');
@@ -928,7 +975,7 @@
     }
     const VALORE = {
       rampa: 5, giro: 5, tunnel: 5, orbita: 4, agente: 4, uscita: 4, torce: 4, cece: 3, sassi: 3, cartelli: 3,
-      gino: 4, piolo: 3, spunta: 3, corsie: 3, resina: 3, su: 2, niente: 1, scivolo: 1, persa: 0,
+      gino: 4, piolo: 3, spunta: 3, corsie: 3, resina: 3, su: 2, niente: 1, scivolo: 1, persa: 0, robivecchio: 6,
     };
     const MIRE = ['rampa', 'giro', 'orbita', 'agente', 'gino', 'cece', 'tunnel'];
     function esitoExtra(q) {
@@ -1235,6 +1282,13 @@
         gp.addColorStop(0, '#fff4dc'); gp.addColorStop(1, '#a8743f');
         g.fillStyle = gp;
         g.beginPath(); g.arc(c.x, c.y, c.r + 1, 0, Math.PI * 2); g.fill();
+        // l'anello di gomma attorno al paletto
+        if (c.tipo === 'paletto' && c.r >= 5) {
+          g.strokeStyle = 'rgba(40,22,6,0.7)'; g.lineWidth = 3.5;
+          g.beginPath(); g.arc(c.x, c.y, c.r + 0.5, 0, Math.PI * 2); g.stroke();
+          g.strokeStyle = '#efe6d2'; g.lineWidth = 2;
+          g.beginPath(); g.arc(c.x, c.y, c.r + 0.5, 0, Math.PI * 2); g.stroke();
+        }
       }
       // cornice del tavolo
       g.lineWidth = 14;
@@ -1498,10 +1552,17 @@
         g.strokeStyle = '#b07a42'; g.lineWidth = 2;
         for (const r of [26, 20, 14]) { g.beginPath(); g.arc(b.x, b.y, r, 0, Math.PI * 2); g.stroke(); }
         const k = b.lampo;
+        // il colpo: l'anello del nodo "salta" (si allarga e sbiadisce) e il cappello d'ambra si gonfia
+        if (k > 0) {
+          g.strokeStyle = hexA('#fff6d0', 0.85 * k); g.lineWidth = 4 * k + 1;
+          g.beginPath(); g.arc(b.x, b.y, 30 + 24 * (1 - k), 0, Math.PI * 2); g.stroke();
+        }
         const ga = g.createRadialGradient(b.x - 6, b.y - 7, 2, b.x, b.y, 18);
         ga.addColorStop(0, k > 0 ? '#fffbe0' : '#ffe2a0'); ga.addColorStop(1, k > 0 ? '#ffb000' : '#c9781a');
         g.fillStyle = ga;
-        g.beginPath(); g.arc(b.x, b.y, 15 + 3 * k, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.arc(b.x, b.y, 15 + 4 * k, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.45)';
+        g.beginPath(); g.ellipse(b.x - 5, b.y - 6, 5 + k, 3 + k, -0.6, 0, Math.PI * 2); g.fill();
         if (k > 0) d.luce(g, b.x, b.y, 70, '#ffb347', k);
       }
       // sassi (bersagli che cadono)
@@ -1673,7 +1734,7 @@
         g.fillRect(t.x - 13, 380, 26, 10);
         g.fillStyle = '#3b2210';
         g.fillRect(t.x - 4, 370, 8, 14);
-        const accesa = S.torce[t.i] || t.lampo > 0 || (inAvv('torce') && !S.torce[t.i] && lampeggia(4) && false);
+        const accesa = S.torce[t.i] || t.lampo > 0;
         fiamma(g, t.x, 372, 1, accesa || (inAvv('torce') && lampeggia(2)), ora);
       }
       d.flipper(g, FL.alto);
@@ -1716,10 +1777,13 @@
     return {
       id: 'radici', nome: 'Le radici della Quercia', sotto: 'Legno, radici e torce sotto la grande quercia',
       W, H, CX, mondo: m, S, FL, gravita: 1450,
-      colori: { neon: C.neon, neon2: C.neon2, luce: C.luce, barra: '#5c3a1c', fondo: '#9fd3ea', pannello: ['#8a5a2e', '#5c3a1c'] },
-      lancio: { x: 600, y: 1834, xCorridoio: 582, yRitorno: 1780 },
+      colori: { neon: C.neon, neon2: C.neon2, luce: C.luce, barra: '#5c3a1c', fondo: '#9fd3ea', pannello: ['#8a5a2e', '#5c3a1c'], display: '#ff9a1e' },
+      lancio: { x: 600, y: 1834, xCorridoio: 582, yRitorno: 1780, yStantuffo: 1846 },
+      forma: formaTavolo,
+      // flasher: dietro i nodi, in cima alla radice lunga, sull'anello del giro, sulla resina
+      flasher: [[352, 290], [270, 438], [ANELLO.x, ANELLO.y], [300, 1290]],
       yPersa: 1925, salvaDa: 578,
-      AVVENTURE, FINALE, PUNTI, AGENTE,
+      AVVENTURE, FINALE, PUNTI, AGENTE, ROBIVECCHI,
       musica: { brano: BRANO, stili: STILI },
       inArrivo: () => (S.dispensa ? S.dispensa.uscita.length : 0),
       rimetti() { S.dispensa.uscita.push(0.5); },

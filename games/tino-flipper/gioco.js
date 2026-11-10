@@ -37,6 +37,7 @@
     gino: carica(ASSETS + 'gino/gino.png'),
     agente: carica(ASSETS + 'agenti-tari/agente-timbro.svg'),
   };
+  const immaginiRobi = {};
   function carica(src) {
     const img = new Image();
     img.src = src;
@@ -83,7 +84,8 @@
     avventura: null, avventureFatte: [], giro: 0,
     tilt: 0, tiltato: false,
     contatori: null, bonus: null,
-    scossa: 0, flash: 0,
+    scossa: 0, flash: 0, flasher: [], gi: 1,
+    robivecchi: { attivo: null, coda: [], presi: [], guadagnati: [], attesa: 0, t: 0 },
     messaggi: [], scritte: [], particelle: [],
     tino: { faccia: 'normale', t: 0, salto: 0 },
     tempo: 0,
@@ -99,18 +101,31 @@
     stato, suoni, ia, immagini, pronta,
     punti: aggiungiPunti, messaggio, scritta, faccia, festa, scintille, tiro, obiettivo, campo,
     scossa: (k = 1) => { stato.scossa = Math.max(stato.scossa, 0.25 * k); },
-    flash: (k = 0.6) => { stato.flash = Math.max(stato.flash, k); },
+    flash: (k = 0.6) => { stato.flash = Math.max(stato.flash, k); flasherTutti(k); },
+    flasher,
     percorso: avviaPercorso, trattieni, libera, togli, nuovaPalla, inCanna,
-    avviaMultiball, avviaAvventura, fineAvventura,
+    avviaMultiball, avviaAvventura, fineAvventura, impresa,
     tinta, d: null,
   };
 
-  const T = TF.tavoli.radici(G);
+  // Il tavolo: ?tavolo=<id> nell'indirizzo (ogni tavolo è in tavoli/<id>.js,
+  // incluso da index.html); se manca o non c'è, le Radici.
+  const idTavolo = (() => {
+    try { return new URLSearchParams(location.search).get('tavolo'); } catch (e) { return null; }
+  })();
+  const T = (TF.tavoli[idTavolo] || TF.tavoli.radici)(G);
   const m = T.mondo;
   const W = T.W, H = T.H;
+  if (!T.lancio.yStantuffo) T.lancio.yStantuffo = H - 54;
   const flipperDi = (lato) => m.flipper.filter((f) => f.lato === lato);
   let classifica = leggi(T.id + ':classifica', []);
   const record = () => (classifica.length ? classifica[0].punti : 0);
+  // robivecchi: la collezione del tavolo (salvata appena presi) e la zona che
+  // sente la ghianda sopra quello in campo
+  const ROBIVECCHI = T.ROBIVECCHI || [];
+  let collezione = leggi(T.id + ':robivecchi', []);
+  for (const r of ROBIVECCHI) immaginiRobi[r.id] = carica(ASSETS + 'oggetti/robivecchi/' + (r.file || r.id) + '.svg');
+  const ZONA_ROBI = m.zona('robivecchio', -100, -100, 26, { attivo: () => !!stato.robivecchi.attivo && !stato.robivecchi.attivo.percorso });
 
   A.abilitato = () => !stato.test && stato.modo !== 'demo';
   A.muto = muto;
@@ -167,6 +182,15 @@
     }
     if (stato.particelle.length > 260) stato.particelle.splice(0, stato.particelle.length - 260);
   }
+  // Flasher: le lampade grosse dei flipper veri, che sparano un lampo di luce
+  // colorata sul campo nei momenti forti (jackpot, multiball, avventure).
+  function flasher(x, y, colore = null, k = 1, durata = 0.4) {
+    stato.flasher.push({ x, y, colore: colore || tinta().luce, k, t: 0, durata });
+    if (stato.flasher.length > 12) stato.flasher.shift();
+  }
+  function flasherTutti(k = 1) {
+    (T.flasher || []).forEach(([x, y], i) => flasher(x, y, null, k, 0.35 + 0.06 * i));
+  }
   function obiettivo(testo, valore) {
     const c = camera.y + camera.alto * 0.4;
     const v = aggiungiPunti(valore, T.CX, c, '#fff27a');
@@ -190,6 +214,8 @@
     stato.statistiche.tiri[nome] = (stato.statistiche.tiri[nome] || 0) + 1;
     const c = stato.combo;
     c.n = c.t > 0 ? c.n + 1 : 1;
+    c.fila = c.t > 0 && c.ultimo === nome ? (c.fila || 1) + 1 : 1;   // stesso tiro di fila
+    c.ultimo = nome;
     c.t = 3.6;
     if (c.n >= 2) {
       aggiungiPunti(10000 * c.n, x, y - 24, tinta().neon2);
@@ -204,6 +230,85 @@
       suoni.jackpot();
       stato.flash = 0.5;
     }
+  }
+
+  // ---------------------------------------------------------------- robivecchi
+  // Un'impresa fatta: il robivecchio compare sul tavolo (uno alla volta, gli
+  // altri aspettano in fila) e ci resta finché la ghianda non ci passa sopra.
+  function impresa(id) {
+    const def = ROBIVECCHI.find((r) => r.id === id);
+    if (!def || stato.modo !== 'gioco') return;
+    const rb = stato.robivecchi;
+    if (collezione.includes(id) || rb.guadagnati.includes(id)) return;
+    rb.guadagnati.push(id);
+    rb.coda.push(def);
+    if (rb.attivo) messaggio(`Impresa: ${def.nome}!`, 'Aspetta il suo turno sul tavolo', 2.2, '#ffe27a');
+    else { rb.attesa = 0.6; messaggio(`Impresa: ${def.nome}!`, `Prendilo ${def.dove}`, 2.6, '#ffe27a'); }
+    suoni.impresa();
+    festa();
+  }
+  function mettiRobivecchio() {
+    const rb = stato.robivecchi;
+    rb.attivo = rb.coda.shift() || null;
+    rb.t = 0;
+    if (!rb.attivo) return;
+    const [x, y] = posRobivecchio(rb.attivo);
+    flasher(x, y, '#ffe27a', 0.8, 0.5);
+    if (rb.coda.length === 0 && stato.messaggi.length === 0) messaggio(rb.attivo.nome, `Prendilo ${rb.attivo.dove}`, 2, '#ffe27a');
+  }
+  function posRobivecchio(r) {
+    return r.pos ? r.pos() : [r.x, r.y];
+  }
+  function prendiRobivecchio(p) {
+    const rb = stato.robivecchi;
+    const r = rb.attivo;
+    if (!r) return;
+    const [x, y] = posRobivecchio(r);
+    rb.attivo = null;
+    rb.attesa = 1.2;
+    rb.presi.push(r.id);
+    if (!stato.test && !collezione.includes(r.id)) {
+      collezione = collezione.concat([r.id]);
+      scrivi(T.id + ':robivecchi', collezione);
+    }
+    const v = aggiungiPunti(25000, x, y - 30, '#ffe27a');
+    messaggio(`Preso: ${r.nome}!`, `+${numero(v)} · robivecchio ${collezione.length || rb.presi.length} di ${ROBIVECCHI.length}`, 2.4, '#ffe27a');
+    scintille(x, y, '#ffe27a', 18, 300);
+    flasher(x, y, '#ffe27a', 1, 0.5);
+    suoni.robivecchio();
+    festa();
+  }
+  function aggiornaRobivecchi(dt) {
+    const rb = stato.robivecchi;
+    rb.t += dt;
+    if (!rb.attivo && rb.coda.length) {
+      rb.attesa -= dt;
+      if (rb.attesa <= 0) mettiRobivecchio();
+    }
+    const r = rb.attivo;
+    if (r && !r.percorso) {
+      const [x, y] = posRobivecchio(r);
+      ZONA_ROBI.x = x; ZONA_ROBI.y = y; ZONA_ROBI.piano = r.piano || 0;
+    }
+  }
+  // disegno: l'oggetto che ondeggia con un alone, e la freccia che lampeggia
+  function disegnaRobivecchio(g, filtro) {
+    const r = stato.robivecchi.attivo;
+    if (!r || !filtro(r)) return;
+    const [x, y] = posRobivecchio(r);
+    const t = stato.robivecchi.t;
+    const ond = Math.sin(t * 3) * 3;
+    luce(g, x, y, 42, '#ffe27a', 0.22 + 0.12 * Math.sin(t * 6));
+    if (!r.pos && r.freccia !== false) lampada(g, x, y + 40, 11, '#ffe27a', lampeggia(4), '', 'freccia', 0);
+    const img = immaginiRobi[r.id];
+    g.save();
+    g.translate(x, y + ond);
+    g.rotate(Math.sin(t * 2) * 0.15);
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    g.beginPath(); g.ellipse(3, 16 - ond, 14, 5, 0, 0, Math.PI * 2); g.fill();
+    if (pronta(img)) g.drawImage(img, -18, -18, 36, 36);
+    else { g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(0, 0, 14, 0, Math.PI * 2); g.fill(); }
+    g.restore();
   }
 
   function avviaMultiball(finale = false) {
@@ -334,6 +439,7 @@
     if (stato.salva > 0) {
       stato.statistiche.salvate++;
       messaggio('Salvata!', 'Ecco un\'altra ghianda', 1.4);
+      suoni.scolo();
       suoni.salvata();
       if (stato.multiball && T.rimetti) T.rimetti();
       else inCanna(true, 0.3);
@@ -344,6 +450,8 @@
       faccia('arrabbiato', 2.2);
       suoni.persa();
       fineBiglia();
+    } else {
+      suoni.scolo();
     }
   }
   function chiudiMultiball() {
@@ -407,22 +515,42 @@
       multiball: false, jackpot: { valore: T.PUNTI.jackpot, fatti: 0, doppio: false },
       avventura: null, avventureFatte: [], giro: 0, palleExtra: 0, tilt: 0, tiltato: false,
       messaggi: [], scritte: [], particelle: [], bonus: null,
+      robivecchi: { attivo: null, coda: [], presi: [], guadagnati: [], attesa: 0, t: 0 },
       statistiche: { palle: 0, durata: 0, perse: 0, salvate: 0, fuori: 0, ferme: 0, dove: [], tiri: {} },
     });
     stato.lancio = { carica: 0, premuto: false, attesa: false, auto: 0, palla: null, ritardo: 0 };
     T.nuovaPartita();
     aggiornaColori();
     ultimaPosizione = -1;
+    stato.match = null;
+    // palle in più vinte col match
+    const match = modo === 'gioco' && !stato.test ? leggi('match', 0) || 0 : 0;
+    if (match > 0) {
+      stato.palleExtra = 1;
+      scrivi('match', match - 1);
+    }
     iniziaPalla();
     if (modo === 'gioco') {
       nascondiPannello();
       suoni.via();
+      if (match > 0) setTimeout(() => messaggio('Palla extra dal match!', 'Una ghianda in più per questa partita', 2.4), 2300);
     }
   }
   function fineGioco() {
     stato.fase = 'finita';
     faccia('ko', 99);
     suoni.sconfitta();
+    // il match dei flipper veri: due cifre a caso contro le ultime due del
+    // punteggio; se sono uguali, knocker e una palla in più alla prossima partita
+    const cifre = String(stato.punti % 100).padStart(2, '0');
+    const vinto = !stato.test && Math.random() < 0.12;
+    let estratte = cifre;
+    if (!vinto) while (estratte === cifre) estratte = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+    stato.match = { cifre, estratte, vinto };
+    if (vinto) {
+      scrivi('match', (leggi('match', 0) || 0) + 1);
+      setTimeout(() => { if (stato.fase === 'finita') suoni.knocker(); }, 900);
+    }
     const voce = { punti: stato.punti, data: new Date().toLocaleDateString('it-IT') };
     const lista = classifica.concat([voce]).sort((a, b) => b.punti - a.punti).slice(0, 5);
     ultimaPosizione = lista.indexOf(voce);
@@ -482,7 +610,10 @@
   let accumulo = 0;
   let orologio = 0;     // tempo della fisica (avanza di un passo alla volta)
 
-  m.ev = (tipo, o, p, info) => T.evento(tipo, o, p, info);
+  m.ev = (tipo, o, p, info) => {
+    if (tipo === 'zona' && o === ZONA_ROBI) { prendiRobivecchio(p); return undefined; }
+    return T.evento(tipo, o, p, info);
+  };
 
   function passoFisica(h) {
     orologio += h;
@@ -529,7 +660,7 @@
         if ((stato.modo === 'demo' || stato.iaGioca) && L.auto <= 0 && !L.premuto) L.auto = 0.5;
         if (L.auto > 0) {
           L.auto -= dt;
-          if (L.auto <= 0) lancia(stato.modo === 'demo' || stato.iaGioca ? casuale(0.55, 0.95) : LANCIO.auto);
+          if (L.auto <= 0) lancia(stato.modo === 'demo' || stato.iaGioca ? casuale(0.62, 1) : LANCIO.auto);
         } else if (L.premuto) {
           L.carica = Math.min(1, L.carica + dt / LANCIO.pieno);
           suoni.carica(L.carica);
@@ -546,7 +677,10 @@
     for (const p of [...stato.palle]) {
       if (p.stato === 'percorso') {
         const per = p.per;
+        const prima = p.s;
         p.s += p.v * dt;
+        const rb = stato.robivecchi.attivo;
+        if (rb && rb.percorso === per.id && prima < rb.s && p.s >= rb.s) prendiRobivecchio(p);
         const q = m.puntoPercorso(per, Math.min(p.s, per.lung));
         p.x = q.x; p.y = q.y;
         if (!per.costante) p.v = clamp(p.v + (q.dy < 0 ? PERCORSO.su : PERCORSO.giu) * dt, per.vel[0], per.vel[1]);
@@ -572,7 +706,8 @@
         continue;
       }
       if (p.stato !== 'campo') continue;
-      p.rot += (p.vx * 0.9 + p.vy * 0.3) * dt / R;
+      // la ghianda gira con lo spin preso negli urti (più un filo col moto, così non sembra mai ferma)
+      p.rot += ((p.spin || 0) + (p.vx * 0.25 + p.vy * 0.1) / R) * dt;
       if (p.y > T.yPersa || p.x < -40 || p.x > W + 40 || p.y < -60) {
         if (p.y < H) {
           stato.statistiche.fuori++;
@@ -619,6 +754,7 @@
       if (a.id === T.FINALE.id && a.t <= 0 && !stato.multiball) fineAvventura(true);
     }
     T.aggiorna(dt);
+    aggiornaRobivecchi(dt);
     aggiornaCamera(dt);
     aggiornaTabellone();
   }
@@ -641,9 +777,20 @@
     }
   }
 
+  // Illuminazione generale del tavolo (come nei flipper veri: si spegne col
+  // tilt, si abbassa a fine palla e a partita finita)
+  function illuminazione() {
+    if (stato.tiltato) return 0.3;
+    if (stato.fase === 'finita') return 0.45;
+    if (stato.fase === 'bonus') return 0.62;
+    return 1;
+  }
   function aggiornaEffetti(dt) {
     stato.scossa = Math.max(0, stato.scossa - dt);
     stato.flash = Math.max(0, stato.flash - dt * 1.6);
+    stato.gi += (illuminazione() - stato.gi) * Math.min(1, dt * 7);
+    for (const f of stato.flasher) f.t += dt;
+    stato.flasher = stato.flasher.filter((f) => f.t < f.durata);
     for (const s of stato.scritte) { s.t += dt; s.y -= 40 * dt; }
     stato.scritte = stato.scritte.filter((s) => s.t < s.durata);
     if (stato.messaggi.length) {
@@ -773,6 +920,8 @@
     if (giu && !premuti[lato]) {
       if (!stato.tiltato) suoni.flipper();
       if (T.premuto) T.premuto(lato);
+    } else if (!giu && premuti[lato] && !stato.tiltato) {
+      suoni.flipperGiu();
     }
     premuti[lato] = giu;
     for (const f of flipperDi(lato)) { f.premuto = giu; f.prog = null; }
@@ -823,6 +972,9 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) pausa(); });
 
   // Mouse e dita: metà sinistra = flipper di sinistra, metà destra = di destra.
+  // Col mouse vale anche il tasto: destro = flipper destro, sinistro = il
+  // flipper della metà in cui si clicca (il clic secondario, soprattutto sui
+  // trackpad, arriva in ritardo: così si gioca anche con un tasto solo).
   // Con la ghianda nel corridoio (e nessuna in campo) si tiene premuto per
   // caricare. Una strisciata veloce verso l'alto è lo scossone.
   const dita = new Map();
@@ -848,7 +1000,7 @@
     if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
     let ruolo;
     if (soloInCanna()) ruolo = 'lancio';
-    else if (e.pointerType === 'mouse') ruolo = e.button === 0 ? 'sx' : e.button === 2 ? 'dx' : 'lancio';
+    else if (e.pointerType === 'mouse') ruolo = e.button === 0 ? latoDi(e) : e.button === 2 ? 'dx' : 'lancio';
     else ruolo = latoDi(e);
     dita.set(e.pointerId, { ruolo, y: e.clientY, t: performance.now() });
     if (ruolo === 'lancio') premiLancio(true);
@@ -1006,7 +1158,7 @@
     g.beginPath(); g.arc(mm, mm, R - 0.5, 0, Math.PI * 2); g.stroke();
     return { c, k, m: mm };
   })();
-  function disegnaGhianda(g, x, y, rot, s = 1) {
+  function disegnaGhianda(g, x, y, rot, s = 1, semplice = false) {
     const sp = spriteGhianda;
     g.save();
     g.translate(x, y);
@@ -1014,10 +1166,16 @@
     g.scale(s / sp.k, s / sp.k);
     g.drawImage(sp.c, -sp.m * sp.k, -sp.m * sp.k);
     g.restore();
+    if (semplice) return;
+    // riflesso della luce (che sta in alto al centro del tavolo): si sposta
+    // un poco secondo dove sta la ghianda, come su una pallina lucida
+    const lx = clamp((T.CX - x) / 320, -1, 1) * 2.6;
     g.save();
     g.globalCompositeOperation = 'lighter';
-    g.fillStyle = 'rgba(255,255,255,0.35)';
-    g.beginPath(); g.ellipse(x - 4 * s, y - 5 * s, 3.4 * s, 2.2 * s, -0.6, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.38)';
+    g.beginPath(); g.ellipse(x + (lx - 2.6) * s, y - 5 * s, 3.4 * s, 2.2 * s, -0.6 + lx * 0.15, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.14)';
+    g.beginPath(); g.ellipse(x - lx * 0.5 * s, y + 7 * s, 4 * s, 1.4 * s, 0, 0, Math.PI * 2); g.fill();
     g.restore();
   }
   const aloni = {};
@@ -1044,9 +1202,26 @@
     g.drawImage(alone(colore), x - r, y - r, r * 2, r * 2);
     g.restore();
   }
-  // Lampade: inserti di plastica colorata che si accendono
+  // Lampade: inserti di plastica colorata che si accendono. Come le lampadine
+  // vere si accendono e si spengono con una piccola dissolvenza (stato per
+  // lampada, riconosciuta dalla posizione); nel menu un'onda di luce
+  // attraversa il tavolo (la "modalità attrazione" dei flipper veri).
+  const lampStato = new Map();
+  let dtDisegno = 1 / 60;
+  function ondaAttrazione(x, y) {
+    if (stato.modo !== 'demo') return false;
+    const f = ((stato.tempo * 1.6 - (y + x * 0.35) / 260) % 1 + 1) % 1;
+    return f < 0.07;
+  }
   function lampada(g, x, y, r, colore, accesa, testo = '', forma = 'tondo', ang = 0) {
     if (y < camera.y - 60 || y > camera.y + camera.alto + 60) return;
+    const chiave = x + '|' + y + '|' + testo;
+    let L = lampStato.get(chiave);
+    if (!L) { L = { k: accesa ? 1 : 0 }; lampStato.set(chiave, L); }
+    const meta = accesa || ondaAttrazione(x, y) ? 1 : 0;
+    L.k += (meta - L.k) * Math.min(1, dtDisegno * (meta ? 26 : 11));
+    const k = L.k;
+    accesa = k > 0.5;
     g.save();
     g.translate(x, y);
     g.rotate(ang);
@@ -1060,10 +1235,19 @@
     } else {
       g.arc(0, 0, r, 0, Math.PI * 2);
     }
-    // spenta: plastica scura con un velo del suo colore (si vede anche sul fondo chiaro)
-    if (!accesa) { g.fillStyle = 'rgba(55,32,12,0.5)'; g.fill(); }
-    g.fillStyle = accesa ? colore : hexA(colore, 0.35);
+    // spenta: plastica scura con un velo del suo colore (si vede anche sul fondo chiaro);
+    // accesa: il colore pieno con il centro più chiaro (la lampadina sotto l'inserto)
+    g.fillStyle = `rgba(55,32,12,${0.5 * (1 - k)})`;
     g.fill();
+    g.fillStyle = hexA(colore, 0.35 + 0.65 * k);
+    g.fill();
+    if (k > 0.05) {
+      const gl = g.createRadialGradient(0, 0, 0, 0, 0, r * (forma === 'pillola' ? 2.4 : 1.1));
+      gl.addColorStop(0, `rgba(255,255,240,${0.55 * k})`);
+      gl.addColorStop(1, 'rgba(255,255,240,0)');
+      g.fillStyle = gl;
+      g.fill();
+    }
     g.lineWidth = accesa ? 2 : 1.5;
     g.strokeStyle = accesa ? '#fff8e0' : 'rgba(40,22,6,0.65)';
     g.stroke();
@@ -1076,7 +1260,7 @@
       g.fillText(testo, 0, 1);
     }
     g.restore();
-    if (accesa) luce(g, x, y, r * (forma === 'pillola' ? 4.5 : 3), colore, 0.65);
+    if (k > 0.03) luce(g, x, y, r * (forma === 'pillola' ? 4.5 : 3), colore, 0.65 * k);
   }
   // Flipper: gomma color crema su un'anima di legno
   function disegnaFlipper(g, f) {
@@ -1096,6 +1280,16 @@
     g.fillStyle = 'rgba(0,0,0,0.4)';
     forma(); g.fill();
     g.restore();
+    // sfocatura di movimento: mentre batte si vede ancora dov'era un istante prima
+    if (Math.abs(f.w) > 6) {
+      g.save();
+      g.translate(f.px, f.py);
+      g.rotate(a - f.verso * Math.sign(f.w) * 0.2);
+      g.globalAlpha = 0.28;
+      g.fillStyle = '#f3e6c8';
+      forma(); g.fill();
+      g.restore();
+    }
     g.save();
     g.translate(f.px, f.py);
     g.rotate(a);
@@ -1121,12 +1315,16 @@
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.lineJoin = 'round';
-    g.shadowColor = colore;
-    g.shadowBlur = 16;
+    // alone a due passate (niente shadowBlur: sui telefoni costava un fotogramma intero)
+    g.strokeStyle = hexA(colore, 0.22);
+    g.lineWidth = size * 0.6;
+    g.strokeText(testo, x, y);
+    g.strokeStyle = hexA(colore, 0.5);
+    g.lineWidth = size * 0.32;
+    g.strokeText(testo, x, y);
     g.lineWidth = size * 0.16;
     g.strokeStyle = colore;
     g.strokeText(testo, x, y);
-    g.shadowBlur = 0;
     g.fillStyle = '#fff';
     g.fillText(testo, x, y);
     g.restore();
@@ -1144,25 +1342,25 @@
     for (const p of stato.palle) {
       if (!filtro(p)) continue;
       if (p.stato === 'ferma') luce(g, p.x, p.y, 40, t.neon2, 0.6 + 0.4 * Math.sin(stato.tempo * 12));
-      if (p.scia.length > 4 && p.stato === 'campo') {
-        g.save();
-        g.globalCompositeOperation = 'lighter';
-        g.lineCap = 'round';
-        for (let i = 2; i < p.scia.length; i += 2) {
-          const a = i / p.scia.length;
-          g.strokeStyle = hexA(stato.multiball ? t.luce : t.neon, a * 0.25);
-          g.lineWidth = R * 1.5 * a;
-          g.beginPath();
-          g.moveTo(p.scia[i - 2], p.scia[i - 1]);
-          g.lineTo(p.scia[i], p.scia[i + 1]);
-          g.stroke();
-        }
-        g.restore();
-      }
       const alta = p.stato === 'percorso' || p.piano === 1;
       const s = p.stato === 'percorso' ? 1 + 0.18 * p.per.alto : 1;
-      g.fillStyle = 'rgba(0,0,0,0.35)';
-      g.beginPath(); g.arc(p.x + (alta ? 8 : 3), p.y + (alta ? 10 : 4), R, 0, Math.PI * 2); g.fill();
+      // sfocatura di movimento: a velocità alta la ghianda lascia due o tre
+      // copie sbiadite dietro di sé (al posto della scia al neon)
+      if (p.stato === 'campo') {
+        const v = Math.hypot(p.vx, p.vy);
+        if (v > 1100) {
+          const n = v > 2200 ? 3 : 2;
+          const passo = 0.014 * Math.min(1.4, v / 2200);
+          for (let i = n; i >= 1; i--) {
+            g.globalAlpha = 0.26 * (1 - i / (n + 1));
+            disegnaGhianda(g, p.x - p.vx * passo * i, p.y - p.vy * passo * i, p.rot, s, true);
+          }
+          g.globalAlpha = 1;
+        }
+      }
+      // ombra: più lontana e sfumata quando la ghianda è in alto (rampe, galleria)
+      g.fillStyle = alta ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.35)';
+      g.beginPath(); g.ellipse(p.x + (alta ? 9 : 3), p.y + (alta ? 12 : 4), R * (alta ? 1.15 : 1), R * (alta ? 1 : 0.9), 0, 0, Math.PI * 2); g.fill();
       disegnaGhianda(g, p.x, p.y + (p.stato === 'canna' ? p.giu || 0 : 0), p.rot, s);
     }
   }
@@ -1170,18 +1368,30 @@
     const L = stato.lancio;
     const tira = L.palla ? L.carica * 46 : 0;
     const x = T.lancio.x;
+    const yS = T.lancio.yStantuffo;
     g.save();
-    g.strokeStyle = '#c9c9c9';
-    g.lineWidth = 2;
+    // molla di metallo (si comprime quando si carica)
+    g.strokeStyle = 'rgba(0,0,0,0.25)';
+    g.lineWidth = 3;
     g.beginPath();
-    const y0 = 1846 + tira, y1 = H;
+    const y0 = yS + tira, y1 = H;
+    for (let i = 0; i <= 8; i++) g.lineTo(x + 2 + (i % 2 ? 10 : -10), y0 + 2 + (y1 - y0) * i / 8);
+    g.stroke();
+    g.strokeStyle = '#d7d7d7';
+    g.lineWidth = 2.4;
+    g.beginPath();
     for (let i = 0; i <= 8; i++) g.lineTo(x + (i % 2 ? 10 : -10), y0 + (y1 - y0) * i / 8);
     g.stroke();
+    // il piattello dello stantuffo (gomma)
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    g.fillRect(x - 13, y0, 28, 7);
     g.fillStyle = tinta().neon2;
-    g.fillRect(x - 14, y0 - 2, 28, 6);
+    g.fillRect(x - 14, y0 - 2, 28, 7);
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.fillRect(x - 14, y0 - 2, 28, 2);
     if (L.palla && L.carica > 0) {
       g.fillStyle = hexA(tinta().neon2, 0.3);
-      g.fillRect(x - 14, 1842 - 300 * L.carica, 28, 300 * L.carica);
+      g.fillRect(x - 14, yS - 4 - 300 * L.carica, 28, 300 * L.carica);
     }
     g.restore();
     if (L.palla) L.palla.giu = tira;
@@ -1309,8 +1519,46 @@
     g.restore();
   }
 
+  // Flasher e illuminazione generale, sopra il campo (in coordinate del tavolo)
+  function disegnaLuci(g) {
+    for (const f of stato.flasher) {
+      const a = Math.pow(1 - f.t / f.durata, 1.6) * f.k;
+      luce(g, f.x, f.y, 190, f.colore, a * 0.9);
+      luce(g, f.x, f.y, 70, '#ffffff', a * 0.6);
+    }
+    if (stato.multiball && T.forma) {
+      // nel multiball l'illuminazione generale pulsa
+      g.save();
+      g.globalCompositeOperation = 'lighter';
+      T.forma(g);
+      g.fillStyle = hexA(tinta().luce, 0.04 + 0.04 * Math.sin(stato.tempo * 9));
+      g.fill();
+      g.restore();
+    }
+    if (stato.gi < 0.995 && T.forma) {
+      g.save();
+      T.forma(g);
+      g.fillStyle = `rgba(8,4,0,${(1 - stato.gi) * 0.72})`;
+      g.fill();
+      g.restore();
+    }
+  }
+  // Il vetro: un riflesso leggero e fisso sullo schermo, come la luce della
+  // stanza sul vetro del flipper
+  function disegnaVetro(g, VH) {
+    const gr = g.createLinearGradient(0, 0, W * 0.9, VH * 0.5);
+    gr.addColorStop(0, 'rgba(255,255,255,0.075)');
+    gr.addColorStop(0.32, 'rgba(255,255,255,0.03)');
+    gr.addColorStop(0.5, 'rgba(255,255,255,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, W, VH);
+  }
+
+  let ultimaOra = 0;
   function disegna(ora) {
     preparaStrati();
+    dtDisegno = clamp(ora - ultimaOra, 0.001, 0.05);
+    ultimaOra = ora;
     const VH = camera.alto;
     ctx.setTransform(scala * dpr, 0, 0, scala * dpr, 0, 0);
     ctx.fillStyle = T.colori.fondo;
@@ -1329,18 +1577,23 @@
     T.disegnaPavimento(ctx, ora);
     T.disegnaCampo(ctx, ora);
     disegnaLancio(ctx);
+    disegnaRobivecchio(ctx, (r) => !r.percorso && !r.piano);
     disegnaPalle(ctx, (p) => p.piano === 0 && (p.stato === 'campo' || p.stato === 'canna' || p.stato === 'ferma'));
     strato(strati.galleria);
     T.disegnaSopraGalleria(ctx, ora);
+    disegnaRobivecchio(ctx, (r) => !r.percorso && r.piano === 1);
     disegnaPalle(ctx, (p) => p.piano === 1 && (p.stato === 'campo' || p.stato === 'ferma'));
     strato(strati.rampe);
     T.disegnaSopra(ctx, ora);
+    disegnaRobivecchio(ctx, (r) => !!r.percorso);
     disegnaPalle(ctx, (p) => p.stato === 'percorso' && !p.per.sotto);
     // ghianda nel tunnel: si vede solo un alone che corre sotto terra
     for (const p of stato.palle) if (p.stato === 'percorso' && p.per.sotto) luce(ctx, p.x, p.y, 26, tinta().neon2, 0.5);
+    disegnaLuci(ctx);
     disegnaParticelle(ctx);
     disegnaScritte(ctx);
     ctx.restore();
+    if (T.colori.vetro !== false) disegnaVetro(ctx, VH);
     if (!lato) {
       disegnaInfoTavolo(ctx);
       if (VH < H) disegnaMiniMappa(ctx, W - 50, 46, 44);
@@ -1348,7 +1601,7 @@
     disegnaMessaggio(ctx);
     if (stato.fase === 'bonus') disegnaBonus(ctx);
     if (stato.flash > 0) {
-      ctx.fillStyle = hexA('#ffffff', stato.flash * 0.35);
+      ctx.fillStyle = hexA('#ffffff', stato.flash * 0.22);
       ctx.fillRect(0, 0, W, VH);
     }
     ctx.restore();
@@ -1393,25 +1646,75 @@
     g.lineWidth = 2;
     for (let y = 40; y < h; y += 48) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
   }
+  // Display a matrice di punti (come il DMD dei flipper veri): il testo si
+  // scrive su una tela piccola, si leggono i pixel e si accende un puntino
+  // arancione per ognuno. Ogni schermata si prepara una volta (cache per testo).
+  // 128 × 32 punti come i DMD veri: in alto, piccoli, la palla e il bonus;
+  // sotto, grande, il punteggio (o il messaggio del momento).
+  const DMD = { cols: 128, righe: 32, cache: new Map() };
+  function schermataDMD(sx, dx, grande, w, h, colore) {
+    const chiave = [sx, dx, grande, w, h, colore].join('|');
+    let c = DMD.cache.get(chiave);
+    if (c) return c;
+    if (DMD.cache.size > 30) DMD.cache.clear();
+    const piccola = document.createElement('canvas');
+    piccola.width = DMD.cols; piccola.height = DMD.righe;
+    const gp = piccola.getContext('2d');
+    gp.fillStyle = '#000'; gp.fillRect(0, 0, DMD.cols, DMD.righe);
+    gp.fillStyle = '#fff'; gp.textBaseline = 'alphabetic';
+    gp.font = '700 8px Arial, Helvetica, sans-serif';
+    gp.textAlign = 'left'; gp.fillText(sx, 1, 8);
+    gp.textAlign = 'right'; gp.fillText(dx, DMD.cols - 1, 8);
+    let size = 19;
+    gp.font = `900 ${size}px Arial, Helvetica, sans-serif`;
+    const ww = gp.measureText(grande).width;
+    if (ww > DMD.cols - 2) { size = Math.max(8, Math.floor(size * (DMD.cols - 2) / ww)); gp.font = `900 ${size}px Arial, Helvetica, sans-serif`; }
+    gp.textAlign = 'center';
+    gp.fillText(grande, DMD.cols / 2, 21 + size * 0.36);
+    const dati = gp.getImageData(0, 0, DMD.cols, DMD.righe).data;
+    const k = Math.min(3, Math.ceil(scala * dpr));
+    c = document.createElement('canvas');
+    c.width = Math.round(w * k); c.height = Math.round(h * k);
+    const g = c.getContext('2d');
+    g.scale(k, k);
+    const cw = w / DMD.cols, ch = h / DMD.righe;
+    g.fillStyle = hexA(colore, 0.13);
+    for (let j = 0; j < DMD.righe; j++) for (let i = 0; i < DMD.cols; i++) g.fillRect((i + 0.2) * cw, (j + 0.2) * ch, cw * 0.6, ch * 0.6);
+    for (let j = 0; j < DMD.righe; j++) {
+      for (let i = 0; i < DMD.cols; i++) {
+        const v = dati[(j * DMD.cols + i) * 4] / 255;
+        if (v < 0.3) continue;
+        g.fillStyle = hexA(colore, 0.6 + 0.4 * v);
+        g.fillRect((i + 0.08) * cw, (j + 0.08) * ch, cw * 0.84, ch * 0.84);
+      }
+    }
+    DMD.cache.set(chiave, c);
+    return c;
+  }
   function disegnaDisplay(g, w, h) {
     const t = tinta();
     sfondoPannello(g, w, h);
     g.save();
-    // targa con i punti
-    g.fillStyle = 'rgba(10,5,2,0.75)';
-    g.fillRect(14, 16, w - 28, 112);
-    g.strokeStyle = t.neon; g.lineWidth = 2;
-    g.strokeRect(14, 16, w - 28, 112);
+    // il display: cornice scura, vetro e puntini arancioni
+    const dx = 12, dy = 14, dw = w - 24, dh = 114;
+    g.fillStyle = '#1a1008';
+    g.beginPath(); if (g.roundRect) g.roundRect(dx - 4, dy - 4, dw + 8, dh + 8, 8); else g.rect(dx - 4, dy - 4, dw + 8, dh + 8); g.fill();
+    g.fillStyle = '#0a0503';
+    g.fillRect(dx, dy, dw, dh);
+    const mm = stato.messaggi[0];
+    const info = stato.moltT > 0 ? `CAMPO x${stato.moltCampo}` : stato.combo.t > 0 && stato.combo.n > 1 ? `COMBO x${stato.combo.n}` : `BONUS x${stato.bonusMolt}`;
+    const gioco = stato.modo === 'gioco';
+    const grande = gioco ? (mm && mm.t < mm.durata - 0.4 ? mm.testo.toUpperCase() : numero(stato.punti)) : numero(record());
+    g.drawImage(schermataDMD(gioco ? `PALLA ${Math.min(stato.palla, stato.palleTotali)}/${stato.palleTotali}` : 'RECORD', gioco ? info : 'TINO FLIPPER', grande, dw - 8, dh - 8, T.colori.display || '#ff9a1e'), dx + 4, dy + 4, dw - 8, dh - 8);
+    // riflesso sul vetro del display
+    const gv = g.createLinearGradient(dx, dy, dx + dw * 0.6, dy + dh);
+    gv.addColorStop(0, 'rgba(255,255,255,0.1)'); gv.addColorStop(0.5, 'rgba(255,255,255,0)');
+    g.fillStyle = gv;
+    g.fillRect(dx, dy, dw, dh);
+    g.strokeStyle = hexA(t.neon, 0.6); g.lineWidth = 1.5;
+    g.strokeRect(dx, dy, dw, dh);
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.font = '600 13px Fredoka, sans-serif';
-    g.fillStyle = hexA('#ffffff', 0.6);
-    g.fillText(stato.modo === 'gioco' ? `PALLA ${Math.min(stato.palla, stato.palleTotali)} DI ${stato.palleTotali}` : 'RECORD', w / 2, 34);
-    testoLuce(g, numero(stato.modo === 'gioco' ? stato.punti : record()), w / 2, 72, adatta(g, numero(stato.punti), 34, w - 50), t.neon);
-    g.font = '600 13px Fredoka, sans-serif';
-    g.fillStyle = hexA('#ffffff', 0.75);
-    const info = [`Bonus ×${stato.bonusMolt}`, stato.moltT > 0 ? `Campo ×${stato.moltCampo}` : '', stato.combo.t > 0 && stato.combo.n > 1 ? `Combo ×${stato.combo.n}` : ''].filter(Boolean).join(' · ');
-    g.fillText(info, w / 2, 108);
     // avventura
     let y = 156;
     const a = stato.avventura;
@@ -1532,7 +1835,7 @@
     g.fillStyle = hexA('#ffffff', 0.65);
     const righe = touch
       ? ['Tocca a sinistra e a destra', 'per i flipper', 'Striscia in su: scossone']
-      : ['← → o Z /  flipper', '↓ o Spazio  lancio', '↑ scossone · V vista intera', 'P pausa · M suoni · N musica'];
+      : ['← → o Z /  flipper', 'o clic a sinistra / a destra', '↓ o Spazio  lancio', '↑ scossone · V vista intera', 'P pausa · M suoni · N musica'];
     righe.forEach((r, i) => g.fillText(r, w / 2, base + 40 + i * 21));
     const gi = immagini.gino;
     if (pronta(gi) && h - base > 200) {
@@ -1576,7 +1879,7 @@
       </div>`;
     }
     return `<div class="comandi">
-      <p>Flipper: <kbd>←</kbd> <kbd>→</kbd> (oppure <kbd>Z</kbd> <kbd>/</kbd>, <kbd>A</kbd> <kbd>D</kbd>, i due <kbd>Maiusc</kbd>), o tasto sinistro e destro del mouse. Ogni tasto muove tutti i flipper del suo lato.</p>
+      <p>Flipper: <kbd>←</kbd> <kbd>→</kbd> (oppure <kbd>Z</kbd> <kbd>/</kbd>, <kbd>A</kbd> <kbd>D</kbd>, i due <kbd>Maiusc</kbd>). Col mouse: clic sulla metà sinistra o destra del tavolo (il tasto destro vale sempre per il flipper destro). Ogni tasto muove tutti i flipper del suo lato.</p>
       <p>Lancio: tieni premuto <kbd>↓</kbd> o <kbd>Spazio</kbd> e lascia. Scossone: <kbd>↑</kbd> (non troppo: tilt!).</p>
       <p><kbd>V</kbd> tavolo intero · <kbd>P</kbd> pausa · <kbd>M</kbd> suoni · <kbd>N</kbd> musica</p>
     </div>`;
@@ -1584,6 +1887,12 @@
   function tabellaClassifica() {
     if (!classifica.length) return '';
     return `<table class="classifica">${classifica.map((c, i) => `<tr class="${i === ultimaPosizione ? 'nuovo' : ''}"><td>${i + 1}.</td><td>${numero(c.punti)}</td><td>${c.data}</td></tr>`).join('')}</table>`;
+  }
+  const imgRobi = (r) => `<img src="${ASSETS}oggetti/robivecchi/${r.file || r.id}.svg" alt="">`;
+  function collezioneRobivecchi() {
+    if (!ROBIVECCHI.length) return '';
+    return `<h3>Robivecchi del tavolo (${collezione.length} di ${ROBIVECCHI.length})</h3>
+      <div class="robivecchi">${ROBIVECCHI.map((r) => `<figure class="${collezione.includes(r.id) ? 'preso' : 'manca'}">${imgRobi(r)}<figcaption><b>${r.nome}</b><span>${collezione.includes(r.id) ? 'Preso!' : r.impresa}</span></figcaption></figure>`).join('')}</div>`;
   }
   function pannelloMenu() {
     return `<div class="riquadro">
@@ -1596,6 +1905,7 @@
         <a class="bottone secondario" href="neon/index.html">Notte al neon (tavolo bonus)</a>
       </div>
       ${classifica.length ? '<h3>I migliori punteggi</h3>' + tabellaClassifica() : ''}
+      ${collezioneRobivecchi()}
       <h3>Come si gioca</h3>
       ${T.testi.guida}
       ${testoComandi()}
@@ -1620,7 +1930,10 @@
       <div class="ritratti">${img('ko')}${img('gino', 'caduto')}</div>
       <h2>${nuovo ? 'Nuovo record!' : 'Partita finita'}</h2>
       <p><b>${numero(stato.punti)}</b> punti</p>
+      ${stato.match ? `<p class="match ${stato.match.vinto ? 'vinto' : ''}">Match <b>${stato.match.cifre}</b> · <b>${stato.match.estratte}</b>${stato.match.vinto ? ' · Match! Palla extra alla prossima partita' : ''}</p>` : ''}
       ${ultimaPosizione >= 0 ? tabellaClassifica() : `<p class="record">Record: ${numero(record())}</p>`}
+      ${stato.robivecchi.presi.length ? `<h3>Robivecchi trovati</h3><div class="robivecchi nuovi">${stato.robivecchi.presi.map((id) => ROBIVECCHI.find((r) => r.id === id)).map((r) => `<figure class="preso">${imgRobi(r)}<figcaption><b>${r.nome}</b></figcaption></figure>`).join('')}</div>` : ''}
+      ${stato.robivecchi.attivo || stato.robivecchi.coda.length ? `<p class="record">Robivecchio rimasto sul tavolo: ${[stato.robivecchi.attivo, ...stato.robivecchi.coda].filter(Boolean).map((r) => r.nome).join(', ')}. Rifai l'impresa in un'altra partita.</p>` : ''}
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Ancora una!</button>
         <button class="bottone secondario" data-azione="menu">Menu</button>
@@ -1672,6 +1985,15 @@
     ultimo = ora;
     if (!stato.test) aggiorna(dt);
     disegna(ora / 1000);
+    // rotolamento: la ghianda più veloce in campo (sulle rampe suona più grave)
+    let vel = 0, rampa = false;
+    if (stato.fase === 'gioco' && stato.modo === 'gioco') {
+      for (const p of stato.palle) {
+        if (p.stato === 'campo') vel = Math.max(vel, Math.hypot(p.vx, p.vy));
+        else if (p.stato === 'percorso' && !p.per.sotto && p.v > vel) { vel = p.v; rampa = true; }
+      }
+    }
+    A.rotola(vel, rampa);
     requestAnimationFrame(ciclo);
   }
   requestAnimationFrame(ciclo);
@@ -1680,7 +2002,7 @@
   window.tinoFlipper = {
     stato, tavolo: T, mondo: m, camera, ia, IA,
     iniziaPartita, aggiorna, lancia, premiFlipper, premiLancio, scossone, pilotaIA, provaColpo,
-    avviaAvventura, avviaMultiball, nuovaPalla, avviaPercorso, cambiaVista,
-    orologio: () => orologio,
+    avviaAvventura, avviaMultiball, nuovaPalla, avviaPercorso, cambiaVista, impresa,
+    orologio: () => orologio, collezione: () => collezione,
   };
 })();
