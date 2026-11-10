@@ -104,18 +104,19 @@ di resa per fatica. In fondo, i numeri delle partite simulate e come continuare.
 ## 3. Proposte · approvate dal proprietario
 
 **Decisione presa (novembre 2026): si fanno tutte, tranne quella sconsigliata
-(la prospettiva leggera, grafica 7).** Ordinate per resa rispetto alla fatica;
-nessuna è iniziata. Si parte in una nuova sessione (Opus 5.5).
+(la prospettiva leggera, grafica 7).** Ordinate per resa rispetto alla fatica.
+Quelle segnate **(fatta)** sono del passo 1 della sezione 5 (dettagli in CLAUDE.md,
+"Passo 1 della sezione 5").
 
 ### Grafica
-1. **Lampadine dell'illuminazione generale lungo le pareti** (facile): una fila
+1. **Lampadine dell'illuminazione generale lungo le pareti** (facile, **fatta**): una fila
    di piccole lampadine bianco-calde lungo il bordo del tavolo e sotto le rampe,
    che seguono `stato.gi` (si spengono col tilt, lampeggiano nei jackpot).
    È quello che più fa "flipper" guardandolo.
-2. **Animazioni meccaniche** (facile): i sassi che cadono con una rotazione
+2. **Animazioni meccaniche** (facile, **fatta**): i sassi che cadono con una rotazione
    all'indietro invece di sparire, i cartelli che si abbattono ruotando, il
    sasso che spunta che sale da sotto, il deviatore che scatta con un rimbalzo.
-3. **Grembiule (apron)** in basso (facile): la zona sotto i flipper come un
+3. **Grembiule (apron)** in basso (facile, **fatta**): la zona sotto i flipper come un
    grembiule di legno con due cartoline (istruzioni e punteggi) e le lampade
    del bonus sopra.
 4. **Backglass dipinto** (media, serve Gemini): il pannello di sinistra come il
@@ -130,35 +131,35 @@ nessuna è iniziata. Si parte in una nuova sessione (Opus 5.5).
    tutto il campo cambierebbe disegno, urti del dito e telecamera.
 
 ### Suoni
-1. **Suono di impatto col vetro** (facile): quando la ghianda scende dalla
+1. **Suono di impatto col vetro** (facile, **fatta**): quando la ghianda scende dalla
    galleria o esce dal pozzo molto veloce, un "tac" sul vetro.
-2. **Campanelle a tre toni** (facile): nei flipper elettromeccanici i bonus
+2. **Campanelle a tre toni** (facile, **fatta**): nei flipper elettromeccanici i bonus
    suonano con tre campanelle; usarle per le corsie e il bonus di fine palla
    invece delle note sintetiche.
-3. **Ronzio del mobile** (facile): un ronzio bassissimo (50 Hz) sotto tutto,
+3. **Ronzio del mobile** (facile, **fatta**): un ronzio bassissimo (50 Hz) sotto tutto,
    che si sente solo nei silenzi; da provare, potrebbe dare fastidio.
 4. **Suoni per il legno vero** (media): registrazioni brevi (.ogg di pochi KB)
    per flipper, bumper e scolo al posto della sintesi; cambierebbe la regola
    "nessun file" degli altri giochi, da decidere.
 
 ### Regole e gioco
-1. **Status report** (facile): tenendo premuto un flipper per 2 s il display
+1. **Status report** (facile, **fatta**): tenendo premuto un flipper per 2 s il display
    mostra a rotazione avventure fatte, chiavi, robivecchi, record.
-2. **Iniziali in classifica** (facile): a nuovo record tre lettere scelte coi
+2. **Iniziali in classifica** (facile, **fatta**): a nuovo record tre lettere scelte coi
    flipper e il lancio, come nei flipper veri.
 3. **Live catch e cradle** (da provare): con l'attrito nuovo dovrebbe essere
    possibile fermare la ghianda sul flipper alzato; da provare con persone vere
    e, se non basta, alzare `attritoFlipper` o abbassare `FLIPPER.e`.
-4. **Tilt a pendolo** (facile): invece del conteggio a scatti, un pendolo che
+4. **Tilt a pendolo** (facile, **fatta**): invece del conteggio a scatti, un pendolo che
    oscilla e si smorza; l'avviso quando tocca il bordo (più fedele e più
    leggibile: si può disegnare nel pannello).
-5. **Ball search** (facile): se la ghianda è ferma 3 s, prima di lo scossone
+5. **Ball search** (facile, **fatta**): se la ghianda è ferma 3 s, prima di lo scossone
    gratis far scattare bumper e fionde vicini come fanno i flipper veri.
 
 ### Tecnica
-1. **Strati ritagliati** (facile): galleria e rampe si disegnano solo nella
+1. **Strati ritagliati** (facile, **fatta**): galleria e rampe si disegnano solo nella
    loro area (ora tre `drawImage` a finestra intera per fotogramma).
-2. **Pannelli laterali solo quando cambiano** (facile): ora si ridisegnano
+2. **Pannelli laterali solo quando cambiano** (facile, **fatta**): ora si ridisegnano
    ogni tre fotogrammi anche se uguali.
 3. **Menu dei tavoli** (tappa 2): scelta del tavolo nel menu e sblocco coi punti.
 4. **Prove su telefono vero** con CPU throttling ×4 (come per Tino Pro Skate):
@@ -183,14 +184,16 @@ dentro il rumore di 6 partite.
 
 ## 5. Come continuare
 
-Ordine di lavoro consigliato per la prossima sessione (prima le cose facili e
-visibili, poi quelle che servono Gemini, poi la tappa 2):
-1. Grafica 1, 2, 3 (lampadine lungo le pareti, animazioni meccaniche, grembiule);
+Ordine di lavoro consigliato (prima le cose facili e visibili, poi quelle che
+servono Gemini, poi la tappa 2):
+1. **Fatto** (novembre 2026, partite simulate ancora a zero fuori e zero ferme):
+   grafica 1, 2, 3 (lampadine lungo le pareti, animazioni meccaniche, grembiule);
    suoni 1, 2, 3 (vetro, campanelle a tre toni, ronzio: se dà fastidio si toglie);
    regole 1, 2, 4, 5 (status report, iniziali, tilt a pendolo, ball search);
    tecnica 1, 2 (strati ritagliati, pannelli solo quando cambiano). Ogni passo:
    partite simulate (`prove/partite.js`) con "fuori" e "ferme" a zero, poi artifact.
-2. Regole 3 (live catch) e tecnica 4 (telefono vero): da provare col proprietario.
+2. **Fatto**: regole 3 (il live catch funziona già, confermato dal proprietario) e tecnica 4
+   (sul telefono risoluzione 1,5 o 1,25 e niente vetro; vedi CLAUDE.md, "Qualità sul telefono").
 3. Grafica 4 e 5 (backglass e piano di gioco dipinti): preparare i prompt per
    Gemini come negli altri giochi; il codice deve usare i PNG se ci sono e
    altrimenti restare com'è. Grafica 6 (spessore delle pareti) dopo, se serve ancora.

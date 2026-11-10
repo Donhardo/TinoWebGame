@@ -24,7 +24,11 @@
   const ALTO_MIN = 960;               // altezza logica minima della finestra sul tavolo
   const LANCIO = { min: 900, max: 3150, pieno: 1.05, auto: 0.74 };
   const SALVA = { inizio: 12, multiball: 14, minimo: 5 };
-  const TILT = { colpo: 1, cala: 0.55, avviso: 1.7, tilt: 2.75 };
+  // Tilt a pendolo: ogni scossone allarga l'oscillazione del piombino (A, in
+// "scossoni"), che si smorza da sola; quando tocca l'anello è l'avviso, se
+// oscilla troppo è tilt. Tre scossoni di fila (entro ~0,35 s l'uno dall'altro)
+// fanno tilt, due l'avviso; uno ogni secondo e mezzo non arriva all'avviso.
+const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo: 0.55 };
   const PERCORSO = { su: -500, giu: 900 };          // accelerazione sulle rampe (px/s²)
   const CAMERA = { anticipo: 0.25, molla: 42, zonaMorta: 36, margine: 70, sottoFlipper: 0.75 };
 
@@ -82,7 +86,7 @@
     multiball: false,
     jackpot: { valore: 150000, fatti: 0, doppio: false },
     avventura: null, avventureFatte: [], giro: 0,
-    tilt: 0, tiltato: false,
+    pendolo: { A: 0, fase: 0 }, tiltato: false,
     contatori: null, bonus: null,
     scossa: 0, flash: 0, flasher: [], gi: 1,
     robivecchi: { attivo: null, coda: [], presi: [], guadagnati: [], attesa: 0, t: 0 },
@@ -478,7 +482,7 @@
     stato.punti += stato.bonus.totale - stato.bonus.contato;
     stato.bonus = null;
     stato.tiltato = false;
-    stato.tilt = 0;
+    stato.pendolo.A = 0;
     stato.bonusMolt = 1;
     if (stato.palleExtra > 0) {
       stato.palleExtra--;
@@ -513,7 +517,7 @@
     Object.assign(stato, {
       punti: 0, palla: 1, palle: [], bonusMolt: 1, moltCampo: 1, moltT: 0, combo: { n: 0, t: 0 },
       multiball: false, jackpot: { valore: T.PUNTI.jackpot, fatti: 0, doppio: false },
-      avventura: null, avventureFatte: [], giro: 0, palleExtra: 0, tilt: 0, tiltato: false,
+      avventura: null, avventureFatte: [], giro: 0, palleExtra: 0, pendolo: { A: 0, fase: 0 }, tiltato: false, status: null, iniziali: null,
       messaggi: [], scritte: [], particelle: [], bonus: null,
       robivecchi: { attivo: null, coda: [], presi: [], guadagnati: [], attesa: 0, t: 0 },
       statistiche: { palle: 0, durata: 0, perse: 0, salvate: 0, fuori: 0, ferme: 0, dove: [], tiri: {} },
@@ -559,13 +563,56 @@
       scrivi(T.id + ':classifica', classifica);
     }
     aggiornaTabellone();
+    // in classifica: prima le iniziali, scelte coi flipper e confermate col lancio
+    if (!stato.test && ultimaPosizione >= 0 && modoGioco()) {
+      const prima = String(leggi('iniziali', 'AAA') || 'AAA').padEnd(3, 'A').slice(0, 3).split('');
+      stato.iniziali = { lettere: prima, i: 0, voce, da: performance.now() };
+      mostraPannello(pannelloIniziali());
+    } else {
+      mostraPannello(pannelloFine());
+    }
+  }
+  function modoGioco() { return stato.modo === 'gioco'; }
+
+  // ---------------------------------------------------------------- iniziali
+  const LETTERE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  function cambiaLettera(passo) {
+    const ini = stato.iniziali;
+    if (!ini || performance.now() - ini.da < 600) return;
+    const k = (LETTERE.indexOf(ini.lettere[ini.i]) + passo + LETTERE.length) % LETTERE.length;
+    ini.lettere[ini.i] = LETTERE[k];
+    suoni.clic();
+    mostraIniziali();
+  }
+  function confermaLettera() {
+    const ini = stato.iniziali;
+    if (!ini || performance.now() - ini.da < 600) return;
+    ini.i++;
+    suoni.campanella(ini.i === 3 ? 0 : 2);
+    if (ini.i < 3) { mostraIniziali(); return; }
+    const nome = ini.lettere.join('');
+    ini.voce.nome = nome;
+    scrivi('iniziali', nome);
+    scrivi(T.id + ':classifica', classifica);
+    stato.iniziali = null;
     mostraPannello(pannelloFine());
+  }
+  function mostraIniziali() {
+    const el = pannello.querySelector('.iniziali');
+    if (el) el.outerHTML = caselleIniziali();
+  }
+  function caselleIniziali() {
+    const ini = stato.iniziali;
+    return `<div class="iniziali">${ini.lettere.map((l, i) => `<span class="${i === ini.i ? 'ora' : i < ini.i ? 'fatta' : ''}">${l}</span>`).join('')}</div>`;
   }
   function pausa() {
     if (stato.modo !== 'gioco' || stato.fase === 'pausa' || stato.fase === 'finita') return;
     stato.pausaDa = stato.fase;
     stato.fase = 'pausa';
     for (const f of m.flipper) f.premuto = false;
+    premuti.sx = premuti.dx = false;
+    premutoDa.sx = premutoDa.dx = null;
+    stato.status = null;
     stato.lancio.premuto = false;
     suoni.fineCarica();
     mostraPannello(pannelloPausa());
@@ -590,8 +637,10 @@
     stato.scossa = Math.max(stato.scossa, 0.18);
     suoni.scossone();
     if (stato.modo !== 'gioco') return;
-    stato.tilt += TILT.colpo;
-    if (stato.tilt >= TILT.tilt) {
+    const P = stato.pendolo;
+    if (P.A < 0.05) P.fase = 0;
+    P.A += TILT.colpo;
+    if (P.A >= TILT.tilt) {
       stato.tiltato = true;
       for (const f of m.flipper) f.premuto = false;
       messaggio('TILT!', 'Hai scosso troppo il tavolo', 3, '#ff4a5a');
@@ -599,11 +648,48 @@
       suoni.tilt();
       stato.salva = 0;
       if (stato.avventura) fineAvventura(false);
-    } else if (stato.tilt >= TILT.avviso) {
+    } else if (P.A >= TILT.avviso) {
       messaggio('Attento!', 'Ancora uno e va in tilt', 1.4, '#ffb627');
       faccia('arrabbiato', 1.5);
       suoni.avviso();
     }
+  }
+
+  // La ghianda appoggiata a un flipper tenuto su (il "cradle") non è incastrata
+  function sulFlipperAlzato(p) {
+    for (const f of m.flipper) {
+      if (!f.premuto || f.piano !== p.piano || !f.zona) continue;
+      const z = f.zona;
+      if (p.x > z[0] && p.x < z[2] && p.y > z[1] && p.y < z[3]) return true;
+    }
+    return false;
+  }
+  // Ball search dei flipper veri: con la ghianda ferma da 2 s scattano tutti i
+  // solenoidi (si sentono e si vedono); spingono la ghianda solo i nodi e le
+  // fionde che la toccano. Non dà punti. Se non basta, a 3 s c'è lo scossone gratis.
+  function ricercaGhianda(p) {
+    stato.statistiche.ricerche = (stato.statistiche.ricerche || 0) + 1;
+    if (stato.test) stato.statistiche.dove.push(['ricerca', p.piano, Math.round(p.x), Math.round(p.y)]);
+    const vicino = R + 9;
+    for (const c of m.cerchi[p.piano] || []) {
+      if (c.tipo !== 'bumper' || (c.attivo && !c.attivo())) continue;
+      const dx = p.x - c.x, dy = p.y - c.y, d = Math.hypot(dx, dy) || 1;
+      if (d > c.r + vicino) continue;
+      p.vx += dx / d * (c.spinta || 900) * 0.8;
+      p.vy += dy / d * (c.spinta || 900) * 0.8;
+    }
+    for (const s of m.segmenti[p.piano] || []) {
+      if (s.tipo !== 'fionda' || (s.attivo && !s.attivo())) continue;
+      const sx = s.bx - s.ax, sy = s.by - s.ay;
+      const t = clamp(((p.x - s.ax) * sx + (p.y - s.ay) * sy) / (sx * sx + sy * sy || 1), 0, 1);
+      const qx = s.ax + sx * t, qy = s.ay + sy * t;
+      const dx = p.x - qx, dy = p.y - qy, d = Math.hypot(dx, dy) || 1;
+      if (d > (s.r || 0) + vicino) continue;
+      p.vx += dx / d * (s.spinta || 800) * 0.8;
+      p.vy += dy / d * (s.spinta || 800) * 0.8;
+    }
+    if (T.ricerca) T.ricerca(p);
+    suoni.ricerca();
   }
 
   // ---------------------------------------------------------------- aggiornamento
@@ -728,11 +814,15 @@
         stato.salvaPronto = false;
         if (stato.salva <= 0) stato.salva = Math.max(SALVA.minimo, SALVA.inizio - stato.giro);
       }
-      // ghianda ferma (incastrata)
-      if (p.vx * p.vx + p.vy * p.vy < 40 * 40) p.ferma += dt;
-      else p.ferma = 0;
-      if (p.ferma > 3 && !(p.x > T.lancio.xCorridoio && p.y > T.lancio.yRitorno)) {
+      // ghianda ferma (incastrata); tenuta sul flipper alzato non conta
+      if (p.vx * p.vx + p.vy * p.vy < 40 * 40 && !sulFlipperAlzato(p)) p.ferma += dt;
+      else { p.ferma = 0; p.cercata = false; }
+      const nelCorridoio = p.x > T.lancio.xCorridoio && p.y > T.lancio.yRitorno;
+      // ball search: prima di aiutarla, scattano i nodi e le fionde vicini
+      if (p.ferma > 2 && !p.cercata && !nelCorridoio) { p.cercata = true; ricercaGhianda(p); }
+      if (p.ferma > 3 && !nelCorridoio) {
         p.ferma = 0;
+        p.cercata = false;
         p.vx += casuale(-200, 200); p.vy -= 400;
         stato.statistiche.ferme++;
         if (stato.test) stato.statistiche.dove.push(['ferma', p.piano, Math.round(p.x), Math.round(p.y)]);
@@ -746,17 +836,39 @@
     if (stato.salva > 0 && !stato.salvaPronto) stato.salva = Math.max(0, stato.salva - dt);
     if (stato.moltT > 0) stato.moltT -= dt;
     if (stato.combo.t > 0) stato.combo.t -= dt;
-    stato.tilt = Math.max(0, stato.tilt - TILT.cala * dt);
+    const P = stato.pendolo;
+    P.A *= Math.exp(-TILT.cala * dt);
+    P.fase += dt * 2 * Math.PI / TILT.periodo;
     const a = stato.avventura;
     if (a) {
       a.t -= dt;
       if (a.t <= 0 && a.id !== T.FINALE.id) fineAvventura(true);
       if (a.id === T.FINALE.id && a.t <= 0 && !stato.multiball) fineAvventura(true);
     }
+    aggiornaStatus();
     T.aggiorna(dt);
     aggiornaRobivecchi(dt);
     aggiornaCamera(dt);
     aggiornaTabellone();
+  }
+
+  // Status report: tenendo premuto un flipper per 2 s il display mostra a
+  // rotazione le pagine del tavolo (avventure, chiavi…), i robivecchi e il record
+  const STATUS = { dopo: 2, pagina: 1.6 };
+  function aggiornaStatus() {
+    const da = [premutoDa.sx, premutoDa.dx].filter((x) => x !== null);
+    const t = da.length && stato.modo === 'gioco' ? stato.tempo - Math.min(...da) - STATUS.dopo : -1;
+    if (t < 0) { stato.status = null; return; }
+    const pagine = statusPagine();
+    const i = Math.floor(t / STATUS.pagina) % pagine.length;
+    stato.status = { i, n: pagine.length, titolo: pagine[i][0], valore: pagine[i][1] };
+  }
+  function statusPagine() {
+    const pag = T.status ? T.status() : [];
+    if (ROBIVECCHI.length) pag.push(['ROBIVECCHI', `${collezione.length} DI ${ROBIVECCHI.length}`]);
+    const r = classifica[0];
+    pag.push(['RECORD' + (r && r.nome ? ' ' + r.nome : ''), numero(record())]);
+    return pag;
   }
 
   function aggiornaBonus(dt) {
@@ -769,7 +881,7 @@
       const prima = b.contato;
       b.contato = Math.min(b.totale, b.contato + passo);
       stato.punti += b.contato - prima;
-      if (Math.floor(b.t * 14) !== Math.floor((b.t - dt) * 14)) suoni.tic();
+      if (Math.floor(b.t * 9) !== Math.floor((b.t - dt) * 9)) suoni.campanella(b.contato >= b.totale ? 0 : 2, 0.7);
     }
     if (b.t > 1 && b.contato >= b.totale) {
       b.fine = (b.fine || 0) + dt;
@@ -914,6 +1026,7 @@
   const LANCIA = ['ArrowDown', 'Space', 'KeyS', 'Enter'];
   const SCUOTI = ['ArrowUp', 'KeyW', 'KeyT'];
   const premuti = { sx: false, dx: false };
+  const premutoDa = { sx: null, dx: null };
 
   function premiFlipper(lato, giu) {
     if (stato.modo !== 'gioco' || stato.fase === 'pausa' || stato.fase === 'finita') return;
@@ -923,6 +1036,7 @@
     } else if (!giu && premuti[lato] && !stato.tiltato) {
       suoni.flipperGiu();
     }
+    if (giu !== premuti[lato]) premutoDa[lato] = giu ? stato.tempo : null;
     premuti[lato] = giu;
     for (const f of flipperDi(lato)) { f.premuto = giu; f.prog = null; }
   }
@@ -955,6 +1069,13 @@
     if (e.code === 'KeyM') { cambiaAudio(); return; }
     if (e.code === 'KeyN') { cambiaMusica(); return; }
     if (e.code === 'KeyV') { cambiaVista(); return; }
+    if (stato.iniziali) {
+      if ([...SINISTRA, ...DESTRA, ...LANCIA].includes(e.code)) e.preventDefault();
+      if (SINISTRA.includes(e.code)) cambiaLettera(-1);
+      else if (DESTRA.includes(e.code)) cambiaLettera(1);
+      else if (LANCIA.includes(e.code)) confermaLettera();
+      return;
+    }
     if (!gioco) return;
     if (SINISTRA.includes(e.code)) premiFlipper('sx', true);
     if (DESTRA.includes(e.code)) premiFlipper('dx', true);
@@ -1051,11 +1172,31 @@
 
   // ================================================================ DISEGNO
   let scala = 1, dpr = 1, lato = 0, larghezza = W, mini = null;
+  // Sul telefono il costo è quasi tutto nel disegno dei pixel (con il processore
+  // rallentato ×4: 12 fotogrammi al secondo a risoluzione 2, 24 a 1,5 senza il
+  // riflesso del vetro, 35 a 1,25): risoluzione al massimo 1,5, niente vetro, e
+  // se in partita resta lento si scende da soli a 1,25 (una volta sola).
+  // (solo se il puntatore principale è il dito: i portatili col touchscreen restano a piena qualità)
+  const telefono = matchMedia('(pointer: coarse)').matches;
+  const qualita = { dpr: telefono ? 1.5 : 2, vetro: !telefono, conta: 0, somma: 0, ridotta: false };
+  function controllaQualita(dt) {
+    if (!telefono || qualita.ridotta || stato.test || stato.modo !== 'gioco' || stato.fase !== 'gioco' || document.hidden) return;
+    qualita.conta++;
+    qualita.somma += dt;
+    if (qualita.conta < 180) return;
+    const medio = qualita.somma / qualita.conta;
+    qualita.conta = 0; qualita.somma = 0;
+    if (medio > 0.026) {
+      qualita.ridotta = true;
+      qualita.dpr = 1.25;
+      ridimensiona();
+    }
+  }
   function ridimensiona() {
     const r = palco.getBoundingClientRect();
     const aw = Math.max(100, r.width - 8);
     const ah = Math.max(100, r.height - 8);
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, qualita.dpr);
     if (stato.vistaIntera) {
       scala = Math.min(aw / W, ah / H);
       camera.alto = H;
@@ -1085,7 +1226,7 @@
 
   // Strati disegnati una volta, a tavolo intero: base (fondo e pareti),
   // galleria e rampe. La risoluzione è limitata per non usare troppa memoria.
-  const strati = { chiave: '', base: null, galleria: null, rampe: null, k: 1 };
+  const strati = { chiave: '', base: null, galleria: null, rampe: null, k: 1, pezzi: new Map() };
   function nuovaTela(k) {
     const c = document.createElement('canvas');
     c.width = Math.round(W * k);
@@ -1108,6 +1249,7 @@
     const [cr, gr] = nuovaTela(k);
     T.strati.rampe(gr);
     strati.base = cb; strati.galleria = cg; strati.rampe = cr;
+    strati.pezzi = new Map([[cg, pezziPieni(cg)], [cr, pezziPieni(cr)]]);
     // mini mappa: il tavolo intero in piccolo
     const mw = 120, mh = Math.round(mw * H / W);
     const cm = document.createElement('canvas');
@@ -1116,11 +1258,43 @@
     for (const s of [cb, cg, cr]) gm.drawImage(s, 0, 0, cm.width, cm.height);
     mini = { c: cm, w: mw, h: mh };
   }
+  // Le parti piene di uno strato trasparente (galleria, rampe): fasce di 64
+  // righe con qualcosa dentro, unite quando sono di seguito, ognuna con la sua
+  // larghezza utile. Si disegnano solo quelle (prima: tutta la finestra).
+  function pezziPieni(c) {
+    let dati;
+    try { dati = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; } catch (e) { return null; }
+    const cw = c.width, fascia = Math.max(1, Math.round(64 * strati.k));
+    const pezzi = [];
+    let corrente = null;
+    for (let y0 = 0; y0 < c.height; y0 += fascia) {
+      const y1 = Math.min(c.height, y0 + fascia);
+      let x0 = cw, x1 = -1;
+      for (let y = y0; y < y1; y++) {
+        const riga = y * cw * 4;
+        for (let x = 0; x < x0; x++) if (dati[riga + x * 4 + 3] > 4) { x0 = x; break; }
+        for (let x = cw - 1; x > x1; x--) if (dati[riga + x * 4 + 3] > 4) { x1 = x; break; }
+      }
+      if (x1 < 0) { corrente = null; continue; }
+      if (corrente) { corrente.y1 = y1; corrente.x0 = Math.min(corrente.x0, x0); corrente.x1 = Math.max(corrente.x1, x1 + 1); }
+      else { corrente = { y0, y1, x0, x1: x1 + 1 }; pezzi.push(corrente); }
+    }
+    return pezzi;
+  }
   function strato(c) {
     const k = strati.k;
     const y0 = Math.max(0, camera.y - 20), y1 = Math.min(H, camera.y + camera.alto + 20);
-    ctx.drawImage(c, 0, y0 * k, W * k, (y1 - y0) * k, 0, y0, W, y1 - y0);
+    const pezzi = strati.pezzi.get(c);
+    if (!pezzi) { ctx.drawImage(c, 0, y0 * k, W * k, (y1 - y0) * k, 0, y0, W, y1 - y0); return; }
+    const a = Math.floor(y0 * k), b = Math.ceil(y1 * k);
+    for (const q of pezzi) {
+      const ya = Math.max(a, q.y0), yb = Math.min(b, q.y1);
+      if (yb <= ya) continue;
+      ctx.drawImage(c, q.x0, ya, q.x1 - q.x0, yb - ya, q.x0 / k, ya / k, (q.x1 - q.x0) / k, (yb - ya) / k);
+    }
   }
+  // con il font arrivato si rifanno gli strati (le scritte dipinte usano Fredoka)
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { strati.chiave = ''; pannelli.chiave = ''; });
 
   // ---------------------------------------------------------------- aiuti di disegno
   const spriteGhianda = (() => {
@@ -1519,6 +1693,31 @@
     g.restore();
   }
 
+  // Lampadine dell'illuminazione generale (T.lampadine: lungo la cornice e
+  // sotto le rampe): seguono stato.gi (si abbassano col tilt e a fine palla)
+  // e nei jackpot e nei lampi corrono a file alterne.
+  function disegnaLampadine(g) {
+    const lista = T.lampadine;
+    if (!lista) return;
+    const gi = stato.gi;
+    const corsa = stato.flash > 0.08 ? Math.floor(stato.tempo * 12) : -1;
+    const y0 = camera.y - 30, y1 = camera.y + camera.alto + 30;
+    for (let i = 0; i < lista.length; i++) {
+      const b = lista[i];
+      if (b.y < y0 || b.y > y1) continue;
+      let k = gi;
+      if (corsa >= 0) k *= (i + corsa) % 2 ? 1.35 : 0.2;
+      else if (stato.multiball) k *= 0.85 + 0.15 * Math.sin(stato.tempo * 9 + i);
+      if (!b.sotto) {
+        g.fillStyle = 'rgba(40,22,6,0.55)';
+        g.beginPath(); g.arc(b.x, b.y, 4.2, 0, Math.PI * 2); g.fill();
+        g.fillStyle = `rgba(255,244,214,${0.25 + 0.75 * Math.min(1, k)})`;
+        g.beginPath(); g.arc(b.x, b.y, 3, 0, Math.PI * 2); g.fill();
+      }
+      luce(g, b.x, b.y, b.sotto ? 46 : 24, '#fff0c8', (b.sotto ? 0.3 : 0.42) * k);
+    }
+  }
+
   // Flasher e illuminazione generale, sopra il campo (in coordinate del tavolo)
   function disegnaLuci(g) {
     for (const f of stato.flasher) {
@@ -1543,6 +1742,42 @@
       g.restore();
     }
   }
+  // Il pendolo del tilt: il piombino oscilla dentro l'anello; quando lo tocca
+  // è l'avviso (l'anello si accende), il segno rosso fuori è il tilt
+  function disegnaPendolo(g, x, y, s) {
+    const P = stato.pendolo;
+    const L = 40 * s;
+    const ang = (A) => TILT.angolo * Math.min(A, TILT.tilt * 1.1) / TILT.tilt;
+    const th = ang(P.A) * Math.sin(P.fase);
+    const rAnello = L * Math.sin(ang(TILT.avviso)) + 4 * s;
+    const tocca = P.A >= TILT.avviso;
+    g.save();
+    g.translate(x, y);
+    g.fillStyle = 'rgba(20,10,3,0.55)';
+    g.beginPath(); if (g.roundRect) g.roundRect(-24 * s, -8 * s, 48 * s, 84 * s, 8 * s); else g.rect(-24 * s, -8 * s, 48 * s, 84 * s); g.fill();
+    // segni del tilt
+    g.strokeStyle = 'rgba(255,74,90,0.7)'; g.lineWidth = 2 * s;
+    const xt = L * Math.sin(ang(TILT.tilt));
+    for (const v of [-1, 1]) { g.beginPath(); g.moveTo(v * xt, L - 7 * s); g.lineTo(v * xt, L + 7 * s); g.stroke(); }
+    // anello
+    g.strokeStyle = stato.tiltato ? '#ff4a5a' : tocca ? '#ffb627' : 'rgba(230,230,230,0.75)';
+    g.lineWidth = (tocca ? 3 : 2) * s;
+    g.beginPath(); g.arc(0, L, rAnello, 0, Math.PI * 2); g.stroke();
+    // asta e piombino
+    const bx = Math.sin(th) * L, by = Math.cos(th) * L;
+    g.strokeStyle = '#c9ced3'; g.lineWidth = 1.6 * s;
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(bx, by); g.stroke();
+    g.fillStyle = '#e8edf0';
+    g.beginPath(); g.arc(bx, by, 4 * s, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#6f7c86';
+    g.beginPath(); g.arc(0, 0, 2.2 * s, 0, Math.PI * 2); g.fill();
+    g.fillStyle = hexA('#ffffff', 0.6);
+    g.font = `600 ${Math.round(9 * s)}px Fredoka, sans-serif`;
+    g.textAlign = 'center';
+    g.fillText('TILT', 0, L + 30 * s);
+    g.restore();
+  }
+
   // Il vetro: un riflesso leggero e fisso sullo schermo, come la luce della
   // stanza sul vetro del flipper
   function disegnaVetro(g, VH) {
@@ -1575,6 +1810,7 @@
     ctx.translate(0, -camera.y);
     strato(strati.base);
     T.disegnaPavimento(ctx, ora);
+    disegnaLampadine(ctx);
     T.disegnaCampo(ctx, ora);
     disegnaLancio(ctx);
     disegnaRobivecchio(ctx, (r) => !r.percorso && !r.piano);
@@ -1593,9 +1829,15 @@
     disegnaParticelle(ctx);
     disegnaScritte(ctx);
     ctx.restore();
-    if (T.colori.vetro !== false) disegnaVetro(ctx, VH);
+    if (T.colori.vetro !== false && qualita.vetro) disegnaVetro(ctx, VH);
     if (!lato) {
       disegnaInfoTavolo(ctx);
+      if (stato.pendolo.A > 0.15 || stato.tiltato) disegnaPendolo(ctx, 40, 56, 1);
+      if (stato.status) {
+        ctx.fillStyle = '#0a0503';
+        ctx.fillRect(96, 44, 408, 108);
+        ctx.drawImage(schermataCorrente(400, 100), 100, 48, 400, 100);
+      }
       if (VH < H) disegnaMiniMappa(ctx, W - 50, 46, 44);
     }
     disegnaMessaggio(ctx);
@@ -1608,7 +1850,15 @@
   }
 
   // ---------------------------------------------------------------- pannelli laterali
-  const pannelli = { chiave: '', tele: null, conta: 0 };
+  // Pannelli laterali: si ridisegnano solo quando cambia quello che mostrano
+  // (il display) o la misura e i colori (la parte fissa del pannello di Tino);
+  // Tino, Gino, il fumetto e il pendolo del tilt si disegnano a ogni fotogramma.
+  const pannelli = { chiave: '', tele: null, viste: ['', ''] };
+  function chiaveDisplay() {
+    const a = stato.avventura;
+    return JSON.stringify([testiDMD(), tinta().neon, a ? [a.nome, Math.round(clamp(a.t / a.durata, 0, 1) * 200)] : 0,
+      stato.multiball, stato.jackpot.valore, stato.avventureFatte.length, T.statoPannello ? T.statoPannello() : 0]);
+  }
   function disegnaPannelli() {
     const VH = camera.alto;
     const chiave = lato + '|' + scala + '|' + dpr + '|' + VH;
@@ -1620,18 +1870,24 @@
         c.height = Math.round(VH * scala * dpr);
         return c;
       });
-      pannelli.conta = 0;
+      pannelli.viste = ['', ''];
     }
-    if (pannelli.conta++ % 3 === 0) {
-      pannelli.tele.forEach((c, i) => {
-        const g = c.getContext('2d');
-        g.setTransform(scala * dpr, 0, 0, scala * dpr, 0, 0);
-        if (i === 0) disegnaDisplay(g, lato, VH);
-        else disegnaPannelloTino(g, lato, VH);
-      });
-    }
+    const viste = [chiaveDisplay(), tinta().neon];
+    pannelli.tele.forEach((c, i) => {
+      if (pannelli.viste[i] === viste[i]) return;
+      pannelli.viste[i] = viste[i];
+      const g = c.getContext('2d');
+      g.setTransform(scala * dpr, 0, 0, scala * dpr, 0, 0);
+      if (i === 0) disegnaDisplay(g, lato, VH);
+      else disegnaPannelloTino(g, lato, VH);
+    });
     ctx.drawImage(pannelli.tele[0], 0, 0, lato, VH);
     ctx.drawImage(pannelli.tele[1], lato + W, 0, lato, VH);
+    ctx.save();
+    ctx.translate(lato + W, 0);
+    disegnaTinoVivo(ctx, lato, VH);
+    disegnaPendolo(ctx, lato - 46, 18, 1);
+    ctx.restore();
     // la mini mappa si ridisegna a ogni fotogramma
     const mw = Math.min(110, lato - 60);
     const mh = mw * H / W;
@@ -1691,6 +1947,20 @@
     DMD.cache.set(chiave, c);
     return c;
   }
+  // la schermata del display in questo momento: status, messaggio o punteggio
+  function testiDMD() {
+    const st = stato.status;
+    if (st) return ['STATUS ' + (st.i + 1) + '/' + st.n, st.titolo, st.valore];
+    const mm = stato.messaggi[0];
+    const info = stato.moltT > 0 ? `CAMPO x${stato.moltCampo}` : stato.combo.t > 0 && stato.combo.n > 1 ? `COMBO x${stato.combo.n}` : `BONUS x${stato.bonusMolt}`;
+    const gioco = stato.modo === 'gioco';
+    const grande = gioco ? (mm && mm.t < mm.durata - 0.4 ? mm.testo.toUpperCase() : numero(stato.punti)) : numero(record());
+    return [gioco ? `PALLA ${Math.min(stato.palla, stato.palleTotali)}/${stato.palleTotali}` : 'RECORD', gioco ? info : 'TINO FLIPPER', grande];
+  }
+  function schermataCorrente(w, h) {
+    const [sx, dx, grande] = testiDMD();
+    return schermataDMD(sx, dx, grande, w, h, T.colori.display || '#ff9a1e');
+  }
   function disegnaDisplay(g, w, h) {
     const t = tinta();
     sfondoPannello(g, w, h);
@@ -1701,11 +1971,7 @@
     g.beginPath(); if (g.roundRect) g.roundRect(dx - 4, dy - 4, dw + 8, dh + 8, 8); else g.rect(dx - 4, dy - 4, dw + 8, dh + 8); g.fill();
     g.fillStyle = '#0a0503';
     g.fillRect(dx, dy, dw, dh);
-    const mm = stato.messaggi[0];
-    const info = stato.moltT > 0 ? `CAMPO x${stato.moltCampo}` : stato.combo.t > 0 && stato.combo.n > 1 ? `COMBO x${stato.combo.n}` : `BONUS x${stato.bonusMolt}`;
-    const gioco = stato.modo === 'gioco';
-    const grande = gioco ? (mm && mm.t < mm.durata - 0.4 ? mm.testo.toUpperCase() : numero(stato.punti)) : numero(record());
-    g.drawImage(schermataDMD(gioco ? `PALLA ${Math.min(stato.palla, stato.palleTotali)}/${stato.palleTotali}` : 'RECORD', gioco ? info : 'TINO FLIPPER', grande, dw - 8, dh - 8, T.colori.display || '#ff9a1e'), dx + 4, dy + 4, dw - 8, dh - 8);
+    g.drawImage(schermataCorrente(dw - 8, dh - 8), dx + 4, dy + 4, dw - 8, dh - 8);
     // riflesso sul vetro del display
     const gv = g.createLinearGradient(dx, dy, dx + dw * 0.6, dy + dh);
     gv.addColorStop(0, 'rgba(255,255,255,0.1)'); gv.addColorStop(0.5, 'rgba(255,255,255,0)');
@@ -1783,10 +2049,23 @@
     const t = tinta();
     sfondoPannello(g, w, h);
     g.save();
-    const base = Math.min(h - 260, 560);
+    const base = baseTino(h);
     luce(g, w / 2, base - 120, 200, t.neon, 0.25);
     g.fillStyle = 'rgba(0,0,0,0.3)';
     g.beginPath(); g.ellipse(w / 2, base, 100, 20, 0, 0, Math.PI * 2); g.fill();
+    g.textAlign = 'center';
+    g.font = '600 14px Fredoka, sans-serif';
+    g.fillStyle = hexA('#ffffff', 0.65);
+    const righe = touch
+      ? ['Tocca a sinistra e a destra', 'per i flipper', 'Striscia in su: scossone', 'Tieni un flipper: status']
+      : ['← → o Z /  flipper', 'o clic a sinistra / a destra', '↓ o Spazio  lancio', '↑ scossone · V vista intera', 'Tieni un flipper: status', 'P pausa · M suoni · N musica'];
+    righe.forEach((r, i) => g.fillText(r, w / 2, base + 40 + i * 21));
+    g.restore();
+  }
+  const baseTino = (h) => Math.min(h - 260, 560);
+  function disegnaTinoVivo(g, w, h) {
+    g.save();
+    const base = baseTino(h);
     const tino = stato.tino;
     const f = stato.fase === 'finita' ? 'ko' : tino.faccia;
     const img = immagini[f] || immagini.normale;
@@ -1811,7 +2090,7 @@
     }
     const frasi = {
       normale: T.testi.frasi.normale(),
-      arrabbiato: stato.tilt >= TILT.avviso ? 'Piano col tavolo!' : 'Uffa, ghianda persa!',
+      arrabbiato: stato.pendolo.A >= TILT.avviso ? 'Piano col tavolo!' : 'Uffa, ghianda persa!',
       ferito: stato.tiltato ? 'Ahia, il tilt!' : 'Ahi, corsia esterna!',
       ko: 'Partita finita!',
     };
@@ -1830,15 +2109,8 @@
       g.textBaseline = 'middle';
       g.fillText(frase, w / 2, fy + 23);
     }
-    g.textAlign = 'center';
-    g.font = '600 14px Fredoka, sans-serif';
-    g.fillStyle = hexA('#ffffff', 0.65);
-    const righe = touch
-      ? ['Tocca a sinistra e a destra', 'per i flipper', 'Striscia in su: scossone']
-      : ['← → o Z /  flipper', 'o clic a sinistra / a destra', '↓ o Spazio  lancio', '↑ scossone · V vista intera', 'P pausa · M suoni · N musica'];
-    righe.forEach((r, i) => g.fillText(r, w / 2, base + 40 + i * 21));
     const gi = immagini.gino;
-    if (pronta(gi) && h - base > 200) {
+    if (pronta(gi) && h - base > 260) {
       const hh = 70, ww = hh * gi.naturalWidth / gi.naturalHeight;
       const G2 = T.oggetti.GINO;
       g.save();
@@ -1859,7 +2131,8 @@
     pannello.innerHTML = html;
     pannello.classList.add('visibile');
     const primo = pannello.querySelector('[data-primo]') || pannello.querySelector('button');
-    if (primo && !touch) primo.focus({ preventScroll: true });
+    if (pannello.querySelector('[data-nofocus]')) { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    else if (primo && !touch) primo.focus({ preventScroll: true });
   }
   function nascondiPannello() {
     pannello.classList.remove('visibile');
@@ -1886,7 +2159,7 @@
   }
   function tabellaClassifica() {
     if (!classifica.length) return '';
-    return `<table class="classifica">${classifica.map((c, i) => `<tr class="${i === ultimaPosizione ? 'nuovo' : ''}"><td>${i + 1}.</td><td>${numero(c.punti)}</td><td>${c.data}</td></tr>`).join('')}</table>`;
+    return `<table class="classifica">${classifica.map((c, i) => `<tr class="${i === ultimaPosizione ? 'nuovo' : ''}"><td>${i + 1}.</td><td class="nome">${c.nome || '···'}</td><td>${numero(c.punti)}</td><td>${c.data}</td></tr>`).join('')}</table>`;
   }
   const imgRobi = (r) => `<img src="${ASSETS}oggetti/robivecchi/${r.file || r.id}.svg" alt="">`;
   function collezioneRobivecchi() {
@@ -1924,6 +2197,25 @@
       ${testoComandi()}
     </div>`;
   }
+  function pannelloIniziali() {
+    const nuovo = ultimaPosizione === 0;
+    const comandi = touch
+      ? 'Tocca ◀ e ▶ per cambiare la lettera, OK per confermarla.'
+      : 'Flipper <kbd>←</kbd> <kbd>→</kbd> cambiano la lettera, <kbd>↓</kbd> o <kbd>Spazio</kbd> la confermano.';
+    return `<div class="riquadro" data-nofocus>
+      <div class="ritratti">${img('ko')}${img('gino', 'caduto')}</div>
+      <h2>${nuovo ? 'Nuovo record!' : 'Sei in classifica!'}</h2>
+      <p><b>${numero(stato.punti)}</b> punti · ${ultimaPosizione + 1}° posto</p>
+      <p>Scrivi le tue iniziali</p>
+      ${caselleIniziali()}
+      <p class="record">${comandi}</p>
+      <div class="scelte">
+        <button class="bottone secondario" data-azione="lettera-giu" aria-label="Lettera prima">◀</button>
+        <button class="bottone secondario" data-azione="lettera-su" aria-label="Lettera dopo">▶</button>
+        <button class="bottone" data-azione="lettera-ok">OK</button>
+      </div>
+    </div>`;
+  }
   function pannelloFine() {
     const nuovo = ultimaPosizione === 0;
     return `<div class="riquadro">
@@ -1947,6 +2239,9 @@
       case 'gioca': iniziaPartita('gioco'); break;
       case 'riprendi': riprendi(); break;
       case 'menu': vaiAlMenu(); break;
+      case 'lettera-giu': cambiaLettera(-1); break;
+      case 'lettera-su': cambiaLettera(1); break;
+      case 'lettera-ok': confermaLettera(); break;
       default: break;
     }
   });
@@ -1984,6 +2279,7 @@
     const dt = clamp((ora - ultimo) / 1000, 0, 0.05);
     ultimo = ora;
     if (!stato.test) aggiorna(dt);
+    controllaQualita(dt);
     disegna(ora / 1000);
     // rotolamento: la ghianda più veloce in campo (sulle rampe suona più grave)
     let vel = 0, rampa = false;
@@ -1994,6 +2290,7 @@
       }
     }
     A.rotola(vel, rampa);
+    A.ronzio(stato.modo === 'gioco' && (stato.fase === 'gioco' || stato.fase === 'bonus') && !document.hidden);
     requestAnimationFrame(ciclo);
   }
   requestAnimationFrame(ciclo);

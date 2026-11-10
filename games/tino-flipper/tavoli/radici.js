@@ -286,6 +286,8 @@
         rampe: 0, prossimaExtra: 8, extraAccesa: false, superJackpot: false, deviatore: 0,
         lampoCorsie: 0, lampoFionda: [0, 0], lampoPiolo: 0, lampoResina: 0, inPiolo: new Set(),
         tinoPalla: 0, torcePalla: [false, false, false],
+        // animazioni meccaniche (solo disegno): 1 = su, 0 = giù
+        visSassi: [1, 1, 1, 1], visCartelli: [1, 1, 1], visSasso: 1, devAng: -0.4, devW: 0,
       });
       CECE.y = CECE.giu; CECE.vy = 0;
       AG.x = S.agente.x;
@@ -459,7 +461,7 @@
           if (!S.corsie[i]) {
             S.corsie[i] = true;
             G.punti(PUNTI.corsia, CORSIE[i], 190);
-            su.corsia(i);
+            su.campanella([0, 1, 2, 1][i]);
             if (S.corsie.every(Boolean)) {
               S.corsie = [false, false, false, false];
               st.bonusMolt = Math.min(st.bonusMolt + 1, 6);
@@ -509,7 +511,8 @@
           break;
         case 'uscita':
           if (!avanti) return;
-          // dalla galleria si scende sul campo
+          // dalla galleria si scende sul campo (se va forte, salta e batte sul vetro)
+          if (Math.hypot(p.vx, p.vy) > 900) G.suoni.vetro(0.7);
           p.piano = 0;
           p.x = Math.max(p.x, 256);
           G.punti(PUNTI.uscita, 260, 420);
@@ -691,6 +694,7 @@
           // il pozzo: la ghianda sale da sotto nella galleria alta
           G.suoni.pozzo();
           G.libera(p, 1, POZZO.x, POZZO.y, casuale(-160, 40), casuale(-1050, -900));
+          if (p.vy < -985) G.suoni.vetro(0.9);       // esce dal pozzo così forte che batte sul vetro
           G.scintille(POZZO.x, POZZO.y, '#ffb347', 14, 260);
           return true;
         default: return false;
@@ -914,6 +918,15 @@
           if (d.uscita.length) d.uscita[0] = Math.max(d.uscita[0], 0.6);
         }
       }
+      // animazioni meccaniche: sassi e cartelli che cadono e si rialzano, il
+      // sasso che spunta, il deviatore che scatta e rimbalza (una molla)
+      const verso = (x, meta, su, giu) => (meta > x ? Math.min(meta, x + su * dt) : Math.max(meta, x - giu * dt));
+      for (let i = 0; i < 4; i++) S.visSassi[i] = verso(S.visSassi[i], S.sassi[i] ? 1 : 0, 9, 5);
+      for (let i = 0; i < 3; i++) S.visCartelli[i] = verso(S.visCartelli[i], S.cartelli[i] ? 1 : 0, 6, 7);
+      S.visSasso = verso(S.visSasso, S.sassoSu ? 1 : 0, 5, 8);
+      const devMeta = S.dispensa.aperta && !st.multiball ? 0.5 : -0.4;
+      S.devW += (900 * (devMeta - S.devAng) - 22 * S.devW) * Math.min(dt, 0.03);
+      S.devAng += S.devW * Math.min(dt, 0.03);
       // lampi
       for (const b of BUMPER) b.lampo = Math.max(0, b.lampo - dt * 4);
       for (const s of SASSI) s.lampo = Math.max(0, s.lampo - dt * 3);
@@ -1430,6 +1443,86 @@
       g.strokeStyle = 'rgba(60,120,30,0.5)'; g.lineWidth = 3;
       tratto(g, disp); g.stroke();
       g.restore();
+      disegnaGrembiule(g);
+    }
+
+    // Il grembiule (apron): la tavola di legno sotto i flipper, con le due
+    // cartoline (istruzioni e punteggi); le lampade del bonus ci stanno sopra
+    // (disegnate vive in disegnaSopra). Copre le corsie esterne e lo scolo.
+    const GREMBIULE = [[40, 1790], [205, 1790], [252, 1820], [252, 1872], [348, 1872], [348, 1820], [395, 1790], [580, 1790], [580, 1925], [40, 1925]];
+    function disegnaGrembiule(g) {
+      g.save();
+      g.save();
+      g.shadowColor = 'rgba(40,25,5,0.45)'; g.shadowBlur = 10; g.shadowOffsetY = -3;
+      poligono(g, GREMBIULE);
+      const gl = g.createLinearGradient(0, 1790, 0, 1900);
+      gl.addColorStop(0, '#d19a5a'); gl.addColorStop(1, '#9c6834');
+      g.fillStyle = gl;
+      g.fill();
+      g.restore();
+      g.save();
+      poligono(g, GREMBIULE);
+      g.clip();
+      // venature e assi
+      seme = 31;
+      g.strokeStyle = 'rgba(100,60,25,0.35)'; g.lineWidth = 1.2;
+      for (let i = 0; i < 26; i++) {
+        const y = 1795 + rnd() * 110, x = 40 + rnd() * 520;
+        g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + 30, y - 2, x + 60, y + 3, x + 100, y); g.stroke();
+      }
+      g.strokeStyle = 'rgba(90,55,20,0.5)'; g.lineWidth = 1.5;
+      for (const x of [146, 454]) { g.beginPath(); g.moveTo(x, 1790); g.lineTo(x, 1820); g.stroke(); }
+      g.restore();
+      poligono(g, GREMBIULE);
+      g.lineJoin = 'round';
+      g.strokeStyle = '#5c3a1c'; g.lineWidth = 3; g.stroke();
+      g.strokeStyle = 'rgba(255,230,180,0.55)'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(42, 1792); g.lineTo(204, 1792); g.lineTo(250, 1821); g.moveTo(350, 1821); g.lineTo(396, 1792); g.lineTo(578, 1792); g.stroke();
+      // viti
+      for (const [x, y] of [[48, 1798], [572, 1798], [262, 1890], [338, 1890], [48, 1896], [572, 1896]]) {
+        g.fillStyle = '#5c3a1c'; g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#e8c48c'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 2, y); g.lineTo(x + 2, y); g.stroke();
+      }
+      // cartoline
+      const cartolina = (x, y, w, h, titolo, righe) => {
+        g.fillStyle = 'rgba(40,25,5,0.35)';
+        g.fillRect(x + 2, y + 3, w, h);
+        g.fillStyle = '#fbf1da';
+        g.fillRect(x, y, w, h);
+        g.strokeStyle = '#b07a42'; g.lineWidth = 1;
+        g.strokeRect(x + 2.5, y + 2.5, w - 5, h - 5);
+        g.fillStyle = '#8a3a12';
+        g.font = '700 9.5px Fredoka, sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(titolo, x + w / 2, y + 9);
+        g.font = '500 8.5px Fredoka, sans-serif';
+        g.fillStyle = '#3b2210';
+        righe.forEach((r, i) => {
+          const yy = y + 21 + i * 10.4;
+          if (Array.isArray(r)) {
+            g.textAlign = 'left'; g.fillText(r[0], x + 7, yy);
+            g.textAlign = 'right'; g.fillText(r[1], x + w - 7, yy);
+            // puntini tra la voce e i punti
+            g.fillStyle = 'rgba(59,34,16,0.3)';
+            const fine = x + w - 9 - g.measureText(r[1]).width;
+            for (let xx = x + 10 + g.measureText(r[0]).width; xx < fine; xx += 4) g.fillRect(xx, yy + 2, 1, 1);
+            g.fillStyle = '#3b2210';
+          } else {
+            g.textAlign = 'center'; g.fillText(r, x + w / 2, yy);
+          }
+        });
+      };
+      cartolina(50, 1822, 190, 72, 'COME SI GIOCA', [
+        'Sassi giù: si apre la dispensa',
+        '3 ghiande nella dispensa: multiball',
+        'Agente stordito: avventura nella buca',
+        'Torce accese: campo ×2',
+        'Cece in cima: una chiave',
+      ]);
+      cartolina(360, 1822, 210, 72, 'PUNTEGGI', [
+        ['Gino', '7.500'], ['Radice lunga', '20.000'], ['Giro della morte', '25.000'], ['Jackpot', '150.000'], ['Super jackpot', '500.000'],
+      ]);
+      g.restore();
     }
 
     // ---------------------------------------------------- disegno vivo
@@ -1459,7 +1552,6 @@
       // palla extra, resina, radice che spunta, molla, ancora
       d.lampada(g, BUCA.x + 46, 926, 9, '#9cff7a', S.extraAccesa && lampeggia(4), 'E');
       d.lampada(g, RESINA.x, RESINA.y + 44, 10, t.neon2, S.resina, 'R');
-      d.lampada(g, 300, 1878, 9, '#9cff7a', S.palo > 0 && (S.palo > 3 || lampeggia(6)));
       d.lampada(g, 62, 1660, 9, '#ffe9a8', S.kickback, 'M');
       d.lampada(g, 300, 1610, 13, '#9cff7a', st.salva > 0 && (st.salva > 2.5 || lampeggia(6)), 'ANCORA', 'pillola');
       // avventure fatte, attorno al piolo d'oro
@@ -1469,8 +1561,6 @@
         const acceso = fatte.includes(a.id) || (st.avventura && st.avventura.id === a.id && lampeggia(3));
         d.lampada(g, PIOLO.x + Math.cos(ang) * 80, PIOLO.y + 10 + Math.sin(ang) * 80, 8, a.tinta, acceso);
       });
-      // moltiplicatore del bonus
-      for (let k = 2; k <= 6; k++) d.lampada(g, 196 + (k - 2) * 52, 1550, 11, t.neon, st.bonusMolt >= k, `${k}×`);
     }
 
     function disegnaPavimento(g) {
@@ -1566,54 +1656,77 @@
         if (k > 0) d.luce(g, b.x, b.y, 70, '#ffb347', k);
       }
       // sassi (bersagli che cadono)
+      // cadono ruotando all'indietro (verso le radici) e si rialzano con un saltino
       for (const s of SASSI) {
-        if (!S.sassi[s.i]) {
-          g.strokeStyle = 'rgba(120,110,100,0.5)'; g.lineWidth = 3;
-          g.beginPath(); g.moveTo(s.ax, s.ay); g.lineTo(s.bx, s.by); g.stroke();
-          continue;
-        }
+        const v = S.visSassi[s.i];
         g.save();
         g.translate((s.ax + s.bx) / 2, (s.ay + s.by) / 2);
         g.rotate(Math.atan2(s.by - s.ay, s.bx - s.ax));
-        g.fillStyle = 'rgba(50,40,10,0.3)';
-        g.beginPath(); g.ellipse(3, 4, 15, 8, 0, 0, Math.PI * 2); g.fill();
-        const gs = g.createLinearGradient(0, -8, 0, 8);
-        gs.addColorStop(0, s.lampo > 0 ? '#ffffff' : '#d6cfc6'); gs.addColorStop(1, '#7b746c');
-        g.fillStyle = gs;
-        g.beginPath(); g.ellipse(0, 0, 15, 8, 0, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = '#4b4540'; g.lineWidth = 1.5; g.stroke();
+        // la fessura in cui si nascondono
+        g.fillStyle = 'rgba(60,40,20,0.55)';
+        g.beginPath(); g.ellipse(0, -2, 14, 3, 0, 0, Math.PI * 2); g.fill();
+        if (v > 0.02) {
+          const sale = S.sassi[s.i] && v < 1;
+          const alto = Math.max(0.05, v + (sale ? 0.22 * Math.sin(Math.PI * v) : 0));
+          g.translate(0, -(1 - v) * 7);
+          g.scale(1, alto);
+          g.fillStyle = 'rgba(50,40,10,0.3)';
+          g.beginPath(); g.ellipse(3, 4, 15, 8, 0, 0, Math.PI * 2); g.fill();
+          const gs = g.createLinearGradient(0, -8, 0, 8);
+          gs.addColorStop(0, s.lampo > 0 ? '#ffffff' : '#d6cfc6'); gs.addColorStop(1, '#7b746c');
+          g.fillStyle = gs;
+          g.beginPath(); g.ellipse(0, 0, 15, 8, 0, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = '#4b4540'; g.lineWidth = 1.5; g.stroke();
+        }
         g.restore();
       }
       // cartelli
+      // si abbattono ruotando sulla cerniera in basso (all'indietro, verso l'alto
+      // del tavolo) e si rialzano con un piccolo rimbalzo
       for (const c of CARTELLI) {
-        const su = S.cartelli[c.i];
+        const v = S.visCartelli[c.i];
         g.save();
         g.translate(c.x, c.y);
-        if (su) {
+        g.fillStyle = 'rgba(231,211,168,0.35)';
+        g.fillRect(-17, -2, 34, 6);
+        g.fillStyle = '#5c3d21';
+        g.fillRect(-17, 4, 34, 2.5);
+        if (v > 0.02) {
+          const sale = S.cartelli[c.i] && v < 1;
+          const k = Math.max(0.06, v + (sale ? 0.18 * Math.sin(Math.PI * v) : 0));
+          g.translate(0, 6);
           g.fillStyle = 'rgba(50,40,10,0.3)';
-          g.fillRect(-15, 2, 34, 12);
+          g.fillRect(-15, -4, 34, 8 + 6 * (1 - v));
+          g.scale(1, k);
           g.fillStyle = c.lampo > 0 ? '#fff3d6' : '#e7d3a8';
-          g.fillRect(-17, -8, 34, 14);
-          g.strokeStyle = '#5c3d21'; g.lineWidth = 2;
-          g.strokeRect(-17, -8, 34, 14);
-          g.fillStyle = '#5c3d21';
-          g.font = '700 10px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-          g.fillText(['↑', '★', '↑'][c.i], 0, -1);
-        } else {
-          g.fillStyle = 'rgba(231,211,168,0.35)';
-          g.fillRect(-17, -2, 34, 6);
+          g.fillRect(-17, -14, 34, 14);
+          g.strokeStyle = '#5c3d21'; g.lineWidth = 2 / Math.max(k, 0.4);
+          g.strokeRect(-17, -14, 34, 14);
+          if (k > 0.45) {
+            g.fillStyle = '#5c3d21';
+            g.font = '700 10px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.fillText(['↑', '★', '↑'][c.i], 0, -7);
+          }
         }
         g.restore();
       }
       // sasso che spunta davanti alla buca
-      if (S.sassoSu) {
+      // sale da sotto il piano (e ci torna dentro)
+      const vs = S.visSasso;
+      g.fillStyle = 'rgba(40,25,10,0.5)';
+      g.beginPath(); g.ellipse(200, 905, 25, 4, 0, 0, Math.PI * 2); g.fill();
+      if (vs > 0.02) {
+        g.save();
+        g.beginPath(); g.rect(160, 880, 80, 27); g.clip();
+        const alza = (1 - vs) * 16;
         g.fillStyle = 'rgba(50,40,10,0.3)';
-        g.beginPath(); g.ellipse(SASSO.ax + 27, 908, 26, 9, 0, 0, Math.PI * 2); g.fill();
-        const gs = g.createLinearGradient(0, 895, 0, 912);
+        g.beginPath(); g.ellipse(SASSO.ax + 27, 908, 26 * vs, 9 * vs, 0, 0, Math.PI * 2); g.fill();
+        const gs = g.createLinearGradient(0, 895 + alza, 0, 912 + alza);
         gs.addColorStop(0, '#cfc8bf'); gs.addColorStop(1, '#6f6861');
         g.fillStyle = gs;
-        g.beginPath(); g.ellipse(200, 903, 26, 9, 0, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.ellipse(200, 903 + alza, 26, 9, 0, 0, Math.PI * 2); g.fill();
         g.strokeStyle = '#3f3a35'; g.lineWidth = 1.5; g.stroke();
+        g.restore();
       }
       // cece nel cunicolo
       g.fillStyle = 'rgba(255,240,210,0.35)';
@@ -1747,14 +1860,38 @@
       const verso = S.dispensa.aperta && !st.multiball ? 1 : 0;
       g.save();
       g.translate(270, 438);
-      g.rotate(verso ? 0.5 : -0.4);
+      g.rotate(S.devAng);
       g.fillStyle = '#d9dee2';
       g.fillRect(-3, -16, 6, 32);
       g.restore();
       d.lampada(g, 300, 410, 7, '#ffe27a', verso && lampeggia(3));
+      // sul grembiule: moltiplicatore del bonus e radice che spunta
+      const t = G.tinta();
+      [70, 106, 142, 494, 530].forEach((x, i) => d.lampada(g, x, 1806, 9, t.neon, st.bonusMolt >= i + 2, `${i + 2}×`));
+      d.lampada(g, 300, 1886, 8, '#9cff7a', S.palo > 0 && (S.palo > 3 || lampeggia(6)));
       // ghiande ferme nella dispensa
       for (let i = 0; i < S.dispensa.bloccate; i++) d.ghianda(g, 44, 868 - i * 25, 0.3 * i, 1);
       if (S.dispensa.aperta && lampeggia(2)) d.luce(g, 44, 800, 60, '#ffe27a', 0.4);
+    }
+
+    // Lampadine dell'illuminazione generale: lungo la cornice (fianchi e volta)
+    // e sotto le rampe (solo la luce che cade sul campo)
+    function lampadineGI() {
+      const l = [];
+      for (let y = 420; y <= 1880; y += 74) { l.push({ x: 20, y }); l.push({ x: 620, y }); }
+      for (let i = 1; i < 16; i++) {
+        const a = Math.PI + i * Math.PI / 16;
+        l.push({ x: 320 + Math.cos(a) * 300, y: 330 + Math.sin(a) * 300 });
+      }
+      const sotto = (id, fr) => fr.forEach((f) => {
+        const per = m.percorsi[id];
+        const q = m.puntoPercorso(per, per.lung * f);
+        l.push({ x: q.x + 6, y: q.y + 9, sotto: true });
+      });
+      sotto('rampa', [0.2, 0.45, 0.7, 0.92]);
+      sotto('rampaA', [0.3, 0.55, 0.8]);
+      sotto('giro', [0.04, 0.12, 0.8, 0.9]);
+      return l;
     }
 
     // Comandi e testi
@@ -1780,6 +1917,16 @@
       colori: { neon: C.neon, neon2: C.neon2, luce: C.luce, barra: '#5c3a1c', fondo: '#9fd3ea', pannello: ['#8a5a2e', '#5c3a1c'], display: '#ff9a1e' },
       lancio: { x: 600, y: 1834, xCorridoio: 582, yRitorno: 1780, yStantuffo: 1846 },
       forma: formaTavolo,
+      lampadine: lampadineGI(),
+      status: () => [
+        ['AVVENTURE', `${G.stato.avventureFatte.length} DI ${AVVENTURE.length}`],
+        ['AGENTE', S.avventuraPronta ? 'PRONTA!' : `${S.agente.colpi} DI ${agenteServe()}`],
+        ['CHIAVI', `${S.chiavi} DI ${S.chiaviServono}`],
+        ['DISPENSA', `${S.dispensa.bloccate} DI 3`],
+        ['RADICI LUNGHE', String(S.rampe)],
+      ],
+      statoPannello: () => [S.avventuraPronta, S.agente.colpi, S.dispensa.bloccate, S.dispensa.aperta, S.chiavi, S.chiaviServono, S.extraAccesa],
+      ricerca() { for (const b of BUMPER) b.lampo = 1; S.lampoFionda = [1, 1]; },
       // flasher: dietro i nodi, in cima alla radice lunga, sull'anello del giro, sulla resina
       flasher: [[352, 290], [270, 438], [ANELLO.x, ANELLO.y], [300, 1290]],
       yPersa: 1925, salvaDa: 578,

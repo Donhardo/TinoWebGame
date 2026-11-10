@@ -50,7 +50,7 @@ async function partita(page, seme) {
     const s = st.statistiche;
     return {
       seme, finita: st.fase === 'finita', minuti: +(n / 3600).toFixed(1), punti: st.punti,
-      palle: s.palle, perse: s.perse, salvate: s.salvate, fuori: s.fuori, ferme: s.ferme,
+      palle: s.palle, perse: s.perse, salvate: s.salvate, fuori: s.fuori, ferme: s.ferme, ricerche: s.ricerche || 0,
       dove: s.dove, scoli: s.scoli || [], tiri: s.tiri, avventure: [...avventure], multiball,
       robivecchi: st.robivecchi ? st.robivecchi.presi.slice() : [],
       imprese: st.robivecchi ? st.robivecchi.guadagnati.slice() : [],
@@ -75,14 +75,14 @@ async function partita(page, seme) {
       const seme = code.shift();
       const r = await partita(page, seme);
       risultati.push(r);
-      console.log(`partita ${seme + 1}: ${r.minuti} min, ${r.punti.toLocaleString('it-IT')} punti, palle ${r.palle}, salvate ${r.salvate}, fuori ${r.fuori}, ferme ${r.ferme}, multiball ${r.multiball}, avventure [${r.avventure}], imprese [${r.imprese}] presi [${r.robivecchi}] maestro ${r.skill}${r.finita ? '' : ' (interrotta)'}`);
+      console.log(`partita ${seme + 1}: ${r.minuti} min, ${r.punti.toLocaleString('it-IT')} punti, palle ${r.palle}, salvate ${r.salvate}, fuori ${r.fuori}, ferme ${r.ferme}, ricerche ${r.ricerche}, multiball ${r.multiball}, avventure [${r.avventure}], imprese [${r.imprese}] presi [${r.robivecchi}] maestro ${r.skill}${r.finita ? '' : ' (interrotta)'}`);
       if (r.dove.length) console.log('   dove:', JSON.stringify(r.dove));
     }
     await page.close();
   }));
   await b.close();
   const media = (k) => (risultati.reduce((s, r) => s + r[k], 0) / risultati.length).toFixed(1);
-  console.log(`\n${tavolo} · ${livello} · ${risultati.length} partite: ${media('minuti')} min, ${Math.round(risultati.reduce((s, r) => s + r.punti, 0) / risultati.length).toLocaleString('it-IT')} punti, fuori ${media('fuori')}, ferme ${media('ferme')}, multiball ${media('multiball')}, avventure ${(risultati.reduce((s, r) => s + r.avventure.length, 0) / risultati.length).toFixed(1)}`);
+  console.log(`\n${tavolo} · ${livello} · ${risultati.length} partite: ${media('minuti')} min, ${Math.round(risultati.reduce((s, r) => s + r.punti, 0) / risultati.length).toLocaleString('it-IT')} punti, fuori ${media('fuori')}, ferme ${media('ferme')}, ricerche ${media('ricerche')}, multiball ${media('multiball')}, avventure ${(risultati.reduce((s, r) => s + r.avventure.length, 0) / risultati.length).toFixed(1)}`);
   const scoli = {};
   for (const r of risultati) for (const [x, lato] of r.scoli) scoli[lato + (x < 300 ? ' sx' : ' dx')] = (scoli[lato + (x < 300 ? ' sx' : ' dx')] || 0) + 1;
   console.log('dove si perde:', JSON.stringify(scoli));
