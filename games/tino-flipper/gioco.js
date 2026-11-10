@@ -972,6 +972,9 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) pausa(); });
 
   // Mouse e dita: metà sinistra = flipper di sinistra, metà destra = di destra.
+  // Col mouse vale anche il tasto: destro = flipper destro, sinistro = il
+  // flipper della metà in cui si clicca (il clic secondario, soprattutto sui
+  // trackpad, arriva in ritardo: così si gioca anche con un tasto solo).
   // Con la ghianda nel corridoio (e nessuna in campo) si tiene premuto per
   // caricare. Una strisciata veloce verso l'alto è lo scossone.
   const dita = new Map();
@@ -997,7 +1000,7 @@
     if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
     let ruolo;
     if (soloInCanna()) ruolo = 'lancio';
-    else if (e.pointerType === 'mouse') ruolo = e.button === 0 ? 'sx' : e.button === 2 ? 'dx' : 'lancio';
+    else if (e.pointerType === 'mouse') ruolo = e.button === 0 ? latoDi(e) : e.button === 2 ? 'dx' : 'lancio';
     else ruolo = latoDi(e);
     dita.set(e.pointerId, { ruolo, y: e.clientY, t: performance.now() });
     if (ruolo === 'lancio') premiLancio(true);
@@ -1832,7 +1835,7 @@
     g.fillStyle = hexA('#ffffff', 0.65);
     const righe = touch
       ? ['Tocca a sinistra e a destra', 'per i flipper', 'Striscia in su: scossone']
-      : ['← → o Z /  flipper', '↓ o Spazio  lancio', '↑ scossone · V vista intera', 'P pausa · M suoni · N musica'];
+      : ['← → o Z /  flipper', 'o clic a sinistra / a destra', '↓ o Spazio  lancio', '↑ scossone · V vista intera', 'P pausa · M suoni · N musica'];
     righe.forEach((r, i) => g.fillText(r, w / 2, base + 40 + i * 21));
     const gi = immagini.gino;
     if (pronta(gi) && h - base > 200) {
@@ -1876,7 +1879,7 @@
       </div>`;
     }
     return `<div class="comandi">
-      <p>Flipper: <kbd>←</kbd> <kbd>→</kbd> (oppure <kbd>Z</kbd> <kbd>/</kbd>, <kbd>A</kbd> <kbd>D</kbd>, i due <kbd>Maiusc</kbd>), o tasto sinistro e destro del mouse. Ogni tasto muove tutti i flipper del suo lato.</p>
+      <p>Flipper: <kbd>←</kbd> <kbd>→</kbd> (oppure <kbd>Z</kbd> <kbd>/</kbd>, <kbd>A</kbd> <kbd>D</kbd>, i due <kbd>Maiusc</kbd>). Col mouse: clic sulla metà sinistra o destra del tavolo (il tasto destro vale sempre per il flipper destro). Ogni tasto muove tutti i flipper del suo lato.</p>
       <p>Lancio: tieni premuto <kbd>↓</kbd> o <kbd>Spazio</kbd> e lascia. Scossone: <kbd>↑</kbd> (non troppo: tilt!).</p>
       <p><kbd>V</kbd> tavolo intero · <kbd>P</kbd> pausa · <kbd>M</kbd> suoni · <kbd>N</kbd> musica</p>
     </div>`;

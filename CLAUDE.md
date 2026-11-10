@@ -1394,7 +1394,11 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   intero rimpicciolito. Mini mappa (strati del tavolo in piccolo, ghiande, finestra) nel
   pannello di sinistra sugli schermi larghi, in alto a destra sul telefono.
 - **Comandi**: come nella versione 1; ogni tasto (o metà schermo) muove tutti i flipper del
-  suo lato. Il giocatore simulato tiene conto anche degli altri flipper dello stesso lato.
+  suo lato. Col mouse il clic sinistro muove il flipper della metà in cui si clicca (il tasto
+  destro vale sempre per il destro): il proprietario sentiva il flipper destro "meno
+  reattivo"; la fisica è simmetrica (verificato passo per passo con una ghianda a specchio),
+  il ritardo era del clic secondario del mouse o del trackpad. Il giocatore simulato tiene
+  conto anche degli altri flipper dello stesso lato.
 - **Disegno**: strati a tavolo intero disegnati una volta (base, galleria, rampe; a
   risoluzione limitata a ~2,6 milioni di pixel l'uno), di cui si copia solo la parte
   inquadrata; sopra il disegno vivo nell'ordine pavimento, campo, ghiande del campo,
