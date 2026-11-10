@@ -1235,6 +1235,13 @@
         gp.addColorStop(0, '#fff4dc'); gp.addColorStop(1, '#a8743f');
         g.fillStyle = gp;
         g.beginPath(); g.arc(c.x, c.y, c.r + 1, 0, Math.PI * 2); g.fill();
+        // l'anello di gomma attorno al paletto
+        if (c.tipo === 'paletto' && c.r >= 5) {
+          g.strokeStyle = 'rgba(40,22,6,0.7)'; g.lineWidth = 3.5;
+          g.beginPath(); g.arc(c.x, c.y, c.r + 0.5, 0, Math.PI * 2); g.stroke();
+          g.strokeStyle = '#efe6d2'; g.lineWidth = 2;
+          g.beginPath(); g.arc(c.x, c.y, c.r + 0.5, 0, Math.PI * 2); g.stroke();
+        }
       }
       // cornice del tavolo
       g.lineWidth = 14;
@@ -1498,10 +1505,17 @@
         g.strokeStyle = '#b07a42'; g.lineWidth = 2;
         for (const r of [26, 20, 14]) { g.beginPath(); g.arc(b.x, b.y, r, 0, Math.PI * 2); g.stroke(); }
         const k = b.lampo;
+        // il colpo: l'anello del nodo "salta" (si allarga e sbiadisce) e il cappello d'ambra si gonfia
+        if (k > 0) {
+          g.strokeStyle = hexA('#fff6d0', 0.85 * k); g.lineWidth = 4 * k + 1;
+          g.beginPath(); g.arc(b.x, b.y, 30 + 24 * (1 - k), 0, Math.PI * 2); g.stroke();
+        }
         const ga = g.createRadialGradient(b.x - 6, b.y - 7, 2, b.x, b.y, 18);
         ga.addColorStop(0, k > 0 ? '#fffbe0' : '#ffe2a0'); ga.addColorStop(1, k > 0 ? '#ffb000' : '#c9781a');
         g.fillStyle = ga;
-        g.beginPath(); g.arc(b.x, b.y, 15 + 3 * k, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.arc(b.x, b.y, 15 + 4 * k, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.45)';
+        g.beginPath(); g.ellipse(b.x - 5, b.y - 6, 5 + k, 3 + k, -0.6, 0, Math.PI * 2); g.fill();
         if (k > 0) d.luce(g, b.x, b.y, 70, '#ffb347', k);
       }
       // sassi (bersagli che cadono)
@@ -1673,7 +1687,7 @@
         g.fillRect(t.x - 13, 380, 26, 10);
         g.fillStyle = '#3b2210';
         g.fillRect(t.x - 4, 370, 8, 14);
-        const accesa = S.torce[t.i] || t.lampo > 0 || (inAvv('torce') && !S.torce[t.i] && lampeggia(4) && false);
+        const accesa = S.torce[t.i] || t.lampo > 0;
         fiamma(g, t.x, 372, 1, accesa || (inAvv('torce') && lampeggia(2)), ora);
       }
       d.flipper(g, FL.alto);
@@ -1716,8 +1730,11 @@
     return {
       id: 'radici', nome: 'Le radici della Quercia', sotto: 'Legno, radici e torce sotto la grande quercia',
       W, H, CX, mondo: m, S, FL, gravita: 1450,
-      colori: { neon: C.neon, neon2: C.neon2, luce: C.luce, barra: '#5c3a1c', fondo: '#9fd3ea', pannello: ['#8a5a2e', '#5c3a1c'] },
-      lancio: { x: 600, y: 1834, xCorridoio: 582, yRitorno: 1780 },
+      colori: { neon: C.neon, neon2: C.neon2, luce: C.luce, barra: '#5c3a1c', fondo: '#9fd3ea', pannello: ['#8a5a2e', '#5c3a1c'], display: '#ff9a1e' },
+      lancio: { x: 600, y: 1834, xCorridoio: 582, yRitorno: 1780, yStantuffo: 1846 },
+      forma: formaTavolo,
+      // flasher: dietro i nodi, in cima alla radice lunga, sull'anello del giro, sulla resina
+      flasher: [[352, 290], [270, 438], [ANELLO.x, ANELLO.y], [300, 1290]],
       yPersa: 1925, salvaDa: 578,
       AVVENTURE, FINALE, PUNTI, AGENTE,
       musica: { brano: BRANO, stili: STILI },
