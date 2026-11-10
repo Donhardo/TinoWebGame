@@ -3,6 +3,7 @@
  * (schermo intero, icona nella Home). Non mette niente da parte: ogni pagina e
  * ogni file arriva sempre dalla rete, così si vede sempre l'ultima versione.
  * Senza rete, al posto della pagina compare un avviso.
+ * Versione: 10 novembre 2026.
  */
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
