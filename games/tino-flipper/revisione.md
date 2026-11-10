@@ -194,9 +194,9 @@ servono Gemini, poi la tappa 2):
    partite simulate (`prove/partite.js`) con "fuori" e "ferme" a zero, poi artifact.
 2. **Fatto**: regole 3 (il live catch funziona già, confermato dal proprietario) e tecnica 4
    (sul telefono risoluzione 1,5 o 1,25 e niente vetro; vedi CLAUDE.md, "Qualità sul telefono").
-3. Grafica 4 e 5 (backglass e piano di gioco dipinti): preparare i prompt per
-   Gemini come negli altri giochi; il codice deve usare i PNG se ci sono e
-   altrimenti restare com'è. Grafica 6 (spessore delle pareti) dopo, se serve ancora.
+3. Grafica 4 e 5 (backglass e piano di gioco dipinti): **prompt e codice fatti**
+   (`disegni/prompt.md`, guide in `disegni/guide/`; il codice usa i PNG se ci sono e
+   altrimenti resta com'è); mancano le immagini da Gemini e la loro preparazione. Grafica 6 (spessore delle pareti) dopo, se serve ancora.
 4. Suoni 4 (registrazioni .ogg): decidere con il proprietario se rompere la regola
    "nessun file audio" valida negli altri giochi; se sì, pochi file piccoli.
 5. Tappa 2: gli altri tavoli, menu dei tavoli e sblocco coi punti.

@@ -278,3 +278,9 @@ body.tavolo-radici { background: #9fd3ea; }
 .tavolo-radici .riquadro .bottone.secondario { background: #6e4622; box-shadow: 0 4px 0 #3b2210; }
 .tavolo-radici .gira { background: #5c3a1c; }
 #campo { touch-action: none; }
+
+/* backglass dipinto, piccolo nel menu quando mancano i pannelli (telefono) */
+.backglass { display: flex; justify-content: center; margin: 0 auto 10px; }
+.backglass[hidden] { display: none; }
+.backglass canvas { width: min(220px, 60vw); height: auto; border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+.backglass:not([hidden]) + .ritratti { display: none; }

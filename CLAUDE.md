@@ -1584,7 +1584,21 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   (il telefono deve funzionare, ma le prove con lui si fanno su PC). Passo 2: il live catch
   funziona già (confermato dal proprietario, nessuna modifica alla fisica); prestazioni sul
   telefono sistemate senza prova col proprietario (vedi "Qualità sul telefono").
-  **Prossimo**: backglass e piano di gioco dipinti con Gemini (il codice resta di riserva), poi
+  **Passo 3 in corso** (backglass e piano dipinti): prompt in `disegni/prompt.md` (stile
+  comune + tre immagini, con le guide in `disegni/guide/` da allegare); codice pronto, in
+  attesa delle immagini. `DIPINTI` in `radici.js` (esposto come `T.dipinti`, caricato da
+  `gioco.js`, che rifà strati e pannelli quando arrivano): `piano` = due metà 2:3
+  (`piano-radici-alto.png` a y 0-990 e `piano-radici-basso.png` a y 910-1900, larghe 660
+  da x -10, sfumate negli 80 px in comune; `pianoDipinto`), che prendono il posto di
+  `disegnaPrato` (il prato del codice); sopra restano `dettagliFondo` (corridoio, buca,
+  base del piolo, canaletta, scritta) e tutto il resto. `backglass` =
+  `backglass-radici.png` (3:4) in cima al pannello di sinistra (`disegnaBackglass`), con
+  sopra le foto originali di Tino e Gino (Gemini non li disegna: regola del sito) e il
+  display nella finestra nera; posizioni in frazioni (`display`, `tino`, `gino`) da
+  rimisurare sull'immagine vera. Col backglass la lista delle avventure sparisce durante
+  un'avventura e la mini mappa si stringe; sul telefono il backglass compare piccolo nel
+  menu (`anteprimaBackglass`) al posto dei ritratti. Senza i file tutto resta com'era.
+  **Prossimo**: preparare le immagini quando arrivano, poi
   decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
   sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.
