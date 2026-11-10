@@ -101,7 +101,7 @@
       W, H, R,
       segmenti: [[], []], cerchi: [[], []],
       flipper: [], sensori: [], prese: [], bocche: [], percorsi: {},
-      prigioniere: [], magneti: [], dischi: [], mobili: [],
+      prigioniere: [], magneti: [], dischi: [], mobili: [], zone: [],
       tempo: 0, tiltato: false, gravita: 1650, griglia: null,
       ev: null,                         // (tipo, oggetto, palla, info) → regole
     };
@@ -210,6 +210,14 @@
       const d = { id: o.id, x: o.x, y: o.y, r: o.r, w: o.w || 4, presa: o.presa || 5, ang: 0, piano: o.piano || 0 };
       m.dischi.push(d);
       return d;
+    };
+    // Zona: un cerchio che non urta, ma sente la ghianda che ci passa sopra
+    // (robivecchi da raccogliere, punti del campo da attraversare). Nelle prove
+    // del giocatore simulato vale come esito.
+    m.zona = (id, x, y, r, o = {}) => {
+      const z = { id, x, y, r, piano: o.piano || 0, attivo: o.attivo || null, esito: o.esito || id, dati: o.dati || null };
+      m.zone.push(z);
+      return z;
     };
     // Giocattolo che si muove: un cerchio che le regole spostano.
     m.mobile = (o) => {
@@ -510,6 +518,13 @@
       if (vv < b.velMin) continue;
       if (sim) { if (!p.esito) p.esito = b.esito; } else return { bocca: b, vel: vv };
     }
+    // zone
+    for (const z of m.zone) {
+      if (z.piano !== p.piano || (z.attivo && !z.attivo())) continue;
+      const dx = p.x - z.x, dy = p.y - z.y;
+      if (dx * dx + dy * dy > z.r * z.r) continue;
+      if (sim) { if (!p.esito) p.esito = z.esito; } else if (m.ev) m.ev('zona', z, p, 0);
+    }
     // buche
     for (const q of m.prese) {
       if (q.piano !== p.piano || (q.attivo && !q.attivo())) continue;
@@ -762,6 +777,11 @@
     lascia: () => tono(160, 0.2, { tipo: 'triangle', f2: 600, vol: 0.08 }),
     prigioniera: () => { tono(500, 0.06, { tipo: 'triangle', vol: 0.06 }); tono(700, 0.05, { tipo: 'triangle', vol: 0.04, rit: 0.02 }); },
     chiave: () => note([1047, 1319, 1568, 2093], 0.06, { tipo: 'triangle', vol: 0.07, d: 0.14 }),
+    robivecchio() {
+      note([1175, 1568, 1976, 2349, 2637], 0.07, { tipo: 'triangle', vol: 0.07, d: 0.18 });
+      rumore(0.5, { tipo: 'highpass', f: 6000, vol: 0.03, rit: 0.15 });
+    },
+    impresa: () => note([659, 784, 988, 1319], 0.08, { tipo: 'square', vol: 0.04, filtro: 3500, d: 0.2 }),
     torcia() {
       rumore(0.5, { tipo: 'bandpass', f: 1500, f2: 400, q: 0.7, vol: 0.1 });
       tono(523, 0.2, { tipo: 'triangle', f2: 784, vol: 0.05 });

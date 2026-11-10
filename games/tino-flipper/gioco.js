@@ -37,6 +37,7 @@
     gino: carica(ASSETS + 'gino/gino.png'),
     agente: carica(ASSETS + 'agenti-tari/agente-timbro.svg'),
   };
+  const immaginiRobi = {};
   function carica(src) {
     const img = new Image();
     img.src = src;
@@ -84,6 +85,7 @@
     tilt: 0, tiltato: false,
     contatori: null, bonus: null,
     scossa: 0, flash: 0, flasher: [], gi: 1,
+    robivecchi: { attivo: null, coda: [], presi: [], guadagnati: [], attesa: 0, t: 0 },
     messaggi: [], scritte: [], particelle: [],
     tino: { faccia: 'normale', t: 0, salto: 0 },
     tempo: 0,
@@ -102,7 +104,7 @@
     flash: (k = 0.6) => { stato.flash = Math.max(stato.flash, k); flasherTutti(k); },
     flasher,
     percorso: avviaPercorso, trattieni, libera, togli, nuovaPalla, inCanna,
-    avviaMultiball, avviaAvventura, fineAvventura,
+    avviaMultiball, avviaAvventura, fineAvventura, impresa,
     tinta, d: null,
   };
 
@@ -118,6 +120,12 @@
   const flipperDi = (lato) => m.flipper.filter((f) => f.lato === lato);
   let classifica = leggi(T.id + ':classifica', []);
   const record = () => (classifica.length ? classifica[0].punti : 0);
+  // robivecchi: la collezione del tavolo (salvata appena presi) e la zona che
+  // sente la ghianda sopra quello in campo
+  const ROBIVECCHI = T.ROBIVECCHI || [];
+  let collezione = leggi(T.id + ':robivecchi', []);
+  for (const r of ROBIVECCHI) immaginiRobi[r.id] = carica(ASSETS + 'oggetti/robivecchi/' + (r.file || r.id) + '.svg');
+  const ZONA_ROBI = m.zona('robivecchio', -100, -100, 26, { attivo: () => !!stato.robivecchi.attivo && !stato.robivecchi.attivo.percorso });
 
   A.abilitato = () => !stato.test && stato.modo !== 'demo';
   A.muto = muto;
@@ -206,6 +214,8 @@
     stato.statistiche.tiri[nome] = (stato.statistiche.tiri[nome] || 0) + 1;
     const c = stato.combo;
     c.n = c.t > 0 ? c.n + 1 : 1;
+    c.fila = c.t > 0 && c.ultimo === nome ? (c.fila || 1) + 1 : 1;   // stesso tiro di fila
+    c.ultimo = nome;
     c.t = 3.6;
     if (c.n >= 2) {
       aggiungiPunti(10000 * c.n, x, y - 24, tinta().neon2);
@@ -220,6 +230,85 @@
       suoni.jackpot();
       stato.flash = 0.5;
     }
+  }
+
+  // ---------------------------------------------------------------- robivecchi
+  // Un'impresa fatta: il robivecchio compare sul tavolo (uno alla volta, gli
+  // altri aspettano in fila) e ci resta finché la ghianda non ci passa sopra.
+  function impresa(id) {
+    const def = ROBIVECCHI.find((r) => r.id === id);
+    if (!def || stato.modo !== 'gioco') return;
+    const rb = stato.robivecchi;
+    if (collezione.includes(id) || rb.guadagnati.includes(id)) return;
+    rb.guadagnati.push(id);
+    rb.coda.push(def);
+    if (rb.attivo) messaggio(`Impresa: ${def.nome}!`, 'Aspetta il suo turno sul tavolo', 2.2, '#ffe27a');
+    else { rb.attesa = 0.6; messaggio(`Impresa: ${def.nome}!`, `Prendilo ${def.dove}`, 2.6, '#ffe27a'); }
+    suoni.impresa();
+    festa();
+  }
+  function mettiRobivecchio() {
+    const rb = stato.robivecchi;
+    rb.attivo = rb.coda.shift() || null;
+    rb.t = 0;
+    if (!rb.attivo) return;
+    const [x, y] = posRobivecchio(rb.attivo);
+    flasher(x, y, '#ffe27a', 0.8, 0.5);
+    if (rb.coda.length === 0 && stato.messaggi.length === 0) messaggio(rb.attivo.nome, `Prendilo ${rb.attivo.dove}`, 2, '#ffe27a');
+  }
+  function posRobivecchio(r) {
+    return r.pos ? r.pos() : [r.x, r.y];
+  }
+  function prendiRobivecchio(p) {
+    const rb = stato.robivecchi;
+    const r = rb.attivo;
+    if (!r) return;
+    const [x, y] = posRobivecchio(r);
+    rb.attivo = null;
+    rb.attesa = 1.2;
+    rb.presi.push(r.id);
+    if (!stato.test && !collezione.includes(r.id)) {
+      collezione = collezione.concat([r.id]);
+      scrivi(T.id + ':robivecchi', collezione);
+    }
+    const v = aggiungiPunti(25000, x, y - 30, '#ffe27a');
+    messaggio(`Preso: ${r.nome}!`, `+${numero(v)} · robivecchio ${collezione.length || rb.presi.length} di ${ROBIVECCHI.length}`, 2.4, '#ffe27a');
+    scintille(x, y, '#ffe27a', 18, 300);
+    flasher(x, y, '#ffe27a', 1, 0.5);
+    suoni.robivecchio();
+    festa();
+  }
+  function aggiornaRobivecchi(dt) {
+    const rb = stato.robivecchi;
+    rb.t += dt;
+    if (!rb.attivo && rb.coda.length) {
+      rb.attesa -= dt;
+      if (rb.attesa <= 0) mettiRobivecchio();
+    }
+    const r = rb.attivo;
+    if (r && !r.percorso) {
+      const [x, y] = posRobivecchio(r);
+      ZONA_ROBI.x = x; ZONA_ROBI.y = y; ZONA_ROBI.piano = r.piano || 0;
+    }
+  }
+  // disegno: l'oggetto che ondeggia con un alone, e la freccia che lampeggia
+  function disegnaRobivecchio(g, filtro) {
+    const r = stato.robivecchi.attivo;
+    if (!r || !filtro(r)) return;
+    const [x, y] = posRobivecchio(r);
+    const t = stato.robivecchi.t;
+    const ond = Math.sin(t * 3) * 3;
+    luce(g, x, y, 42, '#ffe27a', 0.22 + 0.12 * Math.sin(t * 6));
+    if (!r.pos && r.freccia !== false) lampada(g, x, y + 40, 11, '#ffe27a', lampeggia(4), '', 'freccia', 0);
+    const img = immaginiRobi[r.id];
+    g.save();
+    g.translate(x, y + ond);
+    g.rotate(Math.sin(t * 2) * 0.15);
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    g.beginPath(); g.ellipse(3, 16 - ond, 14, 5, 0, 0, Math.PI * 2); g.fill();
+    if (pronta(img)) g.drawImage(img, -18, -18, 36, 36);
+    else { g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(0, 0, 14, 0, Math.PI * 2); g.fill(); }
+    g.restore();
   }
 
   function avviaMultiball(finale = false) {
@@ -426,6 +515,7 @@
       multiball: false, jackpot: { valore: T.PUNTI.jackpot, fatti: 0, doppio: false },
       avventura: null, avventureFatte: [], giro: 0, palleExtra: 0, tilt: 0, tiltato: false,
       messaggi: [], scritte: [], particelle: [], bonus: null,
+      robivecchi: { attivo: null, coda: [], presi: [], guadagnati: [], attesa: 0, t: 0 },
       statistiche: { palle: 0, durata: 0, perse: 0, salvate: 0, fuori: 0, ferme: 0, dove: [], tiri: {} },
     });
     stato.lancio = { carica: 0, premuto: false, attesa: false, auto: 0, palla: null, ritardo: 0 };
@@ -520,7 +610,10 @@
   let accumulo = 0;
   let orologio = 0;     // tempo della fisica (avanza di un passo alla volta)
 
-  m.ev = (tipo, o, p, info) => T.evento(tipo, o, p, info);
+  m.ev = (tipo, o, p, info) => {
+    if (tipo === 'zona' && o === ZONA_ROBI) { prendiRobivecchio(p); return undefined; }
+    return T.evento(tipo, o, p, info);
+  };
 
   function passoFisica(h) {
     orologio += h;
@@ -567,7 +660,7 @@
         if ((stato.modo === 'demo' || stato.iaGioca) && L.auto <= 0 && !L.premuto) L.auto = 0.5;
         if (L.auto > 0) {
           L.auto -= dt;
-          if (L.auto <= 0) lancia(stato.modo === 'demo' || stato.iaGioca ? casuale(0.55, 0.95) : LANCIO.auto);
+          if (L.auto <= 0) lancia(stato.modo === 'demo' || stato.iaGioca ? casuale(0.62, 1) : LANCIO.auto);
         } else if (L.premuto) {
           L.carica = Math.min(1, L.carica + dt / LANCIO.pieno);
           suoni.carica(L.carica);
@@ -584,7 +677,10 @@
     for (const p of [...stato.palle]) {
       if (p.stato === 'percorso') {
         const per = p.per;
+        const prima = p.s;
         p.s += p.v * dt;
+        const rb = stato.robivecchi.attivo;
+        if (rb && rb.percorso === per.id && prima < rb.s && p.s >= rb.s) prendiRobivecchio(p);
         const q = m.puntoPercorso(per, Math.min(p.s, per.lung));
         p.x = q.x; p.y = q.y;
         if (!per.costante) p.v = clamp(p.v + (q.dy < 0 ? PERCORSO.su : PERCORSO.giu) * dt, per.vel[0], per.vel[1]);
@@ -658,6 +754,7 @@
       if (a.id === T.FINALE.id && a.t <= 0 && !stato.multiball) fineAvventura(true);
     }
     T.aggiorna(dt);
+    aggiornaRobivecchi(dt);
     aggiornaCamera(dt);
     aggiornaTabellone();
   }
@@ -1477,12 +1574,15 @@
     T.disegnaPavimento(ctx, ora);
     T.disegnaCampo(ctx, ora);
     disegnaLancio(ctx);
+    disegnaRobivecchio(ctx, (r) => !r.percorso && !r.piano);
     disegnaPalle(ctx, (p) => p.piano === 0 && (p.stato === 'campo' || p.stato === 'canna' || p.stato === 'ferma'));
     strato(strati.galleria);
     T.disegnaSopraGalleria(ctx, ora);
+    disegnaRobivecchio(ctx, (r) => !r.percorso && r.piano === 1);
     disegnaPalle(ctx, (p) => p.piano === 1 && (p.stato === 'campo' || p.stato === 'ferma'));
     strato(strati.rampe);
     T.disegnaSopra(ctx, ora);
+    disegnaRobivecchio(ctx, (r) => !!r.percorso);
     disegnaPalle(ctx, (p) => p.stato === 'percorso' && !p.per.sotto);
     // ghianda nel tunnel: si vede solo un alone che corre sotto terra
     for (const p of stato.palle) if (p.stato === 'percorso' && p.per.sotto) luce(ctx, p.x, p.y, 26, tinta().neon2, 0.5);
@@ -1785,6 +1885,12 @@
     if (!classifica.length) return '';
     return `<table class="classifica">${classifica.map((c, i) => `<tr class="${i === ultimaPosizione ? 'nuovo' : ''}"><td>${i + 1}.</td><td>${numero(c.punti)}</td><td>${c.data}</td></tr>`).join('')}</table>`;
   }
+  const imgRobi = (r) => `<img src="${ASSETS}oggetti/robivecchi/${r.file || r.id}.svg" alt="">`;
+  function collezioneRobivecchi() {
+    if (!ROBIVECCHI.length) return '';
+    return `<h3>Robivecchi del tavolo (${collezione.length} di ${ROBIVECCHI.length})</h3>
+      <div class="robivecchi">${ROBIVECCHI.map((r) => `<figure class="${collezione.includes(r.id) ? 'preso' : 'manca'}">${imgRobi(r)}<figcaption><b>${r.nome}</b><span>${collezione.includes(r.id) ? 'Preso!' : r.impresa}</span></figcaption></figure>`).join('')}</div>`;
+  }
   function pannelloMenu() {
     return `<div class="riquadro">
       <div class="ritratti">${img('normale', 'salta')}${img('gino', 'oscilla')}</div>
@@ -1796,6 +1902,7 @@
         <a class="bottone secondario" href="neon/index.html">Notte al neon (tavolo bonus)</a>
       </div>
       ${classifica.length ? '<h3>I migliori punteggi</h3>' + tabellaClassifica() : ''}
+      ${collezioneRobivecchi()}
       <h3>Come si gioca</h3>
       ${T.testi.guida}
       ${testoComandi()}
@@ -1822,6 +1929,8 @@
       <p><b>${numero(stato.punti)}</b> punti</p>
       ${stato.match ? `<p class="match ${stato.match.vinto ? 'vinto' : ''}">Match <b>${stato.match.cifre}</b> · <b>${stato.match.estratte}</b>${stato.match.vinto ? ' · Match! Palla extra alla prossima partita' : ''}</p>` : ''}
       ${ultimaPosizione >= 0 ? tabellaClassifica() : `<p class="record">Record: ${numero(record())}</p>`}
+      ${stato.robivecchi.presi.length ? `<h3>Robivecchi trovati</h3><div class="robivecchi nuovi">${stato.robivecchi.presi.map((id) => ROBIVECCHI.find((r) => r.id === id)).map((r) => `<figure class="preso">${imgRobi(r)}<figcaption><b>${r.nome}</b></figcaption></figure>`).join('')}</div>` : ''}
+      ${stato.robivecchi.attivo || stato.robivecchi.coda.length ? `<p class="record">Robivecchio rimasto sul tavolo: ${[stato.robivecchi.attivo, ...stato.robivecchi.coda].filter(Boolean).map((r) => r.nome).join(', ')}. Rifai l'impresa in un'altra partita.</p>` : ''}
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Ancora una!</button>
         <button class="bottone secondario" data-azione="menu">Menu</button>
@@ -1890,7 +1999,7 @@
   window.tinoFlipper = {
     stato, tavolo: T, mondo: m, camera, ia, IA,
     iniziaPartita, aggiorna, lancia, premiFlipper, premiLancio, scossone, pilotaIA, provaColpo,
-    avviaAvventura, avviaMultiball, nuovaPalla, avviaPercorso, cambiaVista,
-    orologio: () => orologio,
+    avviaAvventura, avviaMultiball, nuovaPalla, avviaPercorso, cambiaVista, impresa,
+    orologio: () => orologio, collezione: () => collezione,
   };
 })();

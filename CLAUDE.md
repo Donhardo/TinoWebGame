@@ -1342,7 +1342,29 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   velocità sopra `velMin`), `percorso` (spezzata che la ghianda segue: rampe, tunnel con
   `sotto`, scivoli; `costante` o `vel` [min, max]; esce al `piano` con `uscita`),
   `prigioniera` (palla prigioniera: si muove solo in verticale tra `giu` e `su`),
-  `magnete`, `disco` (gira e trascina la ghianda), `mobile` (giocattolo che si muove).
+  `magnete`, `disco` (gira e trascina la ghianda), `mobile` (giocattolo che si muove),
+  `zona` (cerchio che non urta ma sente la ghianda: robivecchi; nelle prove vale come esito).
+  Fisica: **attrito di Coulomb** solo negli urti veri (velocità normale sopra
+  `FISICA.urtoMinimo` 120 px/s): spinta tangenziale al massimo μ volte quella normale
+  (pareti 0,12, gomme 0,2, flipper 0,25); la ghianda prende **spin** negli urti (`p.spin`,
+  cala del 60% al secondo) e il disegno lo usa. Non applicare attrito ai contatti di
+  appoggio: fermava la ghianda sulle superfici inclinate (30 incastri a partita).
+- **Revisione "flipper vero"** (novembre 2026, dettagli e proposte in
+  `games/tino-flipper/revisione.md`): illuminazione generale `stato.gi` (si spegne col
+  tilt, cala a fine palla e a partita finita, pulsa nel multiball), flasher
+  (`G.flasher(x, y)`, `T.flasher` = quattro punti del tavolo accesi da `G.flash`), lampade
+  con dissolvenza (stato per posizione in `lampStato`) e onda di luce nel menu (modalità
+  attrazione), ghianda con riflesso mobile e sfocatura di movimento sopra 1100 px/s (via la
+  scia al neon), flipper con la copia sbiadita mentre batte, nodi che "saltano" al colpo,
+  paletti con l'anello di gomma, riflesso del vetro (`colori.vetro: false` per toglierlo),
+  stantuffo con molla (`lancio.yStantuffo`), `testoLuce` senza `shadowBlur`. **Display a
+  matrice di punti** (`schermataDMD`, 128 × 32, cache per testo) nel pannello di sinistra.
+  Suoni: riverbero del mobile (risposta all'impulso generata, mandata 16%), rotolamento
+  continuo (`A.rotola(vel, rampa)` chiamato da `ciclo`), `flipperGiu`, `knocker` (palla
+  extra e match), `scolo`, campanella nei `bumper`, molla nel `lancio`, clack nel `tilt`,
+  `robivecchio`, `impresa`. **Match** a fine partita (12%): knocker e una palla in più
+  alla prossima partita (`localStorage` `tino-flipper:match`). Il tavolo si sceglie con
+  `?tavolo=<id>` (ogni tavolo in `tavoli/<id>.js` incluso da `index.html`; senza, le Radici).
   Due piani: 0 il campo, 1 un mini campo rialzato; la ghianda urta solo il suo piano.
   `TF.passoPalla(m, p, h, sim)` fa un passo (passo di 1/960 s, urti come nella versione 1)
   e restituisce `{ bocca }`, `{ presa }` o `{ magnete }`; gli altri fatti arrivano a
@@ -1393,7 +1415,12 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   uguale alla versione 1 spostata di (+20, +847), con le corsie esterne più strette (guide
   a x 78 e 522) e le sporgenze laterali più lunghe (fino a y 1518): prima tre ghiande perse
   su quattro finivano nelle corsie esterne.
-- **Elementi**: fionde, tre nodi (bumper), corsie T·I·N·O col tiro da maestro, orbita
+- **Elementi**: fionde, tre nodi (bumper), corsie T·I·N·O col tiro da maestro (con la
+  guida di legno a sinistra delle corsie, da (236, 38) a (250, 112), rimbalzo 0,12: prende
+  la ghianda che arriva lungo la volta e la fa scendere nelle corsie; senza, seguiva tutto
+  l'arco e il tiro da maestro era impossibile. Il lancio decide la corsia: pieno (0,7-1) → T
+  o I, a 0,65 → una qualunque, sotto 0,65 non arriva in cima; la lettera che lampeggia gira
+  ogni 0,55 s, quindi è un gioco di tempismo), orbita
   destra con lo spinner (x 520-580), radice lunga (rampa di legno dalla bocca a (115, 990):
   in cima il deviatore la manda alla corsia interna destra o, con la dispensa aperta, alla
   dispensa), giro della morte (bocca a (440, 960), anello di centro (455, 560), poi la liana
@@ -1457,43 +1484,53 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   head e body, percorsi `../../` tolti, link alla home `#`), `css/sito.css`, `stile.css`,
   `motore.js`, `tavoli/radici.js`, `gioco.js` (con `ASSETS = 'assets/'`),
   `neon/index.html` e `neon/gioco.js` (percorsi `../assets/` e `../css/`),
-  `assets/tino/`, `assets/gino/`, `assets/agenti-tari/agente-timbro.svg`; si pubblica con
-  `files` e `root`. Prove: `window.tinoFlipper` (`stato`, `tavolo` (con `S`, `oggetti`,
-  tabelle), `mondo`, `camera`, `IA`, `iniziaPartita`, `aggiorna`, `avviaPercorso`,
-  `avviaAvventura`, `nuovaPalla`, `cambiaVista`); con `stato.test` e `stato.iaGioca` come
-  nella versione 1; `stato.statistiche.dove` (incastri e uscite), `scoli` (dove si perde
-  la ghianda), `tiri`. I copioni non sono nel repository.
-- **Stato**: tappa 1 fatta e provata dal proprietario: "va bene". Dopo la prova: Gino
-  spostato sul campo (al centro del piolo d'oro) e colori all'aperto (fatti, da far provare
-  al proprietario). Poi i robivecchi (qui sotto), poi la tappa 2.
-- **Robivecchi** (da fare nella prossima sessione; modo approvato: "impresa + punto difficile").
-  Ogni robivecchio si guadagna con un'impresa; quando è fatta, l'oggetto compare in un punto
-  difficile del tavolo (con un messaggio e una freccia che lampeggia) e ci resta, anche da una
-  palla all'altra, finché la ghianda non ci passa sopra (+25.000). Se la partita finisce prima,
-  è perso: si rifà l'impresa in un'altra partita. Uno alla volta sul tavolo; gli altri
-  guadagnati aspettano in fila. Salvati appena presi in `localStorage`
-  `tino-flipper:radici:robivecchi`; a fine partita il pannello con quelli nuovi; nel menu la
-  collezione del tavolo (quelli mancanti in grigio, con l'impresa scritta sotto). Disegni di
-  `assets/oggetti/robivecchi/`; le Radici usano la serie del mondo 1 dell'avventura, ogni
-  tavolo futuro avrà la sua. Proposta di imprese (dalla più facile alla più difficile, da
-  confermare col proprietario):
-  1. Moneta (`moneta.svg`): tiro da maestro. Compare nella galleria alta, accanto al pozzo
-     (si prende salendo dal tunnel).
-  2. Bottone (`bottone.svg`): T·I·N·O completo due volte nella stessa palla. Compare in cima
-     all'orbita destra.
-  3. Graffetta (`graffetta.svg`): le tre torce accese nella stessa palla. Compare tra i nodi.
-  4. Fiocco (`fiocco.svg`): tre radici lunghe di fila nella stessa combo. Compare in cima alla
-     radice lunga, sul deviatore (si prende facendo la radice lunga).
-  5. Carta di credito scaduta (`carta-scaduta.svg`): agente acciuffato nell'avventura
-     Inseguimento. Compare sopra il sentiero dell'agente, alla sua destra (x ~430, y ~650).
-  6. Tappo a corona (`tappo.svg`): super jackpot su Gino. Compare in cima all'anello del giro
-     della morte (si prende facendo il giro).
-  7. Biglia (`biglia.svg`): finire la Ghianda d'Oro. Compare sul bordo del piolo d'oro e gira
-     con lui (bersaglio che si muove attorno a Gino).
-  Gli oggetti sui percorsi (fiocco, tappo) si prendono quando la ghianda passa per quel punto
-  del percorso. Da controllare con le partite simulate: il giocatore simulato deve riuscire a
-  prenderli tutti (`desiderati` col punto del robivecchio in cima quando ce n'è uno), e il
-  medio dovrebbe prenderne 2-4 nelle prime partite.
+  `assets/tino/`, `assets/gino/`, `assets/agenti-tari/agente-timbro.svg`,
+  `assets/oggetti/robivecchi/`; si pubblica con `files` e `root`.
+- **Prove automatiche**: `window.tinoFlipper` (`stato`, `tavolo` (con `S`, `oggetti`,
+  `ROBIVECCHI`, tabelle), `mondo`, `camera`, `IA`, `iniziaPartita`, `aggiorna`,
+  `avviaPercorso`, `avviaAvventura`, `nuovaPalla`, `cambiaVista`, `impresa(id)`,
+  `collezione()`); con `stato.test` e `stato.iaGioca` come nella versione 1;
+  `stato.statistiche.dove` (incastri e uscite), `scoli` (dove si perde la ghianda), `tiri`,
+  `skill` (tiri da maestro); `stato.robivecchi` (`attivo`, `coda`, `presi`, `guadagnati`).
+  **Il copione delle partite simulate è nel repository**: `games/tino-flipper/prove/partite.js`
+  (Playwright; serve `python3 -m http.server 8765` dalla cartella principale; `node
+  games/tino-flipper/prove/partite.js radici 6 12 medio`, livelli preciso / bravo / medio /
+  principiante). Va fatto girare prima e dopo ogni modifica alla fisica o al tavolo: le
+  colonne "fuori" e "ferme" devono restare a zero. Dopo la revisione (6 partite medie fino a
+  12 minuti): 7,5-9,6 minuti a partita, 0 fuori, 0 ferme, 1,7-2,8 avventure; il preciso
+  (12 minuti) fa 3-4 avventure e 1-2 multiball.
+- **Robivecchi** (fatti, modo "impresa + punto difficile"). Tabella `ROBIVECCHI` in
+  `radici.js` (id, nome, file, impresa, dove, x, y, piano, `percorso` + `s` per quelli sulle
+  rampe, `pos()` per quelli che si muovono, `freccia: false` per non disegnare la freccia,
+  `mira` = esiti che il giocatore simulato cerca). Il tavolo chiama `G.impresa(id)` quando
+  l'impresa è fatta; `gioco.js` fa il resto: coda (uno alla volta sul tavolo, gli altri
+  aspettano), zona `ZONA_ROBI` (`m.zona`) che sente la ghianda sopra (+25.000), per quelli
+  sui percorsi il passaggio per `s`, disegno (oggetto che ondeggia con alone e freccia che
+  lampeggia, nello strato giusto per piano e percorso), salvataggio appena presi in
+  `localStorage` `tino-flipper:radici:robivecchi` (non nelle prove), pannello di fine partita
+  con quelli trovati (e l'avviso di quelli rimasti sul tavolo: si rifà l'impresa), collezione
+  nel menu (mancanti in grigio con l'impresa sotto). Il giocatore simulato mette la `mira`
+  del robivecchio in cima a `desiderati` (`VALORE.robivecchio` = 6). Le imprese:
+  1. Moneta: tiro da maestro → galleria alta accanto al pozzo (200, 500, piano 1).
+  2. Bottone: T·I·N·O due volte nella stessa palla (`S.tinoPalla`) → cima dell'orbita (550, 500).
+  3. Graffetta: le tre torce nella stessa palla (`S.torcePalla`) → tra i nodi (352, 284).
+  4. Fiocco: tre radici lunghe di fila nella stessa combo (`stato.combo.fila`, che conta i
+     tiri uguali di fila) → in fondo al percorso `rampa` (sul deviatore).
+  5. Carta di credito scaduta: agente acciuffato nell'Inseguimento → (430, 648).
+  6. Tappo a corona: super jackpot su Gino → in cima all'anello (percorso `giro`, s ≈ 519).
+  7. Biglia: finire la Ghianda d'Oro → sul bordo del piolo d'oro, gira con lui (`pos()`).
+  Partite simulate (6 per livello, 12 minuti): il medio guadagna la moneta in 5 partite su 6
+  e la graffetta in 3 (ne prende 1-2 a partita); il preciso prende graffetta e tappo quasi
+  sempre e la moneta una volta su sei (lancia a caso). Bottone, fiocco, carta e biglia non
+  escono con il giocatore simulato (non gestisce le corsie, tira di rado alla radice lunga,
+  non anticipa l'agente): sono le imprese difficili, da provare con persone vere.
+- **Stato**: tappa 1 fatta e provata dal proprietario ("va bene"); poi Gino sul campo,
+  colori all'aperto, la revisione "flipper vero" e i robivecchi (fatti, da far provare al
+  proprietario con l'artifact). **Prossimo**: scegliere tra le proposte di
+  `revisione.md` (le più facili: lampadine dell'illuminazione generale lungo le pareti,
+  animazioni dei bersagli, grembiule, status report, iniziali in classifica, strati
+  ritagliati), provare su un telefono vero, poi la tappa 2 (gli altri tavoli, menu dei
+  tavoli e sblocco coi punti).
 
 #### Notte al neon (versione 1, ora `neon/`)
 - **Decisioni prese**: titolo "Tino Flipper", sottotitolo "Notte al neon nel bosco";

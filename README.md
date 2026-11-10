@@ -93,5 +93,8 @@ e poi si visita http://localhost:8000.
   gira, la resina che ferma la ghianda, il cece nel cunicolo, l'agente col timbro da
   stordire e la dispensa con le ghiande in fila per il multiball. Quattro avventure (le
   torce, la frana, la chiave, l'inseguimento) e il finale della Ghianda d'Oro. Il vecchio
-  tavolo al neon resta come tavolo bonus (`neon/`). Suoni e musica sintetizzati;
-  classifica dei cinque migliori punteggi per tavolo.
+  tavolo al neon resta come tavolo bonus (`neon/`). Suoni e musica sintetizzati, con il
+  riverbero del mobile, il rotolamento della ghianda e i suoni meccanici (solenoidi,
+  campanelle, knocker); display a matrice di punti, illuminazione generale che si
+  spegne col tilt, flasher, match a fine partita; sette robivecchi da guadagnare con
+  le imprese del tavolo; classifica dei cinque migliori punteggi per tavolo.

@@ -220,6 +220,21 @@ kbd {
 .guida span { line-height: 1.2; }
 .guida b { color: var(--neon, #39f0ff); }
 
+.robivecchi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: 8px 6px;
+  margin-top: 8px;
+}
+.robivecchi figure { margin: 0; display: grid; justify-items: center; gap: 3px; font-size: 0.72rem; line-height: 1.15; }
+.robivecchi img { width: 40px; height: 40px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
+.robivecchi figcaption { display: grid; gap: 1px; text-align: center; }
+.robivecchi figcaption span { opacity: 0.75; font-size: 0.66rem; }
+.robivecchi .manca img { filter: grayscale(1) opacity(0.35); }
+.robivecchi .manca b { opacity: 0.6; }
+.robivecchi .preso b { color: #ffe27a; }
+.robivecchi.nuovi img { animation: saltello 1s ease-in-out infinite; }
+
 .conto { margin: 8px auto 0; border-collapse: collapse; font-size: 1rem; }
 .conto td { padding: 2px 8px; }
 .conto td:last-child { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }

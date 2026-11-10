@@ -53,6 +53,8 @@ async function partita(page, seme) {
       palle: s.palle, perse: s.perse, salvate: s.salvate, fuori: s.fuori, ferme: s.ferme,
       dove: s.dove, scoli: s.scoli || [], tiri: s.tiri, avventure: [...avventure], multiball,
       robivecchi: st.robivecchi ? st.robivecchi.presi.slice() : [],
+      imprese: st.robivecchi ? st.robivecchi.guadagnati.slice() : [],
+      skill: s.skill || 0,
       giro: st.giro,
     };
   }, { ia: LIVELLI[livello] || LIVELLI.medio, minuti, seme });
@@ -73,7 +75,7 @@ async function partita(page, seme) {
       const seme = code.shift();
       const r = await partita(page, seme);
       risultati.push(r);
-      console.log(`partita ${seme + 1}: ${r.minuti} min, ${r.punti.toLocaleString('it-IT')} punti, palle ${r.palle}, salvate ${r.salvate}, fuori ${r.fuori}, ferme ${r.ferme}, multiball ${r.multiball}, avventure [${r.avventure}], robivecchi [${r.robivecchi}]${r.finita ? '' : ' (interrotta)'}`);
+      console.log(`partita ${seme + 1}: ${r.minuti} min, ${r.punti.toLocaleString('it-IT')} punti, palle ${r.palle}, salvate ${r.salvate}, fuori ${r.fuori}, ferme ${r.ferme}, multiball ${r.multiball}, avventure [${r.avventure}], imprese [${r.imprese}] presi [${r.robivecchi}] maestro ${r.skill}${r.finita ? '' : ' (interrotta)'}`);
       if (r.dove.length) console.log('   dove:', JSON.stringify(r.dove));
     }
     await page.close();
