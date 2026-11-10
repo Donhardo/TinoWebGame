@@ -1602,7 +1602,19 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   rimisurare sull'immagine vera. Col backglass la lista delle avventure sparisce durante
   un'avventura e la mini mappa si stringe; sul telefono il backglass compare piccolo nel
   menu (`anteprimaBackglass`) al posto dei ritratti. Senza i file tutto resta com'era.
-  **Prossimo**: preparare le immagini quando arrivano, poi
+  **Immagini arrivate e preparate** (novembre 2026): il backglass è venuto come chiesto
+  (ritagliato il bordo bianco, 600 × 812, 256 colori; finestra del display e posti di Tino
+  e Gino rimisurati in `DIPINTI.backglass`). Il piano invece Gemini l'ha dipinto due volte **intero** (tavolo
+  completo in 2:3, con fionde e corsie) invece che in due metà; allungato fino all'1:3 del
+  tavolo era troppo deformato (al proprietario non va) e non si usa: resta il prato del
+  codice. I prompt 2 e 3 di `prompt.md` sono stati riscritti (un prato "a mappa", non un
+  tavolo da flipper) con la chat nuova di Gemini la metà alta è venuta giusta
+  (`piano-radici-alto.png`, 848 × 1264, colori pieni, nessuna deformazione: in una chat
+  già usata Gemini ritoccava il tavolo intero di prima). Poi, nella stessa chat, anche la metà
+  bassa (`piano-radici-basso.png`, 848 × 1264): le due metà si uniscono senza giunta.
+  `pianoDipinto` usa anche una metà sola (sotto il prato del codice, la metà dipinta
+  sfuma sul lato che manca).
+  **Prossimo**: far provare backglass e piano al proprietario, poi
   decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
   sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.

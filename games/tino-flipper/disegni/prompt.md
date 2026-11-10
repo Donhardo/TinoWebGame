@@ -11,6 +11,12 @@ com'è. Allegati da mettere insieme al testo:
 - piano, metà bassa: `guide/guida-piano-basso.png` **e** la metà alta già fatta
   (per lo stesso stile e gli stessi colori).
 
+**Com'è andata** (novembre 2026): il backglass è venuto bene al primo colpo. Il piano
+Gemini l'ha fatto due volte **intero** (tavolo completo in 2:3, con fionde e corsie in
+fondo) invece che in due metà; allungato fino all'1:3 del tavolo era troppo deformato e
+non si usa. I prompt 2 e 3 qui sotto sono stati riscritti per chiedere un pezzo di prato
+"a mappa" e non un tavolo da flipper (parola che fa disegnare a Gemini il tavolo intero).
+
 Se un'immagine non va, si rifà: il gioco usa i PNG solo se ci sono, altrimenti
 resta il disegno nel codice.
 
@@ -63,25 +69,33 @@ Se il titolo viene scritto male: rifarla aggiungendo "Check the spelling: T-I-N-
 
 ## 2 · Piano di gioco, metà alta (`piano-radici-alto.png`)
 
-```
-Hand-painted storybook illustration, warm and sunny, soft cartoon style with gentle rounded shapes, clean soft outlines, rich but not neon colors, light cel shading and a subtle painted texture. Cheerful and cozy, for a children's pinball game about a toy squirrel living among the roots of a big oak. No people, no animals, no characters, no logos, no text unless requested.
+Allegare solo `guide/guida-piano-alto.png`.
 
-Image: the top half of a pinball playfield, seen exactly from above (top-down, orthographic, no perspective, no horizon, no sky), portrait 2:3. It is only the painted ground: a sunny meadow under a big oak. Bright fresh green grass with short blades, clover, a few fallen oak leaves (green and a few golden), tiny white, yellow, lilac and pink flowers; smooth paths of light packed earth (pale sandy beige) and light-colored oak roots surfacing from the ground, with small pebbles; soft dappled sunlight with a warm glow stronger at the top, and a slightly darker green shade near the left and right edges.
-Follow the attached guide image as a map: put the light earth paths where the guide has beige shapes and the roots where the guide has brown lines, with the same sizes and positions; grass everywhere else. Do not copy the guide's flat colors and blobby look: paint it properly.
-The picture must stay calm and low in contrast, with no large dark areas, because the game draws walls, ramps, bumpers and a small brown acorn ball on top of it.
-DO NOT paint any game element: no walls, rails, ramps, flippers, bumpers, holes, targets, lights, arrows, lanes, frames or borders. No text.
-The bottom edge must continue naturally (it will be blended with the lower half).
+```
+Hand-painted storybook illustration, warm and sunny, soft cartoon style with gentle rounded shapes, clean soft outlines, rich but not neon colors, light cel shading and a subtle painted texture. Cheerful and cozy. No people, no animals, no characters, no logos, no text.
+
+Image: a painted ground texture, portrait 2:3, seen exactly from above (top-down, orthographic, like a map: no perspective, no horizon, no sky, no tree trunk, no canopy). It is a piece of a sunny meadow, and it will be used as the background of the UPPER part of a much taller picture: it is NOT a whole pinball table and it is NOT a game board. It has no beginning and no end at the bottom: the meadow simply continues beyond the bottom edge.
+Bright fresh green grass with short blades, clover, a few fallen oak leaves (green and a few golden), tiny white, yellow, lilac and pink flowers; smooth patches of light packed earth (pale sandy beige) and a few thin light-colored oak roots surfacing from the ground, with small pebbles; soft dappled sunlight, a little warmer at the top; a slightly darker green shade along the left and right edges.
+Use the attached guide image as a map, exactly: light earth where the guide has beige shapes (same sizes and positions: a large oval near the top, a tall oval in the middle, a round patch in the lower part), thin roots where the guide has brown lines, grass everywhere else. Do not copy the guide's flat colors and blobby look: paint it properly.
+Keep it calm and low in contrast, with no large dark areas.
+Absolutely NO game elements of any kind: no flippers, no slingshots, no triangles, no lanes, no gutters, no drain, no paths shaped like rails or tracks, no walls, no ramps, no bumpers, no holes, no targets, no lights, no arrows, no frames, no borders. Only natural ground.
+The bottom edge must look like the middle of a meadow, cut in two.
 ```
 
 ## 3 · Piano di gioco, metà bassa (`piano-radici-basso.png`)
 
-Allegare la guida bassa **e** la metà alta già venuta bene.
+Allegare la metà alta già venuta bene (prima immagine) **e** `guide/guida-piano-basso.png`
+(seconda immagine).
 
 ```
-Hand-painted storybook illustration, warm and sunny, soft cartoon style with gentle rounded shapes, clean soft outlines, rich but not neon colors, light cel shading and a subtle painted texture. Cheerful and cozy, for a children's pinball game about a toy squirrel living among the roots of a big oak. No people, no animals, no characters, no logos, no text unless requested.
+Hand-painted storybook illustration, warm and sunny, soft cartoon style with gentle rounded shapes, clean soft outlines, rich but not neon colors, light cel shading and a subtle painted texture. Cheerful and cozy. No people, no animals, no characters, no logos, no text.
 
-Image: the bottom half of the same pinball playfield as the first attached image (same style, same colors, same grass, same lighting, same scale of details), seen exactly from above (top-down, orthographic, no perspective, no horizon, no sky), portrait 2:3. Its top edge continues the bottom edge of the first attached image. Sunny meadow: bright fresh green grass with short blades, clover, a few fallen oak leaves, tiny white, yellow, lilac and pink flowers; smooth paths of light packed earth (pale sandy beige) and light-colored oak roots surfacing from the ground, with small pebbles; a slightly darker green shade near the left and right edges.
-Follow the second attached image (the guide) as a map: light earth where the guide has beige shapes and roots where it has brown lines, same sizes and positions; grass everywhere else. Do not copy the guide's flat colors.
-Calm and low in contrast, no large dark areas: walls, flippers and a small brown acorn ball will be drawn on top.
-DO NOT paint any game element: no walls, rails, ramps, flippers, bumpers, holes, targets, lights, arrows, lanes, frames or borders. No text.
+Image: a painted ground texture, portrait 2:3, seen exactly from above (top-down, orthographic, like a map: no perspective, no horizon, no sky, no tree). It is the continuation of the first attached image, directly BELOW it: same style, same colors, same grass, same lighting, same scale of details (flowers and leaves the same size). Its top edge must continue seamlessly the bottom edge of the first attached image. It is NOT a whole pinball table and it is NOT a game board: only the ground of a sunny meadow.
+Bright fresh green grass with short blades, clover, a few fallen oak leaves, tiny white, yellow, lilac and pink flowers; smooth patches of light packed earth (pale sandy beige) and thin light-colored oak roots surfacing from the ground, with small pebbles; a slightly darker green shade along the left and right edges.
+Use the second attached image (the guide) as a map, exactly: light earth where the guide has beige shapes (same sizes and positions: two rounded patches in the upper half, a wide rounded patch filling most of the lower half), thin roots where it has brown lines, grass everywhere else. Do not copy the guide's flat colors.
+Keep it calm and low in contrast, with no large dark areas.
+Absolutely NO game elements of any kind: no flippers, no slingshots, no triangles, no lanes, no gutters, no drain, no paths shaped like rails or tracks, no walls, no ramps, no bumpers, no holes, no targets, no lights, no arrows, no frames, no borders. Only natural ground, also at the bottom edge.
 ```
+
+Se Gemini disegna ancora fionde o corsie: rifarla aggiungendo in fondo "This is a texture,
+not a playfield: if you are drawing anything that looks like a pinball part, remove it."
