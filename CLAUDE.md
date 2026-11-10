@@ -1604,15 +1604,12 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   menu (`anteprimaBackglass`) al posto dei ritratti. Senza i file tutto resta com'era.
   **Immagini arrivate e preparate** (novembre 2026): il backglass è venuto come chiesto
   (ritagliato il bordo bianco, 600 × 812, 256 colori; finestra del display e posti di Tino
-  e Gino rimisurati in `DIPINTI.backglass`). Il piano invece Gemini l'ha dipinto **intero**
-  in 2:3 (848 × 1264) invece che in due metà, con le fionde e le corsie in fondo: si usa un
-  solo `piano-radici.png` (760 × 2188, colori pieni) allungato in verticale, le prime 878
-  righe fino a y 1580 (dove iniziano le corsie) e il resto fino in fondo, così fionde e
-  corsie dipinte cadono quasi sotto quelle del gioco; foglie e fiori sono allungati ~2,3
-  volte. Delle due versioni avute si usa la prima: la seconda aveva tre corsie dipinte in
-  cima che non combaciavano con le quattro T·I·N·O. Se l'allungamento non piace, si
-  rifanno le due metà (nel prompt va detto più chiaro che è solo metà tavolo).
-  **Prossimo**: far provare le immagini al proprietario, poi
+  e Gino rimisurati in `DIPINTI.backglass`). Il piano invece Gemini l'ha dipinto due volte **intero** (tavolo
+  completo in 2:3, con fionde e corsie) invece che in due metà; allungato fino all'1:3 del
+  tavolo era troppo deformato (al proprietario non va) e non si usa: resta il prato del
+  codice. I prompt 2 e 3 di `prompt.md` sono stati riscritti (un prato "a mappa", non un
+  tavolo da flipper) e si aspettano le due metà nuove.
+  **Prossimo**: preparare le due metà del piano quando arrivano, farle provare, poi
   decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
   sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.
