@@ -664,7 +664,7 @@
   A.tono = tono; A.rumoreBreve = rumore; A.note = note;
 
   const PENTA = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760, 2093];
-  let ultimoClic = 0, caricaOsc = null;
+  let ultimoClic = 0, ultimeFormiche = 0, caricaOsc = null;
   const EFFETTI = A.effetti = {
     // il solenoide del flipper: scatto secco, con la botta della bobina
     flipper() {
@@ -699,7 +699,15 @@
       ultimoClic = ora;
       tono(1800, 0.03, { tipo: 'square', vol: 0.015, filtro: 4000 });
     },
-    // i nodi (bumper): la botta del solenoide più la campanella di metallo
+    // formiche che scappano: tre zampettii acuti e leggeri
+    formiche() {
+      const ora = A.ctx.currentTime;
+      if (ora - ultimeFormiche < 0.12) return;
+      ultimeFormiche = ora;
+      rumore(0.04, { tipo: 'highpass', f: 6000, vol: 0.03 });
+      tono(2600, 0.025, { tipo: 'square', vol: 0.008, filtro: 6000 });
+    },
+    // i funghi (bumper): la botta del solenoide più la campanella di metallo
     // (due parziali inarmoniche, come una campana vera)
     bumper(i) {
       const f = [392, 494, 587][i % 3];

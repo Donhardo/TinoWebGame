@@ -1465,7 +1465,9 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   uguale alla versione 1 spostata di (+20, +847), con le corsie esterne più strette (guide
   a x 78 e 522) e le sporgenze laterali più lunghe (fino a y 1518): prima tre ghiande perse
   su quattro finivano nelle corsie esterne.
-- **Elementi**: fionde, tre nodi (bumper), corsie T·I·N·O col tiro da maestro (con la
+- **Elementi**: fionde, tre funghi (bumper: amanite rosse a pois viste dall'alto, raggio 27;
+  prima erano nodi di legno) e due funghetti marroni più piccoli (raggio 18, spinta 820,
+  750 punti) sotto la volta a destra, a (455, 380) e (500, 318), corsie T·I·N·O col tiro da maestro (con la
   guida di legno a sinistra delle corsie, da (236, 38) a (250, 112), rimbalzo 0,12: prende
   la ghianda che arriva lungo la volta e la fa scendere nelle corsie; senza, seguiva tutto
   l'arco e il tiro da maestro era impossibile. Il lancio decide la corsia: pieno (0,7-1) → T
@@ -1491,6 +1493,13 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   tra i flipper), dispensa (tubo con le ghiande bloccate in fila; nel multiball escono
   lungo la liana fino alla corsia sinistra). Scivoli sopra i perni del terzo e del quarto
   flipper (la ghianda restava tra parete e perno).
+- **Formiche** (`FORMICHE`, `FILA`, `aggiornaFormiche`, `disegnaFormiche`): 26 formiche in
+  fila sul prato in basso (y 1216-1272) vanno dal formicaio (86, 1238) alle briciole (452,
+  1214) e tornano con una briciola; vicino al formicaio entrano sotto terra. Non urtano la
+  ghianda: se passa a meno di R + 30 scappano (250 punti l'una, suono `formiche`) e poi
+  tornano in fila; ogni 25 spaventate "Formiche in subbuglio!" (25.000); riga "Formiche" nel
+  bonus. Come in Botta e Ghianda. Il tavolo del Prato è stato unito alle Radici (decisione
+  del proprietario): funghi e formiche al posto di un tavolo a parte.
 - **Regole** (tabella `PUNTI`): sassi giù = dispensa aperta, tre ghiande bloccate =
   multiball (jackpot su radice lunga e giro; dopo tre, super jackpot colpendo Gino; sassi giù nel multiball = jackpot doppio); agente colpito 3 volte (poi una in più
   per avventura fatta, al massimo 6) = avventura pronta nella buca (il sasso si abbassa);
@@ -1614,9 +1623,13 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   bassa (`piano-radici-basso.png`, 848 × 1264): le due metà si uniscono senza giunta.
   `pianoDipinto` usa anche una metà sola (sotto il prato del codice, la metà dipinta
   sfuma sul lato che manca).
-  **Prossimo**: far provare backglass e piano al proprietario, poi
-  decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
-  sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
+  Backglass e piano provati dal proprietario ("va bene").
+  **Tappa 2 in corso. Decisioni prese**: il Prato non è un tavolo a parte ma è unito alle
+  Radici (funghi come bumper e formiche, fatto: partite simulate medie 10 minuti, 0 fuori,
+  0 ferme, 2,7 avventure); i tavoli si sbloccano con un punteggio in una partita sul tavolo
+  precedente (le Radici e il Neon sempre aperti); suoni tutti sintetizzati, niente
+  registrazioni; il Neon passa sul motore nuovo alla fine. **Prossimo**: pianta e decisioni
+  del tavolo dopo (Spiaggia, Uffici o Firenze), poi menu dei tavoli con lo sblocco. Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.
 
 #### Notte al neon (versione 1, ora `neon/`)
@@ -1750,7 +1763,7 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
     corsie con i rollover.
   - **Un tavolo per ogni mondo degli altri giochi**, ognuno con un giocattolo e regole
     proprie: Radici della Quercia (legno, radici, torce, piolo d'oro che fa girare la
-    ghianda, Ghianda d'Oro), Prato (erba, fiorellini, formiche che corrono, funghi), Spiaggia
+    ghianda, Ghianda d'Oro; il Prato, con funghi e formiche, è unito qui), Spiaggia
     (faro che gira e illumina i tiri, castello di sabbia da abbattere, onda che spinge),
     Uffici della Tari (timbro gigante che scende, archivio coi cassetti, agente col retino
     come bersaglio mobile, ispettore capo come sfida), Firenze a fumetto (rampa sul Ponte
