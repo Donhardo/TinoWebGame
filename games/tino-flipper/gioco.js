@@ -126,6 +126,16 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
   const record = () => (classifica.length ? classifica[0].punti : 0);
   // robivecchi: la collezione del tavolo (salvata appena presi) e la zona che
   // sente la ghianda sopra quello in campo
+  // Disegni dipinti del tavolo (backglass e piano di gioco, `T.dipinti`): se ci
+  // sono si usano, altrimenti resta il disegno nel codice. Quando arrivano si
+  // rifanno gli strati e i pannelli.
+  const dipinti = T.dipinti || {};
+  for (const d of Object.values(dipinti)) {
+    for (const p of Array.isArray(d) ? d : [d]) {
+      p.img = carica(p.src);
+      p.img.onload = () => { strati.chiave = ''; pannelli.chiave = ''; if (pannelloAperto() && stato.modo !== 'gioco') anteprimaBackglass(); };
+    }
+  }
   const ROBIVECCHI = T.ROBIVECCHI || [];
   let collezione = leggi(T.id + ':robivecchi', []);
   for (const r of ROBIVECCHI) immaginiRobi[r.id] = carica(ASSETS + 'oggetti/robivecchi/' + (r.file || r.id) + '.svg');
@@ -625,6 +635,7 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
   function vaiAlMenu() {
     iniziaPartita('demo');
     mostraPannello(pannelloMenu());
+    anteprimaBackglass();
   }
   function scossone() {
     if (stato.tiltato || stato.fase !== 'gioco') return;
@@ -1889,7 +1900,10 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
     disegnaPendolo(ctx, lato - 46, 18, 1);
     ctx.restore();
     // la mini mappa si ridisegna a ogni fotogramma
-    const mw = Math.min(110, lato - 60);
+    // col backglass la mappa si stringe per lasciare posto alle righe del display
+    const hb = backglass && pronta(backglass.img) ? (lato - 16) * backglass.img.naturalHeight / backglass.img.naturalWidth : 0;
+    const libero = hb ? VH - (hb + 8 + 340) - 18 : Infinity;
+    const mw = Math.max(50, Math.min(110, lato - 60, libero * W / H));
     const mh = mw * H / W;
     disegnaMiniMappa(ctx, (lato - mw) / 2, VH - mh - 18, mw);
   }
@@ -1961,14 +1975,8 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
     const [sx, dx, grande] = testiDMD();
     return schermataDMD(sx, dx, grande, w, h, T.colori.display || '#ff9a1e');
   }
-  function disegnaDisplay(g, w, h) {
-    const t = tinta();
-    sfondoPannello(g, w, h);
-    g.save();
-    // il display: cornice scura, vetro e puntini arancioni
-    const dx = 12, dy = 14, dw = w - 24, dh = 114;
-    g.fillStyle = '#1a1008';
-    g.beginPath(); if (g.roundRect) g.roundRect(dx - 4, dy - 4, dw + 8, dh + 8, 8); else g.rect(dx - 4, dy - 4, dw + 8, dh + 8); g.fill();
+  // il display a puntini dentro il suo vetro, nel rettangolo dato
+  function vetroDisplay(g, dx, dy, dw, dh, bordo) {
     g.fillStyle = '#0a0503';
     g.fillRect(dx, dy, dw, dh);
     g.drawImage(schermataCorrente(dw - 8, dh - 8), dx + 4, dy + 4, dw - 8, dh - 8);
@@ -1977,12 +1985,65 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
     gv.addColorStop(0, 'rgba(255,255,255,0.1)'); gv.addColorStop(0.5, 'rgba(255,255,255,0)');
     g.fillStyle = gv;
     g.fillRect(dx, dy, dw, dh);
-    g.strokeStyle = hexA(t.neon, 0.6); g.lineWidth = 1.5;
-    g.strokeRect(dx, dy, dw, dh);
+    if (bordo) { g.strokeStyle = bordo; g.lineWidth = 1.5; g.strokeRect(dx, dy, dw, dh); }
+  }
+  // Backglass dipinto (il vetro posteriore dei flipper veri): il disegno, sopra
+  // le foto originali di Tino e Gino (Gemini non li ridisegna) e il display nella
+  // sua finestra. Restituisce l'altezza, o 0 se il disegno non c'è.
+  const backglass = dipinti.backglass;
+  function disegnaBackglass(g, x, y, w) {
+    if (!backglass || !pronta(backglass.img)) return 0;
+    const im = backglass.img;
+    const h = w * im.naturalHeight / im.naturalWidth;
+    g.save();
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.fillRect(x + 3, y + 4, w, h);
+    g.drawImage(im, x, y, w, h);
+    const foto = (img, [cx, py, alto]) => {
+      if (!pronta(img)) return;
+      const hh = alto * h, ww = hh * img.naturalWidth / img.naturalHeight;
+      const px = x + cx * w, pyy = y + py * h;
+      g.fillStyle = 'rgba(20,10,0,0.35)';
+      g.beginPath(); g.ellipse(px, pyy - 2, ww * 0.42, hh * 0.05, 0, 0, Math.PI * 2); g.fill();
+      g.drawImage(img, px - ww / 2, pyy - hh, ww, hh);
+    };
+    foto(immagini.normale, backglass.tino);
+    foto(immagini.gino, backglass.gino);
+    const [fx, fy, fw, fh] = backglass.display;
+    vetroDisplay(g, x + fx * w, y + fy * h, fw * w, fh * h, null);
+    g.restore();
+    return h;
+  }
+  // sul telefono (niente pannelli) il backglass compare piccolo nel menu
+  function anteprimaBackglass() {
+    const posto = pannello.querySelector('.backglass');
+    if (!posto || lato || !backglass || !pronta(backglass.img)) return;
+    const w = 220, h = w * backglass.img.naturalHeight / backglass.img.naturalWidth, k = 2;
+    const c = document.createElement('canvas');
+    c.width = w * k; c.height = Math.round(h * k);
+    const g = c.getContext('2d');
+    g.scale(k, k);
+    disegnaBackglass(g, 0, 0, w);
+    c.setAttribute('aria-hidden', 'true');
+    posto.replaceChildren(c);
+    posto.hidden = false;
+  }
+  function disegnaDisplay(g, w, h) {
+    const t = tinta();
+    sfondoPannello(g, w, h);
+    g.save();
+    // il backglass dipinto col display dentro, oppure solo il display
+    const hb = disegnaBackglass(g, 8, 8, w - 16);
+    if (!hb) {
+      const dx = 12, dy = 14, dw = w - 24, dh = 114;
+      g.fillStyle = '#1a1008';
+      g.beginPath(); if (g.roundRect) g.roundRect(dx - 4, dy - 4, dw + 8, dh + 8, 8); else g.rect(dx - 4, dy - 4, dw + 8, dh + 8); g.fill();
+      vetroDisplay(g, dx, dy, dw, dh, hexA(t.neon, 0.6));
+    }
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     // avventura
-    let y = 156;
+    let y = hb ? hb + 36 : 156;
     const a = stato.avventura;
     g.textAlign = 'left';
     const riga = (testo, colore = '#fff', size = 15) => {
@@ -2024,8 +2085,9 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
       riga(`${'● '.repeat(S.dispensa.bloccate)}${'○ '.repeat(3 - S.dispensa.bloccate)}${S.dispensa.aperta ? ' aperta!' : ''}`, '#ffd27a', 15);
       riga('CHIAVI', hexA('#ffffff', 0.55), 12);
       riga(`${S.chiavi} di ${S.chiaviServono}${S.extraAccesa ? ' · palla extra!' : ''}`, '#ffe27a', 15);
-      riga('AVVENTURE', hexA('#ffffff', 0.55), 12);
-      for (const av of T.AVVENTURE) riga(`${stato.avventureFatte.includes(av.id) ? '✓' : '·'} ${av.nome}`, stato.avventureFatte.includes(av.id) ? av.tinta : hexA('#ffffff', 0.45), 13);
+      // col backglass c'è meno posto: durante un'avventura la lista non serve
+      if (!hb || !a) riga('AVVENTURE', hexA('#ffffff', 0.55), 12);
+      if (!hb || !a) for (const av of T.AVVENTURE) riga(`${stato.avventureFatte.includes(av.id) ? '✓' : '·'} ${av.nome}`, stato.avventureFatte.includes(av.id) ? av.tinta : hexA('#ffffff', 0.45), 13);
     }
     g.restore();
   }
@@ -2169,6 +2231,7 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
   }
   function pannelloMenu() {
     return `<div class="riquadro">
+      <div class="backglass" hidden></div>
       <div class="ritratti">${img('normale', 'salta')}${img('gino', 'oscilla')}</div>
       <h1>Tino Flipper</h1>
       <p class="sotto">${T.nome}</p>

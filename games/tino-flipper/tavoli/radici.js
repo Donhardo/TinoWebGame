@@ -90,9 +90,13 @@
     m.parete(VOLTA);
     m.parete([[620, 330], [620, 1920]]);
     const SPORGENZA = [[40, 1387], [80, 1447], [80, 1518], [40, 1530]];
+    // a sinistra il lato di sotto scende molto: la molla spara la ghianda dritta in
+    // su e qui viene deviata verso destra, in campo (col lato quasi piano ci
+    // sbatteva contro e ricadeva nello scolo)
+    const SPORGENZA_SX = [[40, 1387], [80, 1447], [80, 1500], [40, 1545]];
     m.parete([[20, 1340], [40, 1380], [40, 1387]]);
-    m.parete(SPORGENZA);
-    m.parete([[40, 1530], [40, 1920]]);
+    m.parete(SPORGENZA_SX);
+    m.parete([[40, 1545], [40, 1920]]);
     m.parete(mx([[20, 1340], [40, 1380], [40, 1387]]));
     m.parete(mx(SPORGENZA));
     m.parete(mx([[40, 1530], [40, 1920]]));
@@ -1086,11 +1090,53 @@
     }
 
     // Strato 1: il prato al sole con la terra chiara e le radici (disegnato una volta)
+    // Piano di gioco dipinto (Gemini), in due metà alte 2:3 che si sovrappongono
+    // di 80 px e lì sfumano l'una nell'altra; sono larghe 660 (10 px per parte
+    // finiscono sotto la cornice). Se manca un file resta il prato del codice.
+    const DIPINTI = {
+      piano: [
+        { src: 'disegni/piano-radici-alto.png', x: -10, y: 0, w: 660, h: 990 },
+        { src: 'disegni/piano-radici-basso.png', x: -10, y: 910, w: 660, h: 990 },
+      ],
+      // backglass: misure in frazioni del disegno (3:4). display = finestra del
+      // display a puntini [x, y, w, h]; tino e gino = [centro x, piedi y, altezza]
+      backglass: { src: 'disegni/backglass-radici.png', display: [0.08, 0.705, 0.84, 0.205], tino: [0.33, 0.645, 0.4], gino: [0.73, 0.63, 0.19] },
+    };
+    const pronto = (d) => !!(d && d.img && d.img.complete && d.img.naturalWidth > 0);
+    function pianoDipinto(g) {
+      const pezzi = DIPINTI.piano;
+      if (!pezzi.every(pronto)) return false;
+      const k = g.getTransform ? g.getTransform().a : 1;
+      pezzi.forEach((p, i) => {
+        const prec = pezzi[i - 1];
+        const sfuma = prec ? prec.y + prec.h - p.y : 0;
+        if (sfuma <= 0) { g.drawImage(p.img, p.x, p.y, p.w, p.h); return; }
+        // tela a parte col bordo alto che sfuma nella metà di sopra
+        const c = document.createElement('canvas');
+        c.width = Math.round(p.w * k); c.height = Math.round(p.h * k);
+        const t = c.getContext('2d');
+        t.drawImage(p.img, 0, 0, c.width, c.height);
+        t.globalCompositeOperation = 'destination-in';
+        const gr = t.createLinearGradient(0, 0, 0, sfuma * k);
+        gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
+        t.fillStyle = gr;
+        t.fillRect(0, 0, c.width, c.height);
+        g.drawImage(c, p.x, p.y, p.w, p.h);
+      });
+      return true;
+    }
+
     function disegnaFondo(g) {
       seme = 11;
       g.save();
       formaTavolo(g);
       g.clip();
+      if (!pianoDipinto(g)) disegnaPrato(g);
+      dettagliFondo(g);
+      g.restore();
+    }
+    // il prato disegnato nel codice (se manca il piano dipinto); anche la guida per Gemini
+    function disegnaPrato(g) {
       const gr = g.createLinearGradient(0, 0, 0, H);
       gr.addColorStop(0, C.prato[0]); gr.addColorStop(0.35, C.prato[1]); gr.addColorStop(0.7, C.prato[2]); gr.addColorStop(1, C.prato[3]);
       g.fillStyle = gr;
@@ -1184,6 +1230,9 @@
       const ombra2 = g.createLinearGradient(620, 0, 530, 0);
       ombra2.addColorStop(0, 'rgba(40,80,20,0.28)'); ombra2.addColorStop(1, 'rgba(40,80,20,0)');
       g.fillStyle = ombra2; g.fillRect(530, 0, 90, H + 20);
+    }
+    // le parti del fondo che servono al gioco: si disegnano anche sopra il piano dipinto
+    function dettagliFondo(g) {
       // il corridoio di lancio: assi di legno chiaro
       g.fillStyle = '#c99a5e';
       g.fillRect(580, 330, 40, H);
@@ -1206,7 +1255,6 @@
       g.textAlign = 'center';
       g.fillStyle = 'rgba(110,70,30,0.3)';
       g.save(); g.translate(300, 1470); g.fillText('LE RADICI DELLA QUERCIA', 0, 0); g.restore();
-      g.restore();
     }
 
     // Strato 2: legno delle pareti, massa delle radici, fionde
@@ -1947,6 +1995,7 @@
       nuovaPartita, nuovaPalla, contatori, righeBonus, evento, bocca, finePercorso, presa, magnete,
       aggiorna, aggiornaFisica, inizioAvventura, fineAvventura, fineBiglia, fineMultiball,
       desiderati, esitoExtra, VALORE, MIRE,
+      dipinti: DIPINTI, prato: disegnaPrato,
       strati: { fondo: disegnaFondo, pareti: disegnaPareti, galleria: disegnaGalleria, rampe: disegnaRampe },
       disegnaPavimento, disegnaCampo, disegnaSopraGalleria, disegnaSopra,
       testi: TESTI,
