@@ -833,6 +833,28 @@
       tono(116, 1.2, { tipo: 'sawtooth', vol: 0.07, filtro: 900, rit: 0.08 });
     },
     tic: () => tono(1320, 0.03, { tipo: 'square', vol: 0.02, filtro: 4000 }),
+    // le campanelle dei flipper elettromeccanici: tre campane (0 acuta, 1
+    // media, 2 grave) battute da un martelletto; parziali inarmoniche e coda lunga
+    campanella(i = 0, k = 1) {
+      const f = [1568, 1175, 784][i % 3];
+      tono(f, 1.1, { tipo: 'sine', vol: 0.055 * k, attacco: 0.002 });
+      tono(f * 2.76, 0.4, { tipo: 'sine', vol: 0.016 * k, attacco: 0.002 });
+      tono(f * 5.4, 0.12, { tipo: 'sine', vol: 0.008 * k, attacco: 0.001 });
+      rumore(0.012, { tipo: 'highpass', f: 4500, vol: 0.05 * k });
+    },
+    // la ghianda che salta e batte sul vetro: "tac" secco e acuto
+    vetro(k = 1) {
+      rumore(0.018, { tipo: 'highpass', f: 5000, vol: 0.09 * k });
+      tono(2900, 0.03, { tipo: 'square', vol: 0.02 * k, filtro: 7000 });
+      tono(1450, 0.09, { tipo: 'sine', f2: 1380, vol: 0.035 * k, attacco: 0.001 });
+    },
+    // ball search: scattano uno dopo l'altro i solenoidi del tavolo
+    ricerca() {
+      for (let i = 0; i < 6; i++) {
+        rumore(0.04, { tipo: 'bandpass', f: 900 + 250 * (i % 3), q: 1.4, vol: 0.09, rit: i * 0.11 });
+        tono(90 + 15 * (i % 2), 0.06, { tipo: 'square', f2: 55, vol: 0.05, filtro: 600, rit: i * 0.11 });
+      }
+    },
     // lo stantuffo: la molla che scatta (twang che sale) e la ghianda che parte
     lancio(k) {
       tono(60 + 40 * k, 0.16, { tipo: 'sawtooth', f2: 160 + 120 * k, vol: 0.05 + 0.04 * k, filtro: 900, scivola: 0.1 });
@@ -896,6 +918,28 @@
     const k = on ? Math.pow(Math.min(1, vel / 3000), 0.7) : 0;
     r.g.gain.setTargetAtTime(k * (rampa ? 0.075 : 0.05), t, 0.05);
     r.f.frequency.setTargetAtTime(rampa ? 180 + 300 * k : 250 + 1400 * k, t, 0.08);
+  };
+
+  // Il ronzio del mobile: il trasformatore a 50 Hz con le sue armoniche,
+  // bassissimo, si sente solo nei silenzi (A.ronzio(acceso) a ogni fotogramma)
+  A.ronzio = function ronzio(acceso) {
+    const on = acceso && A.ctx && A.ctx.state === 'running' && !A.muto && A.abilitato();
+    if (!CONT.ronzio) {
+      if (!on) return;
+      const c = A.ctx;
+      const g = c.createGain(); g.gain.value = 0;
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420; f.Q.value = 0.5;
+      f.connect(g).connect(A.uscita);
+      const osc = [[50, 'sine', 1], [100, 'sine', 0.55], [150, 'triangle', 0.3], [100, 'sawtooth', 0.12]].map(([hz, tipo, v]) => {
+        const o = c.createOscillator(); o.type = tipo; o.frequency.value = hz;
+        const og = c.createGain(); og.gain.value = v;
+        o.connect(og).connect(f);
+        o.start();
+        return o;
+      });
+      CONT.ronzio = { g, osc };
+    }
+    CONT.ronzio.g.gain.setTargetAtTime(on ? 0.011 : 0, A.ctx.currentTime, 0.25);
   };
 
   // ---------------------------------------------------------------- musica
