@@ -192,7 +192,8 @@ servono Gemini, poi la tappa 2):
    regole 1, 2, 4, 5 (status report, iniziali, tilt a pendolo, ball search);
    tecnica 1, 2 (strati ritagliati, pannelli solo quando cambiano). Ogni passo:
    partite simulate (`prove/partite.js`) con "fuori" e "ferme" a zero, poi artifact.
-2. Regole 3 (live catch) e tecnica 4 (telefono vero): da provare col proprietario.
+2. **Fatto**: regole 3 (il live catch funziona già, confermato dal proprietario) e tecnica 4
+   (sul telefono risoluzione 1,5 o 1,25 e niente vetro; vedi CLAUDE.md, "Qualità sul telefono").
 3. Grafica 4 e 5 (backglass e piano di gioco dipinti): preparare i prompt per
    Gemini come negli altri giochi; il codice deve usare i PNG se ci sono e
    altrimenti restare com'è. Grafica 6 (spessore delle pareti) dopo, se serve ancora.

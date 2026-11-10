@@ -1172,11 +1172,31 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
 
   // ================================================================ DISEGNO
   let scala = 1, dpr = 1, lato = 0, larghezza = W, mini = null;
+  // Sul telefono il costo è quasi tutto nel disegno dei pixel (con il processore
+  // rallentato ×4: 12 fotogrammi al secondo a risoluzione 2, 24 a 1,5 senza il
+  // riflesso del vetro, 35 a 1,25): risoluzione al massimo 1,5, niente vetro, e
+  // se in partita resta lento si scende da soli a 1,25 (una volta sola).
+  // (solo se il puntatore principale è il dito: i portatili col touchscreen restano a piena qualità)
+  const telefono = matchMedia('(pointer: coarse)').matches;
+  const qualita = { dpr: telefono ? 1.5 : 2, vetro: !telefono, conta: 0, somma: 0, ridotta: false };
+  function controllaQualita(dt) {
+    if (!telefono || qualita.ridotta || stato.test || stato.modo !== 'gioco' || stato.fase !== 'gioco' || document.hidden) return;
+    qualita.conta++;
+    qualita.somma += dt;
+    if (qualita.conta < 180) return;
+    const medio = qualita.somma / qualita.conta;
+    qualita.conta = 0; qualita.somma = 0;
+    if (medio > 0.026) {
+      qualita.ridotta = true;
+      qualita.dpr = 1.25;
+      ridimensiona();
+    }
+  }
   function ridimensiona() {
     const r = palco.getBoundingClientRect();
     const aw = Math.max(100, r.width - 8);
     const ah = Math.max(100, r.height - 8);
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, qualita.dpr);
     if (stato.vistaIntera) {
       scala = Math.min(aw / W, ah / H);
       camera.alto = H;
@@ -1809,7 +1829,7 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
     disegnaParticelle(ctx);
     disegnaScritte(ctx);
     ctx.restore();
-    if (T.colori.vetro !== false) disegnaVetro(ctx, VH);
+    if (T.colori.vetro !== false && qualita.vetro) disegnaVetro(ctx, VH);
     if (!lato) {
       disegnaInfoTavolo(ctx);
       if (stato.pendolo.A > 0.15 || stato.tiltato) disegnaPendolo(ctx, 40, 56, 1);
@@ -2259,6 +2279,7 @@ const TILT = { colpo: 1, cala: 0.5, avviso: 1.6, tilt: 2.5, periodo: 1.1, angolo
     const dt = clamp((ora - ultimo) / 1000, 0, 0.05);
     ultimo = ora;
     if (!stato.test) aggiorna(dt);
+    controllaQualita(dt);
     disegna(ora / 1000);
     // rotolamento: la ghianda più veloce in campo (sulle rampe suona più grave)
     let vel = 0, rampa = false;

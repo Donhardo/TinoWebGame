@@ -1411,6 +1411,14 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
     solo quando cambia quello che mostrano (`chiaveDisplay`, `T.statoPannello`), mentre
     Tino, Gino, il fumetto e il pendolo si disegnano dal vivo (`disegnaTinoVivo`); strati e
     pannelli si rifanno quando arriva il font.
+- **Qualità sul telefono** (tabella `qualita` in `gioco.js`, solo se il puntatore principale
+  è il dito: i portatili col touchscreen restano a piena qualità): risoluzione al massimo
+  1,5 invece di 2, niente riflesso del vetro, e se in partita la media dei fotogrammi supera
+  26 ms per 3 s si scende da soli a 1,25 (una volta). Misure con Playwright, Pixel 7 col
+  processore rallentato ×4 (il browser di prova disegna senza scheda grafica, quindi conta
+  il confronto): prima 12-14 fotogrammi al secondo contro i 28 di Tino Pro Skate nelle
+  stesse condizioni; dopo 24 (a 1,5) e 28 (a 1,25). Il costo era tutto nel disegno dei
+  pixel (fondo, rampe, vetro e luci a schermo intero), non nel codice (~5,5 ms).
 - **Tavolo**: `TF.tavoli.<id>(G)` costruisce il mondo e restituisce regole (`evento`,
   `bocca`, `finePercorso`, `presa`, `magnete`, `aggiorna`, `desiderati`, `esitoExtra`…),
   strati da disegnare una volta (`strati.fondo`, `pareti`, `galleria`, `rampe`) e disegno
@@ -1571,9 +1579,12 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   proprietario con l'artifact: "va bene"; col mouse sentiva il flipper destro lento,
   risolto col clic per metà). **Decisione presa**: delle proposte di `revisione.md` si
   fanno **tutte tranne la prospettiva leggera** (scartata). Il passo 1 dell'ordine di
-  lavoro (sezione 5 di `revisione.md`) è fatto (vedi sopra), da far provare al
-  proprietario con l'artifact. **Prossimo**: live catch e prova su telefono vero col proprietario,
-  poi backglass e piano di gioco dipinti con Gemini (il codice resta di riserva), poi
+  lavoro (sezione 5 di `revisione.md`) è fatto (vedi sopra) e provato dal proprietario
+  con l'artifact ("va bene"). **Il proprietario gioca da browser su PC: è l'uso principale**
+  (il telefono deve funzionare, ma le prove con lui si fanno su PC). Passo 2: il live catch
+  funziona già (confermato dal proprietario, nessuna modifica alla fisica); prestazioni sul
+  telefono sistemate senza prova col proprietario (vedi "Qualità sul telefono").
+  **Prossimo**: backglass e piano di gioco dipinti con Gemini (il codice resta di riserva), poi
   decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
   sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.
