@@ -1530,11 +1530,18 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   non anticipa l'agente): sono le imprese difficili, da provare con persone vere.
 - **Stato**: tappa 1 fatta e provata dal proprietario ("va bene"); poi Gino sul campo,
   colori all'aperto, la revisione "flipper vero" e i robivecchi (fatti, da far provare al
-  proprietario con l'artifact). **Prossimo**: scegliere tra le proposte di
-  `revisione.md` (le più facili: lampadine dell'illuminazione generale lungo le pareti,
-  animazioni dei bersagli, grembiule, status report, iniziali in classifica, strati
-  ritagliati), provare su un telefono vero, poi la tappa 2 (gli altri tavoli, menu dei
-  tavoli e sblocco coi punti).
+  proprietario con l'artifact: "va bene"; col mouse sentiva il flipper destro lento,
+  risolto col clic per metà). **Decisione presa**: delle proposte di `revisione.md` si
+  fanno **tutte tranne la prospettiva leggera** (scartata). **Prossimo** (nuova sessione):
+  seguire l'ordine di lavoro in fondo a `revisione.md` (sezione 5): prima le cose facili e
+  visibili (lampadine dell'illuminazione generale lungo le pareti, animazioni di sassi,
+  cartelli e sasso che spunta, grembiule, suono sul vetro, campanelle a tre toni, ronzio,
+  status report, iniziali in classifica, tilt a pendolo, ball search, strati ritagliati,
+  pannelli solo quando cambiano), poi live catch e prova su telefono vero col proprietario,
+  poi backglass e piano di gioco dipinti con Gemini (il codice resta di riserva), poi
+  decidere sulle registrazioni audio, poi la tappa 2 (gli altri tavoli, menu dei tavoli e
+  sblocco coi punti). Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
+  l'artifact per la prova.
 
 #### Notte al neon (versione 1, ora `neon/`)
 - **Decisioni prese**: titolo "Tino Flipper", sottotitolo "Notte al neon nel bosco";

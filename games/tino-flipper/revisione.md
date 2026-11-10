@@ -101,9 +101,11 @@ di resa per fatica. In fondo, i numeri delle partite simulate e come continuare.
   rasterizzazione (`(program)` 89%), la logica è 0,2 ms. **Da verificare su un
   telefono vero** con la ×4 CPU throttling come per Tino Pro Skate.
 
-## 3. Proposte (da decidere col proprietario)
+## 3. Proposte · approvate dal proprietario
 
-Ordinate per resa rispetto alla fatica. Nessuna è iniziata.
+**Decisione presa (novembre 2026): si fanno tutte, tranne quella sconsigliata
+(la prospettiva leggera, grafica 7).** Ordinate per resa rispetto alla fatica;
+nessuna è iniziata. Si parte in una nuova sessione (Opus 5.5).
 
 ### Grafica
 1. **Lampadine dell'illuminazione generale lungo le pareti** (facile): una fila
@@ -124,8 +126,8 @@ Ordinate per resa rispetto alla fatica. Nessuna è iniziata.
 6. **Spessore delle pareti** (media): pareti con una faccia laterale in ombra e
    la cima chiara, ombre proiettate coerenti con la luce dall'alto; le rampe
    con i piloni di sostegno.
-7. **Prospettiva leggera** (difficile, da evitare): inclinare tutto il campo
-   cambierebbe disegno, urti del dito e telecamera. Non consigliata.
+7. ~~**Prospettiva leggera**~~ (difficile, sconsigliata e **scartata**): inclinare
+   tutto il campo cambierebbe disegno, urti del dito e telecamera.
 
 ### Suoni
 1. **Suono di impatto col vetro** (facile): quando la ghianda scende dalla
@@ -180,6 +182,21 @@ quattro le avventure e una volta su sei alla Ghianda d'Oro. Le variazioni sono
 dentro il rumore di 6 partite.
 
 ## 5. Come continuare
+
+Ordine di lavoro consigliato per la prossima sessione (prima le cose facili e
+visibili, poi quelle che servono Gemini, poi la tappa 2):
+1. Grafica 1, 2, 3 (lampadine lungo le pareti, animazioni meccaniche, grembiule);
+   suoni 1, 2, 3 (vetro, campanelle a tre toni, ronzio: se dà fastidio si toglie);
+   regole 1, 2, 4, 5 (status report, iniziali, tilt a pendolo, ball search);
+   tecnica 1, 2 (strati ritagliati, pannelli solo quando cambiano). Ogni passo:
+   partite simulate (`prove/partite.js`) con "fuori" e "ferme" a zero, poi artifact.
+2. Regole 3 (live catch) e tecnica 4 (telefono vero): da provare col proprietario.
+3. Grafica 4 e 5 (backglass e piano di gioco dipinti): preparare i prompt per
+   Gemini come negli altri giochi; il codice deve usare i PNG se ci sono e
+   altrimenti restare com'è. Grafica 6 (spessore delle pareti) dopo, se serve ancora.
+4. Suoni 4 (registrazioni .ogg): decidere con il proprietario se rompere la regola
+   "nessun file audio" valida negli altri giochi; se sì, pochi file piccoli.
+5. Tappa 2: gli altri tavoli, menu dei tavoli e sblocco coi punti.
 
 Tutto quello che serve è nel repository e in CLAUDE.md (sezione Tino Flipper):
 - il piano della versione 2 (tappe 2 e 3) e le decisioni prese;
