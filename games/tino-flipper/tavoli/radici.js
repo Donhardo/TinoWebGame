@@ -90,9 +90,13 @@
     m.parete(VOLTA);
     m.parete([[620, 330], [620, 1920]]);
     const SPORGENZA = [[40, 1387], [80, 1447], [80, 1518], [40, 1530]];
+    // a sinistra il lato di sotto scende molto: la molla spara la ghianda dritta in
+    // su e qui viene deviata verso destra, in campo (col lato quasi piano ci
+    // sbatteva contro e ricadeva nello scolo)
+    const SPORGENZA_SX = [[40, 1387], [80, 1447], [80, 1500], [40, 1545]];
     m.parete([[20, 1340], [40, 1380], [40, 1387]]);
-    m.parete(SPORGENZA);
-    m.parete([[40, 1530], [40, 1920]]);
+    m.parete(SPORGENZA_SX);
+    m.parete([[40, 1545], [40, 1920]]);
     m.parete(mx([[20, 1340], [40, 1380], [40, 1387]]));
     m.parete(mx(SPORGENZA));
     m.parete(mx([[40, 1530], [40, 1920]]));

@@ -1518,6 +1518,10 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   cade di lato a fine partita; col super jackpot acceso il bordo lampeggia. Ghianda col
   contorno scuro; lampade spente di plastica scura velata del loro colore (sul fondo chiaro
   quelle quasi trasparenti non si vedevano); spinner e cancelletto con il bordo scuro.
+  Molla della corsia esterna sinistra: spara la ghianda dritta in su (x 58, -2100), e la
+  sporgenza sopra la corsia aveva il lato di sotto quasi piano: la ghianda ci sbatteva e
+  ricadeva nello scolo. Ora a sinistra la sporgenza è `SPORGENZA_SX` (lato di sotto da
+  (80, 1500) a (40, 1545)) e la devia in campo verso destra (a destra resta com'era).
   Pagina con il cielo e il prato all'orizzonte, pannelli laterali di legno medio.
   Neon solo per le lampade accese e le scritte. Musica in Re minore con i legnetti (menu 92
   bpm, partita 112, avventure 116-134, multiball 130, finale 138).
