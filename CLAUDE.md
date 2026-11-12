@@ -1932,11 +1932,13 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   4. *Grafica dipinta*: **stile scelto: carta ritagliata** (collage di carta colorata a
      strati, ombre tra un foglio e l'altro, grana della carta, come un diorama fatto in
      casa; diverso dal cartone di Gino Volante e Tino Bum e dal fumetto di Tino Pro Skate).
-     Da fare: prompt per Gemini in `games/salta-tino/disegni/prompt.md` (uno stile comune
-     più un'immagine per pezzo: fondale di ogni tappa come striscia verticale che si
-     ripete, prato alla base, rami normale, secco, radice, foglia mobile, ramo a molla,
-     nuvole normale, secca e viola, fungo, pigna, pila di pratiche; sfondo magenta da
-     togliere come per gli altri giochi) e codice che usa i PNG se ci sono, altrimenti
+     Prompt per Gemini pronti in `games/salta-tino/disegni/prompt.md` (22 riquadri completi,
+     stile comune + immagine, F1 da fare per primo e da allegare agli altri): fondali F1-F5
+     (prato alla base, poi tronco, chioma, cielo, stelle come strisce 9:16 che si impilano,
+     cielo a colore piatto), rami R1-R5, nuvole N1-N3, oggetti O1-O7 (fungo, pigna,
+     grandine, stella cadente, pila di pratiche, bolletta, luna), poteri P1-P3 (berretto e
+     pale dell'elica separati, calamita); sfondo magenta da togliere come per gli altri
+     giochi. In attesa delle immagini; poi il codice che usa i PNG se ci sono, altrimenti
      resta il disegno nel codice.
 
 ## Per il prossimo gioco
