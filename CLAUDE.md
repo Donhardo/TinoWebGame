@@ -1968,7 +1968,9 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
        altri giochi, larghi 640. Per ogni larghezza si prepara una tela (a 3×) a pezzi: le
        colonne `fissi` (estremità, foglie, molla, viticcio) restano in proporzione, il resto
        si stringe fino alla larghezza del ramo (al massimo 4 volte rispetto alle parti
-       fisse; se non basta il ramo diventa più sottile); `cima` è la riga su cui si
+       fisse; se non basta il ramo diventa più sottile). Le nuvole sono state ingrandite
+       (alte 46-50 invece di 30-32, 16 px in più per parte: quanto i piedi di Tino, quindi
+       si vede dove ci si appoggia; la parte fisica non cambia); `cima` è la riga su cui si
        appoggia Tino; ombra corta sotto già nella tela. Il ramo a molla si specchia se lancia
        a sinistra e si abbassa e schiaccia quando vibra. Il fungo resta disegnato nel codice.
      Provati dal proprietario ("splendido") e uniti in `main`. **Prossima sessione**:

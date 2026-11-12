@@ -167,9 +167,10 @@
     radice: { file: 'rami/radice.png', cima: 6, alto: 20, fissi: [[0, 36], [604, 640]] },
     foglia: { file: 'rami/foglia.png', cima: 26, alto: 26, fissi: [], piu: 16 },
     molla: { file: 'rami/molla.png', cima: 39, alto: 40, fissi: [[0, 24], [290, 350], [560, 640]], piu: 8 },
-    nuvola: { file: 'nuvole/nuvola.png', cima: 22, alto: 32, fissi: [], piu: 12 },
-    nuvolaSecca: { file: 'nuvole/secca.png', cima: 20, alto: 30, fissi: [], piu: 12 },
-    nuvolaViola: { file: 'nuvole/viola.png', cima: 39, alto: 30, fissi: [], piu: 12 },
+    // le nuvole sporgono di 16 px per parte: quanto i piedi di Tino (FISICA.piede)
+    nuvola: { file: 'nuvole/nuvola.png', cima: 22, alto: 50, fissi: [], piu: 32 },
+    nuvolaSecca: { file: 'nuvole/secca.png', cima: 20, alto: 48, fissi: [], piu: 32 },
+    nuvolaViola: { file: 'nuvole/viola.png', cima: 39, alto: 46, fissi: [], piu: 32 },
   };
   for (const s of Object.values(SPRITE_RAMI)) s.im = carica(s.file);
 
@@ -1683,7 +1684,7 @@
       ctx.globalAlpha = Math.max(0, 1 - r.caduta * 1.6);
     }
     const nuvola = r.mondo >= 3;
-    ripetiLati(r.x, r.w / 2 + 10, (x) => {
+    ripetiLati(r.x, r.w / 2 + (nuvola ? 26 : 10), (x) => {
       ctx.save();
       ctx.translate(x, y);
       if (r.rotto) ctx.rotate((r.id % 2 ? 1 : -1) * r.caduta * 1.5);
