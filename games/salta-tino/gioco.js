@@ -25,7 +25,26 @@
     salto_max: 230,            // distanza verticale massima tra due rami sicuri
   };
 
-  const TINO = { alto: 80, largo: 38 };   // misure in gioco (la foto è 376 × 512)
+  const TINO = { alto: 80, largo: 38 };   // misure in gioco di chi sale (la foto di Tino è 376 × 512)
+  // si può salire anche con Gino (solo la testa: più basso e un po' più largo)
+  const MISURE = { tino: { alto: 80, largo: 38 }, gino: { alto: 66, largo: 44 } };
+
+  // Traguardi: salvati appena raggiunti, si vedono nel menu
+  const TRAGUARDI = [
+    { id: 'tronco', nome: 'Su per il tronco', testo: 'Arriva al tronco (90 m)' },
+    { id: 'chioma', nome: 'Tra le foglie', testo: 'Arriva alla chioma (280 m)' },
+    { id: 'cielo', nome: 'Sopra la quercia', testo: 'Arriva al cielo (600 m)' },
+    { id: 'stelle', nome: 'Tra le stelle', testo: 'Arriva alle stelle (1100 m)' },
+    { id: 'duemila', nome: 'Duemila!', testo: 'Arriva a 2000 m' },
+    { id: 'pestoni', nome: 'Cinque timbri in meno', testo: 'Stordisci 5 agenti in una salita' },
+    { id: 'ghiande', nome: 'Dispensa piena', testo: 'Raccogli 100 ghiande in una salita' },
+    { id: 'senza-poteri', nome: 'A mani nude', testo: 'Arriva a 300 m senza prendere poteri' },
+    { id: 'funghi', nome: 'Fungaiolo', testo: 'Salta su 3 funghi in una salita' },
+    { id: 'seminato', nome: 'Seminato!', testo: 'Semina l\'ispettore capo' },
+    { id: 'poteri', nome: 'Tutti i poteri', testo: 'Prendi elica, bolla e calamita in una salita' },
+    { id: 'intatto', nome: 'Senza un graffio', testo: 'Arriva a 600 m senza essere mai colpito (bolla compresa)' },
+    { id: 'gino', nome: 'Gino in vetta', testo: 'Con Gino, arriva alla chioma' },
+  ];
 
   // Tappe della salita: si sfumano in SFUMA metri da una all'altra.
   const TAPPE = [
@@ -231,6 +250,10 @@
   let recordGhiande = leggi('record-ghiande', 0);
   let salite = leggi('salite', 0);
   let comandi = leggi('comandi', 'dito'); // sul telefono: 'dito' o 'inclina'
+  let personaggio = leggi('personaggio', 'tino'); // chi sale: 'tino' o 'gino'
+  if (!MISURE[personaggio]) personaggio = 'tino';
+  let traguardi = leggi('traguardi', {});
+  if (!traguardi || typeof traguardi !== 'object') traguardi = {};
 
   function nuovoTino() {
     return {
@@ -403,6 +426,7 @@
     capo: () => [0, 1, 2].forEach((i) => { suono(620, 0.22, 'sawtooth', 0.035, 880, i * 0.45); suono(880, 0.2, 'sawtooth', 0.03, 620, i * 0.45 + 0.22); }),
     megafono: () => { suono(240, 0.18, 'sawtooth', 0.03, 200); suono(200, 0.22, 'sawtooth', 0.03, 170, 0.19); },
     seminato: () => [523, 784, 659, 1046].forEach((f, i) => suono(f, 0.14, 'triangle', 0.06, null, i * 0.1)),
+    traguardo: () => [880, 1109, 1319, 1760].forEach((f, i) => suono(f, 0.18, 'sine', 0.05, null, 0.2 + i * 0.07)),
   };
 
   // ---------------------------------------------------------------- musica
@@ -638,7 +662,13 @@
   }
 
   // ---------------------------------------------------------------- flusso
-  function avvia(seme = null) {
+  function scegliPersonaggio(chi) {
+    stato.chi = MISURE[chi] ? chi : 'tino';
+    Object.assign(TINO, MISURE[stato.chi]);
+  }
+
+  function avvia(seme = null, chi = personaggio) {
+    scegliPersonaggio(chi);
     semeCasuale = seme;
     semeRischi = seme === null ? null : (seme * 7919 + 13) | 0;
     idRamo = 0;
@@ -660,13 +690,15 @@
     stato.tappa = 0;
     stato.risultato = null;
     stato.recordPassato = false;
-    stato.statistiche = { salti: 0, pestoni: 0, colpi: 0, secchi: 0, poteri: 0, molle: 0, pigne: 0, raffiche: 0, capi: 0, seminati: 0, causa: null };
+    stato.statistiche = { salti: 0, pestoni: 0, colpi: 0, parati: 0, secchi: 0, poteri: 0, tipiPoteri: [], funghi: 0, molle: 0, pigne: 0, raffiche: 0, capi: 0, seminati: 0, causa: null };
+    stato.nuoviTraguardi = [];
+    stato.avvisiTraguardi = [];
     stato.gen = nuovaGenerazione();
     // il prato: un ramo largo quanto il campo a h = 0
     const prato = nuovoRamo(0, W / 2, 'prato', W * 2);
     stato.rami.push(prato);
     generaFino(alt + 600);
-    stato.fumetto = { testo: 'Forza papà!', t: 2.2 };
+    stato.fumetto = { testo: stato.chi === 'gino' ? 'Forza Gino!' : 'Forza papà!', t: 2.2 };
     messaggio(TAPPE[0].nome, TAPPE[0].sotto);
     nascondiPannello();
     aggiornaBarra();
@@ -693,6 +725,8 @@
   // nel menu Tino salta da solo sul prato e su qualche ramo, come sfondo
   function demo() {
     semeCasuale = null;
+    scegliPersonaggio(personaggio);
+    stato.avvisiTraguardi = [];
     stato.tino = nuovoTino();
     stato.rami = [nuovoRamo(0, W / 2, 'prato', W * 2)];
     stato.agenti = []; stato.bollette = []; stato.ghiande = []; stato.poteri = [];
@@ -719,7 +753,7 @@
     if (nuovo) { record = metri; scrivi('record', record); }
     if (stato.ghiandePrese > recordGhiande) { recordGhiande = stato.ghiandePrese; scrivi('record-ghiande', recordGhiande); }
     salite++; scrivi('salite', salite);
-    stato.risultato = { metri, nuovo, ghiande: stato.ghiandePrese, tappa: stato.tappa, causa: stato.statistiche.causa };
+    stato.risultato = { metri, nuovo, ghiande: stato.ghiandePrese, tappa: stato.tappa, causa: stato.statistiche.causa, traguardi: stato.nuoviTraguardi.slice() };
     aggiornaBarra();
     if (!stato.test) setTimeout(() => { if (stato.fase === 'fine') mostraPannello(pannelloFine()); }, 500);
   }
@@ -834,7 +868,10 @@
         suoni.record();
       }
       if (elMetri.textContent !== String(metri)) elMetri.textContent = metri;
+      controllaTraguardi(m);
     }
+    for (const a of stato.avvisiTraguardi || []) a.t += dt;
+    if (stato.avvisiTraguardi) stato.avvisiTraguardi = stato.avvisiTraguardi.filter((a) => a.t < 3.2);
 
     aggiornaAgenti(dt);
     aggiornaRaccolta(dt);
@@ -907,6 +944,7 @@
     } else if (r.fungo && Math.abs(dx(r.x + r.fungo.dx, T.x)) < 26) {
       v = FISICA.fungo;
       r.fungo.schiaccia = 1;
+      if (stato.statistiche) stato.statistiche.funghi++;
       suoni.fungo();
       scintille(T.x, T.h, '#ff6b5b', 8);
     } else {
@@ -922,6 +960,7 @@
     if (stato.attivi.bolla) {
       delete stato.attivi.bolla;
       T.invulnerabile = 1.2;
+      if (stato.statistiche) stato.statistiche.parati++;
       suoni.scoppio();
       scintille(T.x, T.h + 36, '#bfe9ff', 14);
       scritta('Pop!', T.x, T.h + 80, '#bfe9ff');
@@ -1039,11 +1078,42 @@
       if (Math.hypot(dx(p.x, cx), ch - p.h) < 38) {
         p.preso = true;
         stato.attivi[p.id] = POTERI[p.id].durata;
-        if (stato.statistiche) stato.statistiche.poteri++;
+        if (stato.statistiche) {
+          stato.statistiche.poteri++;
+          if (!stato.statistiche.tipiPoteri.includes(p.id)) stato.statistiche.tipiPoteri.push(p.id);
+        }
         if (p.id === 'elica') suoni.elica(); else if (p.id === 'bolla') suoni.bolla(); else suoni.potere();
         scritta(POTERI[p.id].nome + '!', p.x, p.h + 40, '#fff');
         scintille(p.x, p.h, '#fff6a8', 12);
       }
+    }
+  }
+
+  // ---------------------------------------------------------------- traguardi
+  function controllaTraguardi(m) {
+    const s = stato.statistiche;
+    if (!s || stato.tino.colpito) return;
+    const fatti = {
+      tronco: m >= TAPPE[1].da,
+      chioma: m >= TAPPE[2].da,
+      cielo: m >= TAPPE[3].da,
+      stelle: m >= TAPPE[4].da,
+      duemila: m >= 2000,
+      pestoni: s.pestoni >= 5,
+      ghiande: stato.ghiandePrese >= 100,
+      'senza-poteri': m >= 300 && s.poteri === 0,
+      funghi: s.funghi >= 3,
+      seminato: s.seminati >= 1,
+      poteri: s.tipiPoteri.length >= 3,
+      intatto: m >= 600 && s.colpi === 0 && s.parati === 0,
+      gino: stato.chi === 'gino' && m >= TAPPE[2].da,
+    };
+    for (const t of TRAGUARDI) {
+      if (!fatti[t.id] || traguardi[t.id] || stato.nuoviTraguardi.includes(t.id)) continue;
+      stato.nuoviTraguardi.push(t.id);
+      stato.avvisiTraguardi.push({ nome: t.nome, t: 0 });
+      suoni.traguardo();
+      if (!stato.test) { traguardi[t.id] = true; scrivi('traguardi', traguardi); }
     }
   }
 
@@ -1253,8 +1323,8 @@
     for (const a of stato.agenti) disegnaAgente(a);
     for (const b of stato.bollette) disegnaBolletta(b);
     if (stato.capo) disegnaCapo(stato.capo);
-    // Gino sul prato (solo all'inizio)
-    disegnaGino();
+    // chi fa il tifo sul prato (solo all'inizio)
+    disegnaTifoso();
     // Tino
     if (T) disegnaTino(T);
     for (const p of stato.pigne) disegnaPigna(p);
@@ -1280,6 +1350,7 @@
     }
     disegnaAvvisi();
     disegnaMessaggi();
+    disegnaAvvisiTraguardi();
     if (inGioco() || stato.fase === 'fine') disegnaPoteriAttivi();
     if (girare) disegnaGira();
   }
@@ -1906,19 +1977,23 @@
     }
   }
 
-  function disegnaGino() {
-    if (!pronta(immagini.gino)) return;
+  // chi fa il tifo sul prato: Gino quando sale Tino, Tino quando sale Gino
+  function disegnaTifoso() {
     const y = sy(0);
     if (y > alt + 80) return;
-    const h = 54, w = h * 381 / 470;
+    const triste = stato.fase === 'fine' || stato.fase === 'cade';
+    const tino = stato.chi === 'gino';
+    const im = tino ? immagini[triste ? 'arrabbiato' : 'normale'] : immagini.gino;
+    if (!pronta(im)) return;
+    const h = tino ? 70 : 54, w = h * im.naturalWidth / im.naturalHeight;
     const x = 70;
     let salta = 0, rot = 0;
-    if (stato.fase === 'fine' || stato.fase === 'cade') { rot = Math.sin(stato.tempo * 14) * 0.08; }
+    if (triste) { rot = Math.sin(stato.tempo * 14) * 0.08; }
     else salta = Math.abs(Math.sin(stato.tempo * 5)) * 12;
     ctx.save();
     ctx.translate(x, y - salta);
     ctx.rotate(rot);
-    ctx.drawImage(immagini.gino, -w / 2, -h, w, h);
+    ctx.drawImage(im, -w / 2, -h, w, h);
     ctx.restore();
     if (stato.fumetto) fumetto(stato.fumetto.testo, x + 10, y - h - salta - 12);
   }
@@ -1946,13 +2021,15 @@
     else if (stato.agenti.some((a) => !a.stordito && Math.abs(dx(a.x, T.x)) < 90 && Math.abs(a.h - T.h) < 110)) espr = 'arrabbiato';
     else if (stato.capo && stato.capo.fase === 'insegue' && T.h - (stato.capo.h + CAPO.alto) < 260) espr = 'arrabbiato';
     else if (stato.pigne.some((p) => p.avviso <= 0 && !p.colpito && Math.abs(dx(p.x, T.x)) < 60 && p.h > T.h && p.h - T.h < 320)) espr = 'arrabbiato';
-    const im = immagini[espr];
+    // Gino ha una sola immagine: i suoi stati sono animazioni (trema, cade ruotato)
+    const gino = stato.chi === 'gino';
+    const im = gino ? immagini.gino : immagini[espr];
     if (!pronta(im)) return;
     const y = sy(T.h);
     if (stato.fase === 'fine' && y > alt + 60) return;
-    // misure: stessa altezza di Tino per tutte le espressioni (il ko è sdraiato)
+    // misure: stessa altezza per tutte le espressioni (il ko è sdraiato)
     let h = TINO.alto, w = h * im.naturalWidth / im.naturalHeight;
-    if (espr === 'ko') { w = TINO.alto * 1.2; h = w * im.naturalHeight / im.naturalWidth; }
+    if (espr === 'ko' && !gino) { w = TINO.alto * 1.2; h = w * im.naturalHeight / im.naturalWidth; }
     // schiacciamento all'atterraggio, allungamento in salita
     let sx = 1, syy = 1;
     if (T.schiaccia > 0) { const k = T.schiaccia / 0.14; sx = 1 + 0.18 * k; syy = 1 - 0.2 * k; }
@@ -1961,7 +2038,17 @@
     ripetiLati(T.x, w / 2 + 4, (x) => {
       ctx.save();
       ctx.translate(x, y);
-      if (T.colpito) ctx.rotate(Math.sin(stato.tempo * 18) * 0.25);
+      if (gino && stato.fase === 'fine') {
+        // Gino cade ruotato
+        ctx.translate(0, -h / 2);
+        ctx.rotate(T.verso * 1.35);
+        ctx.translate(0, h / 2);
+      } else if (gino && T.colpito) {
+        // Gino trema
+        ctx.translate(Math.sin(stato.tempo * 70) * 3, 0);
+        ctx.rotate(Math.sin(stato.tempo * 45) * 0.12);
+      } else if (T.colpito) ctx.rotate(Math.sin(stato.tempo * 18) * 0.25);
+      if (gino && espr === 'arrabbiato' && !T.colpito) ctx.rotate(Math.sin(stato.tempo * 30) * 0.04);
       if (stato.attivi.elica) ctx.rotate(Math.sin(stato.tempo * 10) * 0.06);
       ctx.scale(sx * T.verso, syy);
       if (lampeggia) ctx.globalAlpha = 0.45;
@@ -2038,6 +2125,44 @@
     ctx.restore();
   }
 
+  function medaglia(x, y, r) {
+    ctx.fillStyle = '#e8483f';
+    ctx.beginPath(); ctx.moveTo(x - r * 0.7, y - r * 1.9); ctx.lineTo(x - r * 0.15, y - r * 0.6); ctx.lineTo(x + r * 0.15, y - r * 0.6); ctx.lineTo(x + r * 0.7, y - r * 1.9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd34d';
+    ctx.strokeStyle = '#a8740a';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff3b0';
+    ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function disegnaAvvisiTraguardi() {
+    const lista = stato.avvisiTraguardi || [];
+    lista.slice(0, 3).forEach((a, i) => {
+      const k = a.t;
+      const alfa = k < 0.25 ? k / 0.25 : k > 2.8 ? (3.2 - k) / 0.4 : 1;
+      const y = alt - 70 - i * 58 + (k < 0.25 ? (1 - k / 0.25) * 30 : 0);
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, alfa);
+      ctx.font = '700 17px Fredoka, sans-serif';
+      const w = Math.max(ctx.measureText(a.nome).width, 90) + 70;
+      const x0 = W / 2 - w / 2;
+      ctx.fillStyle = 'rgba(255, 248, 225, 0.96)';
+      ctx.strokeStyle = '#a8740a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.roundRect(x0, y - 22, w, 48, 14); ctx.fill(); ctx.stroke();
+      medaglia(x0 + 28, y + 6, 11);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#a8740a';
+      ctx.font = '600 13px Fredoka, sans-serif';
+      ctx.fillText('Traguardo!', x0 + 50, y - 3);
+      ctx.fillStyle = '#3b2a1a';
+      ctx.font = '700 17px Fredoka, sans-serif';
+      ctx.fillText(a.nome, x0 + 50, y + 16);
+      ctx.restore();
+    });
+  }
+
   function disegnaPoteriAttivi() {
     let x = 30;
     for (const id of Object.keys(stato.attivi)) {
@@ -2080,6 +2205,7 @@
     pannello.innerHTML = '';
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
+  const nomeChi = () => (stato.chi === 'gino' ? 'Gino' : 'Tino');
   const img = (nome, classe = '') => {
     const src = nome === 'gino' ? ASSETS + 'gino/gino.png' : ASSETS + 'tino/tino-' + nome + '.png';
     const alt = nome === 'gino' ? 'Gino' : 'Tino';
@@ -2113,24 +2239,42 @@
     </div>${stato.avvisoInclina ? `<p class="nota">${stato.avvisoInclina}</p>` : ''}`;
   }
 
+  function sceltaPersonaggio() {
+    return `<div class="scelta-comandi">Chi sale:
+      <button class="scheda ${personaggio === 'tino' ? 'attiva' : ''}" data-azione="chi-tino">Tino</button>
+      <button class="scheda ${personaggio === 'gino' ? 'attiva' : ''}" data-azione="chi-gino">Gino</button>
+    </div>`;
+  }
+
+  function elencoTraguardi() {
+    const fatti = TRAGUARDI.filter((t) => traguardi[t.id]).length;
+    const voci = TRAGUARDI.map((t) => `<li class="${traguardi[t.id] ? 'fatto' : ''}"><span class="segno" aria-hidden="true">${traguardi[t.id] ? '★' : '☆'}</span><b>${t.nome}</b> <span>${t.testo}</span></li>`).join('');
+    return `<details class="traguardi"><summary>Traguardi: ${fatti} su ${TRAGUARDI.length}</summary><ul>${voci}</ul></details>`;
+  }
+
   function pannelloMenu() {
     const rec = record > 0 ? `<p class="record">Il tuo record: <b>${record} m</b>${recordGhiande ? ` · più ghiande in una salita: ${recordGhiande}` : ''}</p>` : '';
+    const ritratti = personaggio === 'gino'
+      ? `${img('gino', 'salta')}${img('normale', 'tifoso')}`
+      : `${img('normale', 'salta')}${img('gino', 'gino')}`;
     return `<div class="riquadro">
-      <div class="ritratti">${img('normale', 'salta')}${img('gino', 'gino salta')}</div>
+      <div class="ritratti">${ritratti}</div>
       <h1>Salta, Tino!</h1>
       <p>Tino salta di ramo in ramo su per la grande quercia: dalle radici al tronco, tra le foglie della chioma, poi di nuvola in nuvola fino alle stelle. Quanto in alto arriverà?</p>
       ${rec}
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Gioca</button>
       </div>
+      ${sceltaPersonaggio()}
       ${sceltaComandi()}
+      ${elencoTraguardi()}
       ${testoComandi()}
     </div>`;
   }
 
   function pannelloPausa() {
     return `<div class="riquadro">
-      <div class="ritratti">${img('normale')}${img('gino', 'gino')}</div>
+      <div class="ritratti">${stato.chi === 'gino' ? `${img('gino')}${img('normale', 'tifoso')}` : `${img('normale')}${img('gino', 'gino')}`}</div>
       <h2>Pausa</h2>
       <div class="scelte">
         <button class="bottone" data-azione="riprendi" data-primo>Continua</button>
@@ -2144,10 +2288,13 @@
     const r = stato.risultato;
     const dove = TAPPE[r.tappa].nome.toLowerCase();
     let titolo, testo, ritratti;
+    const gino = stato.chi === 'gino';
     if (r.nuovo && r.metri > 0) {
       titolo = 'Nuovo record!';
-      testo = `Tino è arrivato più in alto che mai, fino ${dove === 'le stelle' ? 'alle stelle' : 'a ' + dove}! Gino fa il tifo da sotto.`;
-      ritratti = `${img('normale', 'salta')}${img('gino', 'gino salta')}`;
+      testo = gino
+        ? `Gino è arrivato più in alto che mai, fino ${dove === 'le stelle' ? 'alle stelle' : 'a ' + dove}! Tino fa il tifo da sotto.`
+        : `Tino è arrivato più in alto che mai, fino ${dove === 'le stelle' ? 'alle stelle' : 'a ' + dove}! Gino fa il tifo da sotto.`;
+      ritratti = gino ? `${img('gino', 'salta')}${img('normale', 'tifoso salta')}` : `${img('normale', 'salta')}${img('gino', 'gino salta')}`;
     } else {
       const TITOLI = {
         bolletta: 'Una bolletta in faccia!', capo: 'Preso dall\'ispettore capo!',
@@ -2159,9 +2306,9 @@
         pigna: 'Quando in cima compare il punto esclamativo, spostati: lì sta per cadere qualcosa.',
       };
       TESTI.grandine = TESTI.stella = TESTI.pigna;
-      titolo = TITOLI[r.causa] || (r.causa && r.causa.startsWith('agente') ? 'Preso dalla Tari!' : 'Tino è caduto!');
+      titolo = TITOLI[r.causa] || (r.causa && r.causa.startsWith('agente') ? 'Preso dalla Tari!' : `${nomeChi()} è caduto!`);
       testo = TESTI[r.causa] || 'Ricorda: gli agenti si stordiscono saltandoci in testa.';
-      ritratti = `${img('ko')}${img('gino', 'gino caduto')}`;
+      ritratti = gino ? `${img('gino', 'caduto')}${img('arrabbiato', 'tifoso')}` : `${img('ko')}${img('gino', 'gino caduto')}`;
     }
     return `<div class="riquadro">
       <div class="ritratti">${ritratti}</div>
@@ -2169,6 +2316,7 @@
       <div class="risultato">${r.metri} m</div>
       <p class="dettagli"><img src="ghianda.svg" alt="" class="ico-ghianda"> ${r.ghiande} ghiande · arrivato: ${TAPPE[r.tappa].nome.toLowerCase()} · record ${record} m</p>
       <p>${testo}</p>
+      ${r.traguardi.length ? `<p class="nuovi-traguardi">Nuovi traguardi: ${r.traguardi.map((id) => `<b>${TRAGUARDI.find((t) => t.id === id).nome}</b>`).join(', ')}</p>` : ''}
       <div class="scelte">
         <button class="bottone" data-azione="gioca" data-primo>Ancora!</button>
         <button class="bottone secondario" data-azione="menu">Menu</button>
@@ -2183,6 +2331,14 @@
     if (az === 'gioca') avvia();
     else if (az === 'riprendi') riprendi();
     else if (az === 'menu') vaiAlMenu();
+    else if (az === 'chi-tino' || az === 'chi-gino') {
+      personaggio = az === 'chi-gino' ? 'gino' : 'tino';
+      scrivi('personaggio', personaggio);
+      demo();
+      const aperti = pannello.querySelector('details.traguardi')?.open;
+      mostraPannello(pannelloMenu());
+      if (aperti) pannello.querySelector('details.traguardi').open = true;
+    }
     else if (az === 'dito' || az === 'inclina') {
       const ridisegna = () => mostraPannello(stato.fase === 'pausa' ? pannelloPausa() : pannelloMenu());
       if (az === 'dito') { comandi = 'dito'; stato.avvisoInclina = ''; scrivi('comandi', comandi); ridisegna(); return; }
@@ -2236,7 +2392,8 @@
 
   // utile per le prove automatiche
   window.saltaTino = {
-    stato, avvia, aggiorna, finisci, curva, dx, posRamo, tappaA,
+    stato, avvia, aggiorna, finisci, curva, dx, posRamo, tappaA, TRAGUARDI,
+    get traguardi() { return traguardi; },
     premi: (v) => { stato.comando = clamp(v, -1, 1); },
     FISICA, TINO, TAPPE, CURVE, AGENTE, POTERI, PIGNA, MOLLA, VENTO, CAPO, PX_M, W,
     get alt() { return alt; },

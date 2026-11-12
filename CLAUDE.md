@@ -1900,7 +1900,8 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   903 / 614 (mediana 672 / 472); ispettori seminati 89-94%. Questo copione non è
   confrontabile con quello di prima (numeri sopra), solo con sé stesso.
 - **Prove automatiche**: `window.saltaTino` (`stato`, `avvia(seme)`, `aggiorna(dt)`,
-  `premi(v)` con v da -1 a 1, `finisci`, `curva`, `dx`, `tappaA`, `posRamo`, tabelle
+  `premi(v)` con v da -1 a 1, `finisci`, `curva`, `dx`, `tappaA`, `posRamo`, `TRAGUARDI`,
+  `traguardi` (quelli salvati), `avvia(seme, 'gino')` per salire con Gino, tabelle
   comprese `PIGNA`, `MOLLA`, `VENTO`, `CAPO`, `alt`); con
   `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli;
   `stato.statistiche` (salti, pestoni, colpi, secchi, poteri, molle, pigne, raffiche,
@@ -1914,14 +1915,18 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   ("molto carino").
 - **Prossimi passi (approvati tutti dal proprietario)**:
   1. *Più cose per strada*: fatto (pigne, ramo a molla, vento, ispettore capo: vedi sopra).
-  2. *Gino giocabile*, come in Tino Pro Skate: scelta nel menu ("Chi sale"), `localStorage`
-     `personaggio`; Gino trema quando è colpito e cade ruotato a fine partita; Tino resta
-     sul prato a fare il tifo ("Forza Gino!").
-  3. *Traguardi* salvati in `localStorage` e mostrati nel menu: arrivare al tronco, alla
-     chioma, al cielo, alle stelle, a 2000 m; stordire 5 agenti in una salita; 100 ghiande
-     in una salita; 300 m senza poteri; 3 funghi in una salita; seminare l'ispettore capo;
-     tutti e tre i poteri in una salita; 600 m senza essere mai colpiti; con Gino fino alla
-     chioma.
+  2. *Gino giocabile*: fatto. Nel menu "Chi sale: Tino / Gino" (`localStorage`
+     `personaggio`, `scegliPersonaggio`); Gino è alto 66 e largo 44 (tabella `MISURE`, che
+     riscrive `TINO`), si specchia, trema quando è colpito e a fine partita cade ruotato;
+     Tino resta sul prato a fare il tifo ("Forza Gino!", `disegnaTifoso`), arrabbiato
+     quando Gino cade. Anche la partita dimostrativa del menu usa il personaggio scelto.
+  3. *Traguardi*: fatti. Tabella `TRAGUARDI` (13: tronco, chioma, cielo, stelle, 2000 m,
+     5 agenti storditi, 100 ghiande, 300 m senza poteri, 3 funghi, ispettore seminato,
+     tutti e tre i poteri, 600 m senza essere mai colpiti (bolla compresa:
+     `statistiche.parati`), con Gino alla chioma), `controllaTraguardi` a ogni passo;
+     salvati appena raggiunti in `localStorage` `traguardi` (non nelle prove); avviso in
+     basso con la medaglia (`disegnaAvvisiTraguardi`); nel menu l'elenco a scomparsa
+     ("Traguardi: N su 13"); a fine salita "Nuovi traguardi".
   4. *Grafica dipinta*: **stile scelto: carta ritagliata** (collage di carta colorata a
      strati, ombre tra un foglio e l'altro, grana della carta, come un diorama fatto in
      casa; diverso dal cartone di Gino Volante e Tino Bum e dal fumetto di Tino Pro Skate).

@@ -107,4 +107,5 @@ e poi si visita http://localhost:8000.
   in testa (quello col timbro tira bollette), rami a molla, pigne (grandine e stelle
   cadenti più in alto) annunciate da un avviso, raffiche di vento nel cielo, l'ispettore
   capo che ogni 500 m sale su una pila di pratiche e va seminato, ghiande e tre poteri
-  (cappello a elica, bolla, calamita). Record dei metri; suoni e musica sintetizzati.
+  (cappello a elica, bolla, calamita). Si può salire anche con Gino (Tino fa il tifo dal
+  prato). Record dei metri e 13 traguardi; suoni e musica sintetizzati.
