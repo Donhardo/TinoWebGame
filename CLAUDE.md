@@ -1912,7 +1912,9 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`, `assets/tino/`,
   `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e `root`.
 - **Stato**: prima versione unita in `main` (pull request 40), provata dal proprietario
-  ("molto carino").
+  ("molto carino"). Passi 1-3 (pericoli, Gino giocabile, traguardi) provati dal
+  proprietario con l'artifact ("bellissimo") e uniti in `main`. **Prossima sessione: il
+  passo 4, la grafica dipinta** (decisione del proprietario).
 - **Prossimi passi (approvati tutti dal proprietario)**:
   1. *Più cose per strada*: fatto (pigne, ramo a molla, vento, ispettore capo: vedi sopra).
   2. *Gino giocabile*: fatto. Nel menu "Chi sale: Tino / Gino" (`localStorage`
