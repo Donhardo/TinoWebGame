@@ -2,6 +2,11 @@
 
 Stile scelto: **carta ritagliata** (collage di carta colorata a strati, come un diorama fatto in casa).
 
+**F1 fatto** (novembre 2026): `fondali/prato.png`, 768 × 1376, 256 colori col metodo
+`FASTOCTREE` (col metodo predefinito i fiori lilla diventavano grigi). Il tronco è largo circa
+metà immagine (non il 40%) e in cima ha due rami con le foglie: nel gioco la parte alta sfuma nel
+tronco F2, che per questo chiede lo stesso tronco, della stessa larghezza.
+
 Ogni riquadro è già completo (stile + immagine): si copia così com'è. **F1 va fatto per primo**, in una chat
 nuova e senza allegati: è il riferimento di stile. In tutti gli altri si allega F1 ("same style as the
 attached image"). Conviene una chat nuova ogni tanto: in una chat già usata Gemini tende a ritoccare
@@ -41,7 +46,7 @@ Background, portrait 9:16: the foot of a huge old oak tree in a sunny meadow. Th
 ```
 Cut-paper collage style for a 2D vertical jumping game for children, same style as the attached image: every shape is cut from colored construction paper and thin craft card, stacked in a few layers like a handmade shadow-box diorama, with soft short drop shadows between the paper layers, visible paper grain and fibers, slightly irregular hand-cut edges and an occasional torn edge. Flat matte colors, warm and cheerful palette, no glossy highlights, no gradients except the soft shadows between layers. Strict side view (orthographic, no perspective), no people, no animals, no characters, no logos, no text unless requested.
 
-Background, portrait 9:16: a vertical section of the trunk of a huge oak tree, light brown paper bark with darker vertical strips, a few knots and one small dark hollow, filling the center of the image (about 40% of the width) from the top edge to the bottom edge. On both sides a sky of one flat light blue paper, with no clouds, no sun and no gradient, and a few small green paper leaves on twigs peeking from the trunk. Seamless vertically: the top edge must continue exactly into the bottom edge, so the image can be stacked in a tall column. Keep the colors a little lighter and softer than the foreground pieces will be, and keep the central 40% of the width calm and low in contrast: the game's branches and characters are drawn on top of it.
+Background, portrait 9:16: the same oak trunk as in the attached image, continuing straight up: same width (about half of the image width, centered), same light brown paper bark with the wide pale central band and darker strips along the sides, a few knots and one small dark hollow, from the top edge to the bottom edge, perfectly vertical, without getting wider or narrower. No branches, no meadow, no roots. On both sides the same flat light blue paper sky, with no clouds, no sun and no gradient, and a few small green paper leaves on short twigs peeking from the sides of the trunk. Seamless vertically: the top edge must continue exactly into the bottom edge, so the image can be stacked in a tall column. Keep the colors a little lighter and softer than the foreground pieces will be, and keep the central 40% of the width calm and low in contrast: the game's branches and characters are drawn on top of it.
 ```
 
 ### F3 · la chioma (striscia che si ripete)
