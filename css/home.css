@@ -365,3 +365,37 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
   .testata { flex-wrap: wrap; align-items: center; }
   .titolo { order: 3; width: 100%; }
 }
+
+/* Anteprima di Salta, Tino!: Tino rimbalza sui rami davanti al tronco */
+.anteprima-salta { background: linear-gradient(#8fd3f0, #e0f4fb); }
+.apt-tronco {
+  position: absolute; left: 38%; width: 24%; top: 0; bottom: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 18%, rgba(70, 45, 22, 0.18) 18% 21%),
+    linear-gradient(90deg, #8a6a4c, #b08a62 40%, #a07c56 70%, #7c5e42);
+  opacity: 0.85;
+}
+.apt-ramo {
+  position: absolute; height: 6%; width: 22%; border-radius: 999px;
+  background: #a8692f; box-shadow: 0 0 0 2px #3e220c;
+}
+.apt-ramo-1 { left: 26%; bottom: 14%; }
+.apt-ramo-2 { left: 56%; bottom: 46%; }
+.apt-ramo-3 { left: 14%; bottom: 76%; animation: apt-foglia 3s ease-in-out infinite alternate; background: #5fbf52; box-shadow: 0 0 0 2px #2f6b26; }
+@keyframes apt-foglia { to { translate: 140% 0; } }
+.apt-ghianda { position: absolute; left: 62%; bottom: 60%; width: 4%; animation: oscilla 1.2s ease-in-out infinite; }
+.apt-tino {
+  position: absolute; left: 30%; bottom: 20%; height: 30%;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+  animation: apt-tino 2.4s ease-in-out infinite;
+}
+@keyframes apt-tino {
+  0% { translate: 0 0; scale: 1.15 0.85; animation-timing-function: ease-out; }
+  8% { scale: 1 1; }
+  25% { translate: 30% -95%; animation-timing-function: ease-in; }
+  50% { translate: 120% -106%; scale: 1.15 0.85; animation-timing-function: ease-out; }
+  58% { scale: 1 1; }
+  75% { translate: 60% -60%; animation-timing-function: ease-in; }
+  100% { translate: 0 0; scale: 1.15 0.85; }
+}
+.apt-gino { position: absolute; left: 6%; bottom: 3%; height: 18%; transform-origin: 50% 100%; animation: saltello 0.8s ease-in-out infinite; }

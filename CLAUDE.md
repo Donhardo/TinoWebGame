@@ -1801,6 +1801,75 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
     simulate (la ghianda non deve uscire né incastrarsi) e si tara; si fa provare come
     artifact prima di unire.
 
+### Salta, Tino! (`games/salta-tino/`)
+Salita infinita a salti (meccaniche da classici del genere): Tino rimbalza da solo di
+ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.html`,
+`stile.css`, `gioco.js` (tutta la logica, su canvas, grafica disegnata nel codice),
+`ghianda.svg`.
+- **Decisioni prese** (proposta scelta tra tre idee "leggere e immediate"): titolo
+  "Salta, Tino!"; sul telefono si sceglie nel menu (o in pausa) tra dito (metà sinistra /
+  metà destra dello schermo) e inclinazione del telefono (`localStorage` `comandi`; su
+  iPhone l'inclinazione chiede il permesso, se il telefono non la dà resta il dito); salita
+  infinita a tappe che sfumano come in Gino Volante; ghiande e poteri per strada, **niente
+  negozio**. Si gioca in verticale (sul telefono in orizzontale compare "Gira il telefono"
+  e il gioco va in pausa); sul computer il campo è una colonna verticale al centro.
+- **Campo**: largo 480 logici, alto 720-1040 secondo lo schermo; x si richiude sui lati
+  (uscendo da un lato si rientra dall'altro), h verso l'alto, 40 px = 1 m. La telecamera
+  sale soltanto (Tino a metà schermo); si perde cadendo sotto il bordo basso. Linea
+  tratteggiata del record.
+- **Fisica** (tabella `FISICA`): gravità 1500, salto 900 (~270 px), fungo 1500 (~750 px),
+  velocità orizzontale 430 con accelerazione 3200; ci si appoggia ai rami solo scendendo.
+  Il gioco avanza a passi di 1/120 s.
+- **Generazione** (`generaFino`, curve `CURVE` [metri, valore] come negli altri giochi):
+  una catena di rami "sicuri" (normali, mobili o col fungo) mai più distanti di
+  `FISICA.salto_max` (230 px) in altezza; siccome il campo si richiude, ogni x si
+  raggiunge in un salto: la salita è sempre battibile. Tra due rami sicuri, a volte, un
+  ramo in più: normale, **secco** (si spezza, niente salto; in cielo la nuvola
+  tratteggiata svanisce) o con un **agente** (mai vicino ai rami sicuri). Il passo tra i
+  rami cresce da 80 a 200 px, la larghezza scende da 112 a 64, crescono rami secchi,
+  mobili (foglie e nuvole viola che vanno avanti e indietro) e agenti.
+- **Tappe** (tabella `TAPPE`, si sfumano in 40 m): le radici (0 m, prato con Gino che fa
+  il tifo, "Forza papà!"), il tronco (90 m), la chioma (280 m, ciuffi di foglie ai lati),
+  il cielo (600 m, i rami diventano nuvole), le stelle (1100 m, notte con la luna). Dietro
+  c'è il tronco della quercia che scorre a metà velocità; anche lo sfondo della pagina
+  prende i colori della tappa.
+- **Agenti** (tabella `AGENTE`, disegni di `assets/agenti-tari/`, non si specchiano): col
+  retino cammina avanti e indietro sul ramo; col timbro (dai 260 m) tira bollette a
+  parabola verso Tino ogni 2,6 s se è entro 420 px. Saltandoci in testa scendendo si
+  stordiscono (cadono girando, +3 ghiande); toccarli di lato o prendere una bolletta fa
+  cadere Tino (ferito, poi fine).
+- **Poteri** (tabella `POTERI`, uno ogni 70-150 m, mai due uguali di fila): cappello a
+  elica (2,6 s di volo in su, intoccabile; il cappello è disegnato nel codice sopra la
+  foto), bolla (para un colpo, 18 s), calamita (10 s, attira le ghiande entro 170 px).
+  Icone con l'anello del tempo in alto a sinistra.
+- **Espressioni**: Tino normale; arrabbiato quando cade veloce o un agente è vicino;
+  ferito quando è colpito (con le stelline); ko a fine partita. Si specchia secondo la
+  direzione, si schiaccia atterrando e si allunga in salita. Gino saltella sul prato e
+  trema quando Tino cade.
+- **Suoni e musica**: tutto Web Audio con un compressore (salto che sale piano di tono
+  con l'altezza, fungo, ramo secco, nuvola, ghianda, pestone, colpo, bolla e scoppio,
+  elica, poteri, bolletta, tappa, record, caduta). Musichetta in Fa (8 battute, come in
+  Gino Volante): menu 100 bpm, in salita da 120 a 136 secondo la tappa. `localStorage`
+  `salta-tino:record`, `record-ghiande`, `salite`, `comandi`, `muto`, `musica-spenta`.
+- **Difficoltà tarata** con salite simulate (copione Playwright non nel repository: a ogni
+  rimbalzo sceglie il ramo più alto che raggiunge, evitando quelli con gli agenti, e lo
+  tiene finché non diventa irraggiungibile; mira a dove sarà il ramo mobile; scansa
+  agenti e bollette vicine; principiante reazione 0,22 s, errore 22 px, 25% di rami secchi
+  non visti; medio 0,14 s, 14 px, 12%; bravo 0,08 s, 8 px, 4%). 16 salite fino a 3000 m:
+  il giocatore perfetto arriva a 3000 m in 13 su 16 (le altre: bollette e agenti presi dal
+  copione, non salti impossibili); bravo ~2000 m di media (~5 minuti), medio ~1150 m
+  (~3 minuti), principiante ~975 m (mediana ~600). Si sale a ~7 m/s.
+- **Prove automatiche**: `window.saltaTino` (`stato`, `avvia(seme)`, `aggiorna(dt)`,
+  `premi(v)` con v da -1 a 1, `finisci`, `curva`, `dx`, `tappaA`, tabelle); con
+  `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli;
+  `stato.statistiche` (salti, pestoni, colpi, secchi, poteri, causa: `caduto`,
+  `agente-retino`, `agente-timbro`, `bolletta`).
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
+  `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`, `assets/tino/`,
+  `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e `root`.
+- **Stato**: prima versione giocabile, da far provare al proprietario.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   copiare dalle altre pagine le righe del `<head>` per l'app (manifest, meta, icona,

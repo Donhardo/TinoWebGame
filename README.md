@@ -98,3 +98,11 @@ e poi si visita http://localhost:8000.
   campanelle, knocker); display a matrice di punti, illuminazione generale che si
   spegne col tilt, flasher, match a fine partita; sette robivecchi da guadagnare con
   le imprese del tavolo; classifica dei cinque migliori punteggi per tavolo.
+- **Salta, Tino!** (`games/salta-tino/`): Tino salta da solo di ramo in ramo su per la
+  grande quercia e si sposta solo a destra e a sinistra (frecce, mouse o dito su una metà
+  dello schermo; sul telefono si può scegliere anche l'inclinazione); uscendo da un lato
+  rientra dall'altro. Salita infinita a tappe (le radici, il tronco, la chioma, il cielo,
+  le stelle), con rami secchi e nuvole che si rompono, foglie e nuvole che vanno avanti e
+  indietro, funghi che fanno saltare altissimo, agenti della Tari da stordire saltandoci
+  in testa (quello col timbro tira bollette), ghiande e tre poteri (cappello a elica,
+  bolla, calamita). Record dei metri; suoni e musica sintetizzati.
