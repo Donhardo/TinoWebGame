@@ -1340,7 +1340,7 @@ logica, su canvas), `ghianda.svg`.
 
 ### Tino Flipper (`games/tino-flipper/`)
 Flipper (meccaniche da classici del genere), senza storia: solo un passatempo. Versione 2
-in corso (piano più sotto): motore comune e un tavolo per mondo; la versione 1 (Notte al
+fatta con un solo tavolo, gli altri in pausa (piano più sotto): motore comune e un tavolo per mondo; la versione 1 (Notte al
 neon) è diventata il tavolo bonus in `neon/`.
 File: `index.html` (pagina della versione 2), `stile.css` (comune, con le regole
 `.tavolo-radici` per il legno), `motore.js` (motore comune), `tavoli/radici.js` (primo
@@ -1638,11 +1638,13 @@ ai tavoli). Nel menu c'è il pulsante "Notte al neon (tavolo bonus)".
   `pianoDipinto` usa anche una metà sola (sotto il prato del codice, la metà dipinta
   sfuma sul lato che manca).
   Backglass e piano provati dal proprietario ("va bene").
-  **Tappa 2 in corso. Decisioni prese**: il Prato non è un tavolo a parte ma è unito alle
+  **Tappa 2 in pausa (decisione del proprietario, novembre 2026)**: per ora il flipper
+  resta con un solo tavolo, le Radici (più il Neon come bonus); gli altri tavoli si potranno
+  fare in futuro, ripartendo da qui. **Decisioni prese**: il Prato non è un tavolo a parte ma è unito alle
   Radici (funghi come bumper e formiche, fatto: partite simulate medie 10 minuti, 0 fuori,
   0 ferme, 2,7 avventure); i tavoli si sbloccano con un punteggio in una partita sul tavolo
   precedente (le Radici e il Neon sempre aperti); suoni tutti sintetizzati, niente
-  registrazioni; il Neon passa sul motore nuovo alla fine. **Prossimo**: pianta e decisioni
+  registrazioni; il Neon passa sul motore nuovo alla fine. **Se si riprende**: pianta e decisioni
   del tavolo dopo (Spiaggia, Uffici o Firenze), poi menu dei tavoli con lo sblocco. Dopo ogni passo: partite simulate con "fuori" e "ferme" a zero, poi
   l'artifact per la prova.
 
