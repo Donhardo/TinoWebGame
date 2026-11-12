@@ -1868,7 +1868,34 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
   `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`, `assets/tino/`,
   `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e `root`.
-- **Stato**: prima versione giocabile, da far provare al proprietario.
+- **Stato**: prima versione unita in `main` (pull request 40), provata dal proprietario
+  ("molto carino").
+- **Prossimi passi (approvati tutti dal proprietario, da fare)**:
+  1. *Più cose per strada*: pigna che cade dall'alto con un avviso in cima allo schermo
+     (dai ~150 m); ramo a molla che si piega e lancia Tino più in alto e un po' di lato
+     (prima del cielo); raffiche di vento nel cielo e nelle stelle (spostano Tino di lato
+     di ~150 px/s, con foglie che volano e un avviso; il vento va aggiunto alla
+     posizione, non alla velocità, altrimenti il comando lo annulla); ogni ~500 m
+     l'ispettore capo sale dal basso su una pila di pratiche e insegue Tino per ~14 s
+     (non si stordisce: va seminato salendo in fretta; velocità da tarare con le salite
+     simulate, i copioni salgono a ~280 px/s).
+  2. *Gino giocabile*, come in Tino Pro Skate: scelta nel menu ("Chi sale"), `localStorage`
+     `personaggio`; Gino trema quando è colpito e cade ruotato a fine partita; Tino resta
+     sul prato a fare il tifo ("Forza Gino!").
+  3. *Traguardi* salvati in `localStorage` e mostrati nel menu: arrivare al tronco, alla
+     chioma, al cielo, alle stelle, a 2000 m; stordire 5 agenti in una salita; 100 ghiande
+     in una salita; 300 m senza poteri; 3 funghi in una salita; seminare l'ispettore capo;
+     tutti e tre i poteri in una salita; 600 m senza essere mai colpiti; con Gino fino alla
+     chioma.
+  4. *Grafica dipinta*: **stile scelto: carta ritagliata** (collage di carta colorata a
+     strati, ombre tra un foglio e l'altro, grana della carta, come un diorama fatto in
+     casa; diverso dal cartone di Gino Volante e Tino Bum e dal fumetto di Tino Pro Skate).
+     Da fare: prompt per Gemini in `games/salta-tino/disegni/prompt.md` (uno stile comune
+     più un'immagine per pezzo: fondale di ogni tappa come striscia verticale che si
+     ripete, prato alla base, rami normale, secco, radice, foglia mobile, ramo a molla,
+     nuvole normale, secca e viola, fungo, pigna, pila di pratiche; sfondo magenta da
+     togliere come per gli altri giochi) e codice che usa i PNG se ci sono, altrimenti
+     resta il disegno nel codice.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
