@@ -53,6 +53,36 @@
     funghi: [[0, 0], [25, 0.05], [600, 0.04]],
     ghiande: [[0, 0.45], [600, 0.35]],
     potere: [[0, 70], [600, 110], [1500, 150]],                   // metri tra un potere e l'altro
+    molle: [[0, 0], [70, 0], [90, 0.07], [580, 0.08]],            // rami sicuri a molla (non nel cielo)
+    pigne: [[200, 15], [600, 13], [1500, 11]],                     // secondi tra una pigna e l'altra
+    vento: [[600, 120], [1100, 150], [2000, 170]],                // forza delle raffiche (px/s)
+    pausaVento: [[600, 11], [1100, 9], [2000, 7]],                // secondi di calma tra le raffiche
+    capo: [[500, 165], [1500, 185], [3000, 205]],                 // velocità di salita dell'ispettore
+  };
+
+  // Pigne (nel cielo chicchi di grandine, tra le stelle stelle cadenti): prima un
+  // avviso in cima allo schermo sopra Tino, poi cadono dritte.
+  const PIGNA = { da: 200, avviso: 1.1, avvisoCielo: 1.4, gravita: 700, velMax: 520, raggio: 13, urto: 22 };
+
+  // Ramo a molla: si piega e lancia Tino più in alto e un po' di lato. La spinta
+  // di lato si somma alla posizione e si spegne piano (~100 px in tutto).
+  const MOLLA = { salto: 1250, spinta: 220, smorza: 2.2 };
+
+  // Raffiche nel cielo e tra le stelle: si sommano alla posizione di Tino (non
+  // alla velocità, che il comando correggerebbe subito).
+  const VENTO = { da: 620, avviso: 1.4, durata: [3, 4.5], salita: 0.6 };
+
+  // L'ispettore capo sale dal basso su una pila di pratiche e insegue Tino per
+  // un po': non si stordisce, va seminato salendo in fretta.
+  const CAPO = {
+    primo: 500, ogni: 500,     // metri
+    durata: 14,                // secondi di inseguimento
+    largo: 64, alto: 104,      // misure (la pila sotto è larga come lui)
+    rincorsa: 520,             // velocità quando è troppo indietro
+    distanza: 420,             // ...cioè con la testa più di tanto sotto l'altezza massima di Tino
+    quota: 0.6,                // intanto Tino sta a questa altezza dello schermo (di solito 0,5)
+    insegue: 95,               // velocità orizzontale verso Tino
+    respinto: 170,             // quanto scivola giù se la bolla lo para
   };
 
   const AGENTE = {
@@ -83,6 +113,7 @@
     gino: carica(ASSETS + 'gino/gino.png'),
     retino: carica(ASSETS + 'agenti-tari/agente-retino.svg'),
     timbro: carica(ASSETS + 'agenti-tari/agente-timbro.svg'),
+    capo: carica(ASSETS + 'agenti-tari/ispettore-capo.svg'),
     ghianda: carica('ghianda.svg'),
   };
   const pronta = (im) => im.complete && im.naturalWidth > 0;
@@ -114,6 +145,18 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   const tra = (a, b) => a + casuale() * (b - a);
+  // un secondo generatore per i pericoli (pigne, vento, ispettore): così la
+  // strada di rami resta la stessa per lo stesso seme, qualunque cosa succeda
+  let semeRischi = null;
+  function rischio() {
+    if (semeRischi === null) return Math.random();
+    semeRischi = (semeRischi + 0x6D2B79F5) | 0;
+    let t = semeRischi;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  const traR = (a, b) => a + rischio() * (b - a);
   function hash(n) {
     let t = (n * 374761393 + 668265263) | 0;
     t = Math.imul(t ^ (t >>> 13), 1274126177);
@@ -165,6 +208,9 @@
     bollette: [],
     ghiande: [],
     poteri: [],                // poteri da prendere sul campo
+    pigne: [],                 // pigne (grandine, stelle cadenti) che cadono
+    vento: null,               // { fase: calma | avviso | soffia, t, dir, forza, v }
+    capo: null,                // l'ispettore capo quando insegue
     attivi: {},                // poteri in uso { id: secondi }
     particelle: [],
     messaggi: [],
@@ -189,7 +235,7 @@
   function nuovoTino() {
     return {
       x: W / 2, h: 0, vx: 0, vy: FISICA.salto * 0.8,
-      verso: 1, schiaccia: 0, colpito: false, invulnerabile: 0, ultimoRamo: null,
+      verso: 1, schiaccia: 0, colpito: false, invulnerabile: 0, ultimoRamo: null, deriva: 0,
     };
   }
 
@@ -222,6 +268,10 @@
         r.fase = tra(0, Math.PI * 2);
       } else if (m > 20 && casuale() < curva('funghi', m)) {
         r.fungo = { dx: tra(-0.25, 0.25) * w, schiaccia: 0 };
+      } else if (r.mondo < 3 && casuale() < curva('molle', m)) {
+        r.tipo = 'molla';
+        r.lato = casuale() < 0.5 ? -1 : 1;
+        r.piega = 0;
       }
       stato.rami.push(r);
       // ghiande sopra il ramo
@@ -343,6 +393,16 @@
     tappa: () => [523, 659, 784, 1046].forEach((f, i) => suono(f, 0.15, 'triangle', 0.06, null, i * 0.09)),
     record: () => [784, 988, 1175, 1568].forEach((f, i) => suono(f, 0.14, 'sine', 0.06, null, i * 0.08)),
     cade: () => suono(700, 1.1, 'triangle', 0.05, 120),
+    molla: () => { suono(150, 0.35, 'triangle', 0.07, 700); suono(300, 0.25, 'sine', 0.03, 1100, 0.03); suono(520, 0.12, 'square', 0.015, 260, 0.12); },
+    avviso: () => { suono(1320, 0.07, 'square', 0.025); suono(1320, 0.07, 'square', 0.025, null, 0.14); },
+    pigna: (tipo) => tipo === 'stella'
+      ? suono(1800, 0.6, 'sine', 0.035, 500)
+      : tipo === 'grandine' ? fruscio(0.25, 0.12, 4000, 'highpass') : suono(900, 0.4, 'triangle', 0.03, 300),
+    ventoAvviso: () => fruscio(1.2, 0.08, 600, 'lowpass'),
+    vento: (d) => { fruscio(d, 0.22, 450, 'lowpass'); fruscio(d * 0.8, 0.07, 1400, 'bandpass', 0.2); },
+    capo: () => [0, 1, 2].forEach((i) => { suono(620, 0.22, 'sawtooth', 0.035, 880, i * 0.45); suono(880, 0.2, 'sawtooth', 0.03, 620, i * 0.45 + 0.22); }),
+    megafono: () => { suono(240, 0.18, 'sawtooth', 0.03, 200); suono(200, 0.22, 'sawtooth', 0.03, 170, 0.19); },
+    seminato: () => [523, 784, 659, 1046].forEach((f, i) => suono(f, 0.14, 'triangle', 0.06, null, i * 0.1)),
   };
 
   // ---------------------------------------------------------------- musica
@@ -580,6 +640,7 @@
   // ---------------------------------------------------------------- flusso
   function avvia(seme = null) {
     semeCasuale = seme;
+    semeRischi = seme === null ? null : (seme * 7919 + 13) | 0;
     idRamo = 0;
     stato.fase = 'gioco';
     stato.tempo = 0;
@@ -592,13 +653,14 @@
     stato.attivi = {};
     stato.particelle = [];
     stato.messaggi = [];
+    azzeraPericoli();
     stato.cam = 0;
     stato.alto = 0;
     stato.ghiandePrese = 0;
     stato.tappa = 0;
     stato.risultato = null;
     stato.recordPassato = false;
-    stato.statistiche = { salti: 0, pestoni: 0, colpi: 0, secchi: 0, poteri: 0, causa: null };
+    stato.statistiche = { salti: 0, pestoni: 0, colpi: 0, secchi: 0, poteri: 0, molle: 0, pigne: 0, raffiche: 0, capi: 0, seminati: 0, causa: null };
     stato.gen = nuovaGenerazione();
     // il prato: un ramo largo quanto il campo a h = 0
     const prato = nuovoRamo(0, W / 2, 'prato', W * 2);
@@ -635,9 +697,19 @@
     stato.rami = [nuovoRamo(0, W / 2, 'prato', W * 2)];
     stato.agenti = []; stato.bollette = []; stato.ghiande = []; stato.poteri = [];
     stato.particelle = []; stato.messaggi = []; stato.attivi = {};
+    azzeraPericoli();
     stato.cam = 0; stato.alto = 0; stato.tappa = 0; stato.fumetto = null;
     stato.gen = nuovaGenerazione();
     generaFino(alt + 200);
+  }
+
+  function azzeraPericoli() {
+    stato.pigne = [];
+    stato.prossimaPigna = 4;
+    stato.vento = { fase: 'calma', t: 5, dir: 1, forza: 0, v: 0 };
+    stato.capo = null;
+    stato.prossimoCapo = CAPO.primo;
+    stato.quota = 0.5;
   }
 
   function finisci() {
@@ -716,7 +788,12 @@
     } else {
       T.vy = Math.max(-FISICA.cadutaMax, T.vy - FISICA.gravita * dt);
     }
-    T.x = giro(T.x + T.vx * dt);
+    // spinta di lato del ramo a molla e vento: si sommano alla posizione
+    if (T.deriva) {
+      T.deriva *= Math.exp(-MOLLA.smorza * dt);
+      if (Math.abs(T.deriva) < 5) T.deriva = 0;
+    }
+    T.x = giro(T.x + (T.vx + T.deriva + stato.vento.v) * dt);
     T.h += T.vy * dt;
     if (T.schiaccia > 0) T.schiaccia = Math.max(0, T.schiaccia - dt);
     if (T.invulnerabile > 0) T.invulnerabile -= dt;
@@ -735,7 +812,7 @@
     if (giocando || stato.fase === 'menu') {
       // altezza raggiunta e telecamera
       if (!T.colpito && T.h > stato.alto) stato.alto = T.h;
-      const vuole = T.h - alt * 0.5;
+      const vuole = T.h - alt * (stato.quota || 0.5);
       if (stato.fase !== 'cade' && vuole > stato.cam) stato.cam = vuole;
       if (stato.fase === 'menu') stato.cam = Math.max(0, Math.min(stato.cam, 1200));
       generaFino(stato.cam + alt + 600);
@@ -761,11 +838,15 @@
 
     aggiornaAgenti(dt);
     aggiornaRaccolta(dt);
+    aggiornaPigne(dt);
+    aggiornaVento(dt);
+    aggiornaCapo(dt);
+    for (const r of stato.rami) if (r.piega > 0) r.piega = Math.max(0, r.piega - dt * 3);
 
     // particelle e messaggi
     for (const p of stato.particelle) {
       p.t += dt;
-      p.vy -= (p.foglia ? 120 : 600) * dt;
+      p.vy -= (p.g !== undefined ? p.g : p.foglia ? 120 : 600) * dt;
       if (p.foglia) { p.vx *= 1 - dt; p.rot += dt * 4; }
       p.x += p.vx * dt; p.h += p.vy * dt;
     }
@@ -816,7 +897,14 @@
       return;
     }
     let v = FISICA.salto;
-    if (r.fungo && Math.abs(dx(r.x + r.fungo.dx, T.x)) < 26) {
+    if (r.tipo === 'molla') {
+      v = MOLLA.salto;
+      r.piega = 1;
+      T.deriva = r.lato * MOLLA.spinta;
+      suoni.molla();
+      foglioline(r.x + r.lato * r.w / 2, r.h, 3);
+      if (stato.statistiche) stato.statistiche.molle++;
+    } else if (r.fungo && Math.abs(dx(r.x + r.fungo.dx, T.x)) < 26) {
       v = FISICA.fungo;
       r.fungo.schiaccia = 1;
       suoni.fungo();
@@ -959,6 +1047,152 @@
     }
   }
 
+  // ---------------------------------------------------------------- pericoli
+  function tipoPigna() {
+    const t = tappaA(stato.alto / PX_M);
+    return t >= 4 ? 'stella' : t >= 3 ? 'grandine' : 'pigna';
+  }
+
+  function aggiornaPigne(dt) {
+    const T = stato.tino;
+    const m = stato.alto / PX_M;
+    // mai insieme all'ispettore o al vento: un pericolo alla volta
+    const calma = !stato.capo && stato.vento.fase === 'calma';
+    if (stato.fase === 'gioco' && m >= PIGNA.da && calma && !T.colpito) {
+      stato.prossimaPigna -= dt;
+      if (stato.prossimaPigna <= 0) {
+        stato.prossimaPigna = curva('pigne', m) * traR(0.8, 1.25);
+        // cade dove è Tino, più o meno
+        const x = giro(T.x + traR(-25, 25));
+        const tipo = tipoPigna();
+        const avviso = tipo === 'pigna' ? PIGNA.avviso : PIGNA.avvisoCielo;
+        stato.pigne.push({ x, h: stato.cam + alt + 30, vx: 0, vy: 0, avviso, avviso0: avviso, tipo, rot: 0, colpito: false });
+        suoni.avviso();
+        if (stato.statistiche) stato.statistiche.pigne++;
+      }
+    }
+    for (const p of stato.pigne) {
+      if (p.avviso > 0) {
+        p.avviso -= dt;
+        p.h = stato.cam + alt + 30;
+        if (p.avviso <= 0) { p.vy = -120; suoni.pigna(p.tipo); }
+        continue;
+      }
+      p.vy = Math.max(-PIGNA.velMax, p.vy - PIGNA.gravita * dt);
+      p.x = giro(p.x + p.vx * dt);
+      p.h += p.vy * dt;
+      p.rot += dt * (p.colpito ? 12 : 4);
+      if (p.colpito || T.colpito || stato.fase !== 'gioco') continue;
+      if (Math.abs(dx(p.x, T.x)) < PIGNA.urto
+        && p.h > T.h - PIGNA.raggio + 4 && p.h < T.h + TINO.alto + PIGNA.raggio - 10) {
+        if (colpisci(p.tipo)) { p.colpito = true; p.vy = 260; p.vx = (dx(T.x, p.x) < 0 ? -1 : 1) * 160; }
+      }
+    }
+    stato.pigne = stato.pigne.filter((p) => p.avviso > 0 || p.h > stato.cam - 120);
+  }
+
+  function aggiornaVento(dt) {
+    const V = stato.vento;
+    const m = stato.alto / PX_M;
+    const attivo = stato.fase === 'gioco' && m >= VENTO.da;
+    if (!attivo) {
+      V.v *= Math.exp(-4 * dt);
+      if (V.fase === 'avviso' || stato.fase === 'menu') { V.fase = 'calma'; V.t = 4; V.v = 0; }
+      if (V.fase === 'soffia' && stato.fase !== 'pausa') { V.t -= dt; if (V.t <= 0) V.fase = 'calma'; }
+      return;
+    }
+    V.t -= dt;
+    if (V.fase === 'calma') {
+      if (V.t <= 0) {
+        if (stato.capo || stato.pigne.some((p) => !p.colpito && p.h > stato.cam - 50)) V.t = 1.5;
+        else {
+          V.fase = 'avviso';
+          V.t = VENTO.avviso;
+          V.dir = rischio() < 0.5 ? -1 : 1;
+          V.forza = curva('vento', m);
+          suoni.ventoAvviso();
+        }
+      }
+    } else if (V.fase === 'avviso') {
+      if (V.t <= 0) {
+        V.fase = 'soffia';
+        V.durata = traR(VENTO.durata[0], VENTO.durata[1]);
+        V.t = V.durata;
+        suoni.vento(V.durata);
+        if (stato.statistiche) stato.statistiche.raffiche++;
+      }
+    } else if (V.t <= 0) {
+      V.fase = 'calma';
+      V.t = curva('pausaVento', m) * traR(0.8, 1.25);
+    }
+    let k = 0;
+    if (V.fase === 'soffia') k = clamp(Math.min((V.durata - V.t) / VENTO.salita, V.t / VENTO.salita), 0, 1);
+    V.v = V.dir * V.forza * k;
+    // strisce d'aria e foglie che volano: fanno vedere il vento
+    if (Math.abs(V.v) > 30 && Math.random() < dt * 24) {
+      const h = stato.cam + Math.random() * alt;
+      const x = V.dir > 0 ? -20 : W + 20;
+      if (Math.random() < 0.35) {
+        stato.particelle.push({ x, h, vx: V.v * 1.8, vy: (Math.random() - 0.5) * 60, g: 0, t: 0, durata: 2.4, colore: stato.tappa >= 4 ? '#c9b8ff' : ['#6cbf4a', '#e0a84a', '#8fd06a'][Math.floor(Math.random() * 3)], r: 4, foglia: true, rot: Math.random() * 6 });
+      } else {
+        stato.particelle.push({ x, h, vx: V.v * (3 + Math.random() * 1.5), vy: 0, g: 0, t: 0, durata: 1.6, colore: stato.tappa >= 4 ? 'rgba(220, 210, 255, 0.8)' : 'rgba(70, 130, 190, 0.55)', r: 3, striscia: 50 + Math.random() * 50 });
+      }
+    }
+  }
+
+  function aggiornaCapo(dt) {
+    const T = stato.tino;
+    const m = stato.alto / PX_M;
+    // la telecamera tiene Tino un po' più in alto quando c'è l'ispettore, così si vede
+    const quota = stato.capo && stato.capo.fase === 'insegue' ? CAPO.quota : 0.5;
+    stato.quota = stato.quota === undefined ? 0.5 : stato.quota + clamp(quota - stato.quota, -dt * 0.12, dt * 0.12);
+    if (!stato.capo && stato.fase === 'gioco' && m >= stato.prossimoCapo && !T.colpito) {
+      stato.prossimoCapo += CAPO.ogni;
+      stato.capo = {
+        x: giro(T.x + (rischio() < 0.5 ? -1 : 1) * traR(120, 200)),
+        h: stato.cam - 260 - CAPO.alto, t: 0, fase: 'insegue', urla: 1.8, vel: 0,
+      };
+      stato.pigne = stato.pigne.filter((p) => p.avviso <= 0);
+      if (stato.vento.fase === 'avviso') { stato.vento.fase = 'calma'; stato.vento.t = 3; }
+      messaggio('L\'ispettore capo!', 'Scappa in alto, più in fretta che puoi!', 2.6);
+      suoni.capo();
+      if (stato.statistiche) stato.statistiche.capi++;
+    }
+    const C = stato.capo;
+    if (!C) return;
+    if (C.fase === 'insegue') {
+      C.t += dt;
+      const testa = C.h + CAPO.alto;
+      // sotto lo schermo rincorre di corsa, poi sale alla sua velocità
+      C.vel = testa < stato.alto - CAPO.distanza ? CAPO.rincorsa : curva('capo', m);
+      if (stato.fase === 'gioco' || stato.fase === 'cade') C.h += C.vel * dt;
+      const d = dx(C.x, T.x);
+      C.x = giro(C.x + clamp(d, -CAPO.insegue * dt, CAPO.insegue * dt));
+      C.urla -= dt;
+      if (C.urla <= 0 && sy(testa) < alt + 10) {
+        C.urla = 2.6;
+        scritta('MULTA!', C.x, testa + 24, '#ff6b5b');
+        suoni.megafono();
+      }
+      // preso?
+      if (stato.fase === 'gioco' && !T.colpito
+        && Math.abs(d) < CAPO.largo / 2 + TINO.largo / 2 - 8 && T.h < testa - 10) {
+        const parato = !!stato.attivi.bolla;
+        if (colpisci('capo') && parato) C.h -= CAPO.respinto;
+      }
+      if (C.t >= CAPO.durata && stato.fase === 'gioco' && !T.colpito) {
+        C.fase = 'scende';
+        messaggio('Seminato!', 'L\'ispettore torna giù a mani vuote', 2.2);
+        prendiGhiande(10, T.x, T.h + TINO.alto + 20);
+        suoni.seminato();
+        if (stato.statistiche) stato.statistiche.seminati++;
+      }
+    } else {
+      C.h -= 650 * dt;
+      if (C.h + CAPO.alto < stato.cam - 300) stato.capo = null;
+    }
+  }
+
   // nel menu: Tino punta al ramo più alto vicino sopra di lui
   function pilotaDemo() {
     const T = stato.tino;
@@ -1018,17 +1252,25 @@
     // agenti e bollette
     for (const a of stato.agenti) disegnaAgente(a);
     for (const b of stato.bollette) disegnaBolletta(b);
+    if (stato.capo) disegnaCapo(stato.capo);
     // Gino sul prato (solo all'inizio)
     disegnaGino();
     // Tino
     if (T) disegnaTino(T);
+    for (const p of stato.pigne) disegnaPigna(p);
     // particelle
     for (const p of stato.particelle) {
       const y = sy(p.h);
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - p.t / p.durata);
       ctx.fillStyle = p.colore;
-      if (p.foglia) {
+      if (p.striscia) {
+        ctx.strokeStyle = p.colore;
+        ctx.lineWidth = p.r;
+        ctx.lineCap = 'round';
+        const d = Math.sign(p.vx) * p.striscia;
+        ctx.beginPath(); ctx.moveTo(p.x, y); ctx.lineTo(p.x - d, y); ctx.stroke();
+      } else if (p.foglia) {
         ctx.translate(p.x, y); ctx.rotate(p.rot);
         ctx.beginPath(); ctx.ellipse(0, 0, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
       } else {
@@ -1036,6 +1278,7 @@
       }
       ctx.restore();
     }
+    disegnaAvvisi();
     disegnaMessaggi();
     if (inGioco() || stato.fase === 'fine') disegnaPoteriAttivi();
     if (girare) disegnaGira();
@@ -1247,6 +1490,7 @@
       if (r.rotto) ctx.rotate((r.id % 2 ? 1 : -1) * r.caduta * 1.5);
       if (nuvola) disegnaNuvolaRamo(r);
       else if (r.tipo === 'mobile') disegnaFogliaRamo(r);
+      else if (r.tipo === 'molla') disegnaMolla(r);
       else disegnaLegno(r);
       if (r.fungo) disegnaFungo(r);
       ctx.restore();
@@ -1293,6 +1537,55 @@
         ctx.beginPath(); ctx.ellipse(0, -6, 5, 9, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
+    }
+  }
+
+  // ramo a molla: un ramo verde e flessibile col viticcio arricciato dalla parte
+  // in cui lancia; quando Tino ci salta sopra si piega e poi vibra
+  function disegnaMolla(r) {
+    const w = r.w, L = r.lato, p = r.piega || 0;
+    const piega = p > 0 ? 14 * p * Math.cos((1 - p) * Math.PI * 5) : 0;
+    const spess = 11;
+    ctx.fillStyle = '#9bcf55';
+    ctx.strokeStyle = '#35601a';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, 1 - L * 4);
+    ctx.quadraticCurveTo(0, piega * 2 - 1, w / 2, 1 + L * 4);
+    ctx.quadraticCurveTo(w / 2 + 5, 1 + L * 4 + spess / 2, w / 2 - 2, spess + L * 4);
+    ctx.quadraticCurveTo(0, piega * 2 + spess + 2, -w / 2 + 2, spess - L * 4);
+    ctx.quadraticCurveTo(-w / 2 - 5, spess / 2 - L * 4, -w / 2, 1 - L * 4);
+    ctx.fill(); ctx.stroke();
+    // molla sotto il ramo
+    ctx.strokeStyle = '#6b4424';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    const giu = spess + piega + 2;
+    for (let i = 0; i <= 6; i++) {
+      const x = (i % 2 ? 7 : -7);
+      const y = giu + i * (16 - p * 6) / 6;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // viticcio arricciato dalla parte del lancio
+    ctx.strokeStyle = '#35601a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const xe = L * (w / 2 - 4), ye = 1 + L * 4;
+    ctx.moveTo(xe, ye);
+    for (let a = 0; a < Math.PI * 3.2; a += 0.25) {
+      const rr = 11 - a * 2.6;
+      ctx.lineTo(xe + L * (6 + Math.sin(a) * rr), ye - 8 - (1 - Math.cos(a)) * rr * 0.9 + a);
+    }
+    ctx.stroke();
+    // foglioline
+    ctx.fillStyle = '#6cbf4a';
+    for (const fx of [-0.25, 0.15]) {
+      ctx.save();
+      ctx.translate(fx * w, piega * (1 - Math.abs(fx) * 2) - 1);
+      ctx.rotate(fx * 2);
+      ctx.beginPath(); ctx.ellipse(0, -6, 4.5, 8, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
   }
 
@@ -1456,6 +1749,163 @@
     });
   }
 
+  function disegnaPigna(p) {
+    if (p.avviso > 0) return;
+    const y = sy(p.h);
+    if (y < -40 || y > alt + 40) return;
+    ripetiLati(p.x, 20, (x) => {
+      ctx.save();
+      ctx.translate(x, y);
+      if (p.tipo === 'stella') {
+        // coda della stella cadente
+        const gr = ctx.createLinearGradient(0, 0, 0, -70);
+        gr.addColorStop(0, 'rgba(255, 236, 140, 0.8)'); gr.addColorStop(1, 'rgba(255, 236, 140, 0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(0, -75); ctx.lineTo(9, 0); ctx.fill();
+        ctx.rotate(p.rot);
+        ctx.fillStyle = '#ffe066';
+        ctx.strokeStyle = '#b8860b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const a = -Math.PI / 2 + i * Math.PI / 5;
+          const rr = i % 2 ? 6.5 : 15;
+          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else if (p.tipo === 'grandine') {
+        ctx.rotate(p.rot);
+        ctx.fillStyle = '#e6f4ff';
+        ctx.strokeStyle = '#7aa6c8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 9; i++) {
+          const a = i * Math.PI * 2 / 9;
+          const rr = PIGNA.raggio * (0.85 + hash(i * 5) * 0.25);
+          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.beginPath(); ctx.ellipse(-4, -4, 4, 2.5, -0.6, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.rotate(Math.sin(p.rot) * 0.4 + Math.PI);
+        // pigna: punta in basso, squame a file
+        ctx.fillStyle = '#9a5f2c';
+        ctx.strokeStyle = '#4a2a10';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(0, 0, 11, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#c0803f';
+        for (let fila = 0; fila < 4; fila++) {
+          const yy = -11 + fila * 7;
+          const n = fila === 0 || fila === 3 ? 2 : 3;
+          for (let i = 0; i < n; i++) {
+            const xx = (i - (n - 1) / 2) * 7;
+            ctx.beginPath(); ctx.moveTo(xx - 3.5, yy); ctx.quadraticCurveTo(xx, yy + 7, xx + 3.5, yy); ctx.closePath(); ctx.fill(); ctx.stroke();
+          }
+        }
+        ctx.fillStyle = '#6b4424';
+        ctx.fillRect(-1.5, -21, 3, 6);
+      }
+      ctx.restore();
+    });
+  }
+
+  function disegnaCapo(C) {
+    const testa = C.h + CAPO.alto;
+    const yPiedi = sy(C.h);
+    if (sy(testa) > alt + 10) return;
+    const im = immagini.capo;
+    // la pila di pratiche, dai piedi fino sotto lo schermo
+    const colori = ['#f2e2b6', '#cfe3f5', '#f6c9d0', '#e9e4d8', '#d6efc4'];
+    const spessore = 15;
+    const quante = Math.min(80, Math.ceil((alt + 20 - yPiedi) / spessore) + 1);
+    ripetiLati(C.x, CAPO.largo, (x) => {
+      ctx.save();
+      for (let i = 0; i < quante; i++) {
+        const y = yPiedi + i * spessore;
+        if (y > alt + 20) break;
+        const off = (hash(i * 3 + 1) - 0.5) * 12;
+        const larg = CAPO.largo + 6 + hash(i * 7) * 10;
+        ctx.fillStyle = colori[i % colori.length];
+        ctx.strokeStyle = '#6b5a3e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(x - larg / 2 + off, y, larg, spessore - 1, 2); ctx.fill(); ctx.stroke();
+        // fogli che spuntano e qualche timbro
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x - larg / 2 + off + 5, y + 3, larg - 14, 2);
+        if (hash(i * 11) < 0.25) {
+          ctx.fillStyle = '#c0392b';
+          ctx.font = '700 8px Fredoka, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('TARI', x + off + (hash(i) - 0.5) * 20, y + 12);
+        }
+      }
+      if (pronta(im)) {
+        const h = CAPO.alto + 12, w = h * 260 / 320;
+        const ondeggia = C.fase === 'insegue' ? Math.sin(stato.tempo * 6) * 0.05 : 0.25;
+        ctx.translate(x, yPiedi + 3);
+        ctx.rotate(ondeggia);
+        ctx.drawImage(im, -w / 2, -h, w, h);
+      }
+      ctx.restore();
+    });
+  }
+
+  // avvisi: pigne che stanno per cadere, vento che arriva, ispettore sotto lo schermo
+  function disegnaAvvisi() {
+    const lampo = Math.floor(stato.tempo * 8) % 2 === 0;
+    for (const p of stato.pigne) {
+      if (p.avviso <= 0) continue;
+      ripetiLati(p.x, 22, (x) => {
+        ctx.save();
+        ctx.globalAlpha = lampo ? 1 : 0.6;
+        ctx.fillStyle = p.tipo === 'stella' ? '#ffe066' : '#ff6b5b';
+        ctx.strokeStyle = '#4a1a10';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, 50); ctx.lineTo(x - 15, 22); ctx.lineTo(x + 15, 22); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = '700 17px Fredoka, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('!', x, 41);
+        // una riga sottile che scende: dove cadrà
+        ctx.globalAlpha = 0.25;
+        ctx.strokeStyle = '#fff';
+        ctx.setLineDash([6, 8]);
+        ctx.beginPath(); ctx.moveTo(x, 56); ctx.lineTo(x, 56 + (1 - p.avviso / p.avviso0) * alt * 0.4); ctx.stroke();
+        ctx.restore();
+      });
+    }
+    const V = stato.vento;
+    if (V && (V.fase === 'avviso' || V.fase === 'soffia') && inGioco()) {
+      ctx.save();
+      ctx.globalAlpha = V.fase === 'avviso' ? (lampo ? 1 : 0.45) : 0.55;
+      ctx.font = '700 26px Fredoka, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(20, 40, 80, 0.75)';
+      ctx.fillStyle = '#fff';
+      const t = V.dir > 0 ? 'Vento ➜' : '⬅ Vento';
+      ctx.strokeText(t, W / 2, 96);
+      ctx.fillText(t, W / 2, 96);
+      ctx.restore();
+    }
+    const C = stato.capo;
+    if (C && C.fase === 'insegue' && sy(C.h + CAPO.alto) > alt - 4 && inGioco()) {
+      ctx.save();
+      ctx.globalAlpha = lampo ? 1 : 0.6;
+      const x = clamp(C.x, 24, W - 24);
+      ctx.fillStyle = '#ff6b5b';
+      ctx.strokeStyle = '#4a1a10';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, alt - 46); ctx.lineTo(x - 15, alt - 18); ctx.lineTo(x + 15, alt - 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = '700 17px Fredoka, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('!', x, alt - 23);
+      ctx.restore();
+    }
+  }
+
   function disegnaGino() {
     if (!pronta(immagini.gino)) return;
     const y = sy(0);
@@ -1494,6 +1944,8 @@
     else if (T.colpito) espr = 'ferito';
     else if (T.vy < -900 && !stato.attivi.elica) espr = 'arrabbiato';
     else if (stato.agenti.some((a) => !a.stordito && Math.abs(dx(a.x, T.x)) < 90 && Math.abs(a.h - T.h) < 110)) espr = 'arrabbiato';
+    else if (stato.capo && stato.capo.fase === 'insegue' && T.h - (stato.capo.h + CAPO.alto) < 260) espr = 'arrabbiato';
+    else if (stato.pigne.some((p) => p.avviso <= 0 && !p.colpito && Math.abs(dx(p.x, T.x)) < 60 && p.h > T.h && p.h - T.h < 320)) espr = 'arrabbiato';
     const im = immagini[espr];
     if (!pronta(im)) return;
     const y = sy(T.h);
@@ -1643,7 +2095,10 @@
       <ol>
         <li>Uscendo da un lato rientra dall'altro.</li>
         <li>I <b>rami secchi</b> e le <b>nuvole tratteggiate</b> si rompono: niente salto! Il <b>fungo</b> fa saltare altissimo.</li>
+        <li>Il <b>ramo a molla</b> lancia più in alto e un po' di lato, dalla parte del viticcio.</li>
         <li>Gli <b>agenti della Tari</b> si stordiscono saltandoci in testa; toccarli di lato o prendere una bolletta fa cadere Tino.</li>
+        <li>Se in cima compare un <b>!</b> sta per cadere una pigna: spostati. Nel cielo il <b>vento</b> spinge di lato.</li>
+        <li>Ogni 500 m l'<b>ispettore capo</b> sale dal basso su una pila di pratiche: non si stordisce, va seminato salendo in fretta.</li>
         <li>Poteri: <b>cappello a elica</b> (vola su), <b>bolla</b> (para un colpo), <b>calamita</b> (attira le ghiande).</li>
       </ol>
       ${touch ? '' : '<p><kbd>P</kbd> pausa · <kbd>M</kbd> tutti i suoni · <kbd>N</kbd> solo la musica</p>'}
@@ -1694,8 +2149,18 @@
       testo = `Tino è arrivato più in alto che mai, fino ${dove === 'le stelle' ? 'alle stelle' : 'a ' + dove}! Gino fa il tifo da sotto.`;
       ritratti = `${img('normale', 'salta')}${img('gino', 'gino salta')}`;
     } else {
-      titolo = r.causa === 'bolletta' ? 'Una bolletta in faccia!' : r.causa && r.causa.startsWith('agente') ? 'Preso dalla Tari!' : 'Tino è caduto!';
-      testo = r.causa === 'caduto' ? 'Niente paura, è atterrato sul morbido. Si riparte?' : 'Ricorda: gli agenti si stordiscono saltandoci in testa.';
+      const TITOLI = {
+        bolletta: 'Una bolletta in faccia!', capo: 'Preso dall\'ispettore capo!',
+        pigna: 'Una pigna in testa!', grandine: 'Un chicco di grandine!', stella: 'Una stella cadente!',
+      };
+      const TESTI = {
+        caduto: 'Niente paura, è atterrato sul morbido. Si riparte?',
+        capo: 'Quando arriva l\'ispettore non fermarti: sali più in fretta che puoi per 14 secondi.',
+        pigna: 'Quando in cima compare il punto esclamativo, spostati: lì sta per cadere qualcosa.',
+      };
+      TESTI.grandine = TESTI.stella = TESTI.pigna;
+      titolo = TITOLI[r.causa] || (r.causa && r.causa.startsWith('agente') ? 'Preso dalla Tari!' : 'Tino è caduto!');
+      testo = TESTI[r.causa] || 'Ricorda: gli agenti si stordiscono saltandoci in testa.';
       ritratti = `${img('ko')}${img('gino', 'gino caduto')}`;
     }
     return `<div class="riquadro">
@@ -1773,7 +2238,7 @@
   window.saltaTino = {
     stato, avvia, aggiorna, finisci, curva, dx, posRamo, tappaA,
     premi: (v) => { stato.comando = clamp(v, -1, 1); },
-    FISICA, TINO, TAPPE, CURVE, AGENTE, POTERI, PX_M, W,
+    FISICA, TINO, TAPPE, CURVE, AGENTE, POTERI, PIGNA, MOLLA, VENTO, CAPO, PX_M, W,
     get alt() { return alt; },
   };
 })();

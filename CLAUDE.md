@@ -1859,26 +1859,61 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   il giocatore perfetto arriva a 3000 m in 13 su 16 (le altre: bollette e agenti presi dal
   copione, non salti impossibili); bravo ~2000 m di media (~5 minuti), medio ~1150 m
   (~3 minuti), principiante ~975 m (mediana ~600). Si sale a ~7 m/s.
+- **Pericoli e aiuti in più** (passo 1, fatto; un secondo generatore a seme, `rischio()`,
+  per i pericoli: la strada di rami resta la stessa per lo stesso seme):
+  - *Ramo a molla* (tabella `MOLLA`, tipo `molla`, curva `molle`: ~7% dei rami sicuri da
+    90 m, mai nel cielo): ramo verde flessibile con la molla sotto e il viticcio arricciato
+    dalla parte in cui lancia (`r.lato`); salto 1250 (~520 px) e spinta di lato 220 px/s
+    che si spegne piano (~100 px in tutto, `T.deriva`, sommata alla posizione); si piega e
+    vibra (`r.piega`).
+  - *Pigne* (tabella `PIGNA`, curva `pigne`: una ogni 15 s a 200 m, 13 a 600, 11 a 1500;
+    nel cielo chicchi di grandine, tra le stelle stelle cadenti, `tipoPigna`): prima un
+    avviso in cima allo schermo (triangolo rosso con "!" e una riga tratteggiata) per
+    1,1 s (1,4 nel cielo), dove è Tino ±25 px; poi cade dritta (gravità 700, al massimo
+    520 px/s). Urta solo entro 22 px dal centro di Tino. Mai insieme al vento o
+    all'ispettore (un pericolo alla volta). Prima, più veloci (fino a 760 px/s), mirate
+    dove Tino stava andando e una ogni 9 s, erano la prima causa di caduta anche per il
+    giocatore perfetto.
+  - *Vento* (tabella `VENTO`, curve `vento` e `pausaVento`, `stato.vento` { fase: calma |
+    avviso | soffia }): dai 620 m, raffiche di 3-4,5 s ogni 7-11 s di calma, forti
+    120 → 150 → 170 px/s, con 1,4 s di avviso ("Vento ➜" che lampeggia in cima) e
+    0,6 s di salita e discesa; strisce d'aria e foglie che volano. Si somma alla
+    posizione di Tino (`stato.vento.v`).
+  - *Ispettore capo* (tabella `CAPO`, curva `capo`, `stato.capo`): a 500 m e poi ogni
+    500 m sale dal basso su una pila di pratiche colorate (`disegnaCapo`) e insegue Tino
+    per 14 s: sale a 165 px/s (185 a 1500 m, 205 a 3000) e corre a 520 se la sua testa è
+    più di 420 px sotto l'altezza massima di Tino; di lato va verso Tino a 95 px/s. Tocca
+    Tino se lui è sotto la sua testa e vicino alla pila (non si stordisce; la bolla para
+    e lo fa scivolare giù di 170 px). Grida "MULTA!" col megafono; freccia rossa in basso
+    se è sotto lo schermo. Intanto la telecamera tiene Tino al 60% dello schermo invece
+    che a metà (`stato.quota`, cambia piano), così l'ispettore si vede. Dopo 14 s
+    "Seminato!" e +10 ghiande. Con 240 px/s prendeva anche il giocatore perfetto.
+  - Fine partita con la causa (`pigna`, `grandine`, `stella`, `capo`); Tino arrabbiato
+    con l'ispettore vicino o una pigna che gli sta per cadere addosso.
+- **Taratura dei pericoli** (copione nuovo, Playwright, non nel repository: come quello di
+  prima, ma prevede il tempo di caduta delle pigne (`arrivo`) e scarta i rami sotto la
+  loro colonna o dall'altra parte quando la pigna passa in quel momento, scansa le pigne
+  vicine, gli agenti (a meno di cadergli in testa) e le bollette, scarta i rami sotto la
+  testa futura dell'ispettore; le salite in cui resta 40 s senza salire, rimbalzando
+  sempre sullo stesso ramo, non contano). 64 salite fino a 3000 m, gioco di prima / con
+  le novità: perfetto 2166 / 1814 m, bravo 1781 / 1493, medio 1525 / 1121, principiante
+  903 / 614 (mediana 672 / 472); ispettori seminati 89-94%. Questo copione non è
+  confrontabile con quello di prima (numeri sopra), solo con sé stesso.
 - **Prove automatiche**: `window.saltaTino` (`stato`, `avvia(seme)`, `aggiorna(dt)`,
-  `premi(v)` con v da -1 a 1, `finisci`, `curva`, `dx`, `tappaA`, tabelle); con
+  `premi(v)` con v da -1 a 1, `finisci`, `curva`, `dx`, `tappaA`, `posRamo`, tabelle
+  comprese `PIGNA`, `MOLLA`, `VENTO`, `CAPO`, `alt`); con
   `stato.test = true` il gioco non avanza da solo, non suona e non apre pannelli;
-  `stato.statistiche` (salti, pestoni, colpi, secchi, poteri, causa: `caduto`,
-  `agente-retino`, `agente-timbro`, `bolletta`).
+  `stato.statistiche` (salti, pestoni, colpi, secchi, poteri, molle, pigne, raffiche,
+  capi, seminati, causa: `caduto`, `agente-retino`, `agente-timbro`, `bolletta`, `pigna`,
+  `grandine`, `stella`, `capo`); `stato.pigne`, `stato.vento`, `stato.capo`.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
   `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`, `assets/tino/`,
   `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e `root`.
 - **Stato**: prima versione unita in `main` (pull request 40), provata dal proprietario
   ("molto carino").
-- **Prossimi passi (approvati tutti dal proprietario, da fare)**:
-  1. *Più cose per strada*: pigna che cade dall'alto con un avviso in cima allo schermo
-     (dai ~150 m); ramo a molla che si piega e lancia Tino più in alto e un po' di lato
-     (prima del cielo); raffiche di vento nel cielo e nelle stelle (spostano Tino di lato
-     di ~150 px/s, con foglie che volano e un avviso; il vento va aggiunto alla
-     posizione, non alla velocità, altrimenti il comando lo annulla); ogni ~500 m
-     l'ispettore capo sale dal basso su una pila di pratiche e insegue Tino per ~14 s
-     (non si stordisce: va seminato salendo in fretta; velocità da tarare con le salite
-     simulate, i copioni salgono a ~280 px/s).
+- **Prossimi passi (approvati tutti dal proprietario)**:
+  1. *Più cose per strada*: fatto (pigne, ramo a molla, vento, ispettore capo: vedi sopra).
   2. *Gino giocabile*, come in Tino Pro Skate: scelta nel menu ("Chi sale"), `localStorage`
      `personaggio`; Gino trema quando è colpito e cade ruotato a fine partita; Tino resta
      sul prato a fare il tifo ("Forza Gino!").
