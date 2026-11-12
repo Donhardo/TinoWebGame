@@ -1842,6 +1842,22 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   elica (2,6 s di volo in su, intoccabile; il cappello è disegnato nel codice sopra la
   foto), bolla (para un colpo, 18 s), calamita (10 s, attira le ghiande entro 170 px).
   Icone con l'anello del tempo in alto a sinistra.
+  **Elicotterino** (`POTERI.soccorso`, tabella `SOCCORSO`; più raro: al posto del potere
+  scelto con probabilità 0,22, mai se se ne ha già uno; resta finché non serve, anello
+  pieno): se Tino sta per uscire dal fondo dello schermo (40 px sotto il bordo invece di
+  90) parte il salvataggio (`avviaSoccorso`, fase `soccorso`, `stato.elicottero`): Gino
+  (o Tino, se sale Gino) arriva in un elicotterino disegnato nel codice (`formaElicottero`,
+  con la foto di chi guida nella cabina) mentre Tino cade sempre più piano, cala la lenza
+  con la canna da pesca (0,75 s), lo aggancia per la testa e lo porta (1,1 s) su un ramo
+  sicuro a circa un terzo dello schermo senza agenti (`ramoDiSalvataggio`), poi vola via;
+  Tino dondola appeso (arrabbiato), poi "Salvo!", "Grazie Gino!" e 1,5 s di
+  invulnerabilità. Vale anche quando cade perché colpito (la causa si azzera); l'ispettore
+  capo, se insegue, viene rimandato sotto lo schermo. `statistiche.soccorsi`. Il traguardo
+  "Tutti i poteri" chiede elica, bolla e calamita.
+- **Schermo acceso**: durante la salita il gioco chiede di tenere acceso lo schermo
+  (Screen Wake Lock, `schermoAcceso`; si rilascia a fine partita e nel menu, si richiede
+  quando la pagina torna visibile): giocando con l'inclinazione non si tocca lo schermo e
+  il telefono andava in standby.
 - **Espressioni**: Tino normale; arrabbiato quando cade veloce o un agente è vicino;
   ferito quando è colpito (con le stelline); ko a fine partita. Si specchia secondo la
   direzione, si schiaccia atterrando e si allunga in salita. Gino saltella sul prato e
@@ -1968,7 +1984,9 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
        altri giochi, larghi 640. Per ogni larghezza si prepara una tela (a 3×) a pezzi: le
        colonne `fissi` (estremità, foglie, molla, viticcio) restano in proporzione, il resto
        si stringe fino alla larghezza del ramo (al massimo 4 volte rispetto alle parti
-       fisse; se non basta il ramo diventa più sottile); `cima` è la riga su cui si
+       fisse; se non basta il ramo diventa più sottile). Le nuvole sono state ingrandite
+       (alte 46-50 invece di 30-32, 16 px in più per parte: quanto i piedi di Tino, quindi
+       si vede dove ci si appoggia; la parte fisica non cambia); `cima` è la riga su cui si
        appoggia Tino; ombra corta sotto già nella tela. Il ramo a molla si specchia se lancia
        a sinistra e si abbassa e schiaccia quando vibra. Il fungo resta disegnato nel codice.
      Provati dal proprietario ("splendido") e uniti in `main`. **Prossima sessione**:
