@@ -1915,8 +1915,8 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
 - **Stato**: prima versione unita in `main` (pull request 40), provata dal proprietario
   ("molto carino"). Passi 1-3 (pericoli, Gino giocabile, traguardi) provati dal
   proprietario con l'artifact ("bellissimo") e uniti in `main`. Passo 4 (grafica dipinta)
-  in corso: fondali, rami e nuvole fatti e nel gioco (da far provare al proprietario);
-  mancano oggetti e poteri.
+  in corso: fondali, rami e nuvole fatti, provati dal proprietario con l'artifact
+  ("splendido") e uniti in `main`; mancano oggetti e poteri.
 - **Prossimi passi (approvati tutti dal proprietario)**:
   1. *Più cose per strada*: fatto (pigne, ramo a molla, vento, ispettore capo: vedi sopra).
   2. *Gino giocabile*: fatto. Nel menu "Chi sale: Tino / Gino" (`localStorage`
@@ -1971,8 +1971,8 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
        fisse; se non basta il ramo diventa più sottile); `cima` è la riga su cui si
        appoggia Tino; ombra corta sotto già nella tela. Il ramo a molla si specchia se lancia
        a sinistra e si abbassa e schiaccia quando vibra. Il fungo resta disegnato nel codice.
-     **Prossima sessione**: far provare al proprietario; poi oggetti (O1-O7) e poteri
-     (P1-P3), preparati allo stesso modo.
+     Provati dal proprietario ("splendido") e uniti in `main`. **Prossima sessione**:
+     oggetti (O1-O7) e poteri (P1-P3), preparati allo stesso modo.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
