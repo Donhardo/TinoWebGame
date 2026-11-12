@@ -1909,12 +1909,14 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   `grandine`, `stella`, `capo`); `stato.pigne`, `stato.vento`, `stato.capo`.
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
-  `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`, `assets/tino/`,
-  `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files` e `root`.
+  `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`, `fondali/`, `rami/`,
+  `nuvole/`, `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files`
+  e `root`.
 - **Stato**: prima versione unita in `main` (pull request 40), provata dal proprietario
   ("molto carino"). Passi 1-3 (pericoli, Gino giocabile, traguardi) provati dal
-  proprietario con l'artifact ("bellissimo") e uniti in `main`. **Prossima sessione: il
-  passo 4, la grafica dipinta** (decisione del proprietario).
+  proprietario con l'artifact ("bellissimo") e uniti in `main`. Passo 4 (grafica dipinta)
+  in corso: fondali, rami e nuvole fatti, provati dal proprietario con l'artifact
+  ("splendido") e uniti in `main`; mancano oggetti e poteri.
 - **Prossimi passi (approvati tutti dal proprietario)**:
   1. *Più cose per strada*: fatto (pigne, ramo a molla, vento, ispettore capo: vedi sopra).
   2. *Gino giocabile*: fatto. Nel menu "Chi sale: Tino / Gino" (`localStorage`
@@ -1942,11 +1944,35 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
      256 colori col metodo `FASTOCTREE` di Pillow (col metodo predefinito i fiori lilla
      diventavano grigi). Il tronco è largo circa metà immagine (non il 40% chiesto) e in
      cima ha due rami con le foglie: nel gioco la parte alta sfumerà nel tronco F2, il cui
-     prompt ora chiede lo stesso tronco della stessa larghezza. **Prossima sessione**: il
-     proprietario passa le immagini che ha già fatto (fondali e rami) e poi riprende dagli
-     oggetti (O1-O7, poi P1-P3); preparare i PNG (magenta tolto, ritaglio, riduzione,
-     attenzione ai colori a 256) e poi scrivere il codice che usa i PNG se ci sono,
-     altrimenti resta il disegno nel codice.
+     prompt ora chiede lo stesso tronco della stessa larghezza.
+     **Fondali, rami e nuvole arrivati e nel gioco** (novembre 2026; nello zip il ramo
+     secco R2 si chiamava `F2.jpg`). Se un file manca resta il disegno nel codice.
+     - *Fondali* (`FONDALI`, `STRISCE`, `FONDALE`, `disegnaFondoDipinto`): `tronco.png`,
+       `chioma.png`, `stelle.png` (768 × 1376) e `cielo.png` (768 × 751: tagliato tra due
+       righe senza nuvole, y 495-1246, perché in cima e in fondo c'erano nuvole tagliate),
+       256 colori `FASTOCTREE`. Larghi quanto il campo (480), in colonna, scorrono a 0,5
+       della telecamera; il prato F1 sta in fondo una volta sola (il suo bordo basso è in
+       fondo allo schermo con la telecamera a terra) e la sua cima sfuma (16%) nel tronco,
+       che continua sopra. Tronco e stelle si ripetono dritti (la giunta combacia), la
+       chioma una copia sì e una no capovolta (la giunta non combaciava). Tra le tappe la
+       più presente si disegna piena e l'altra sopra in trasparenza. Velo bianco per tappa
+       (`velo`: 0,12 radici e tronco, 0,3 chioma (le ghiande dipinte somigliavano a quelle
+       da prendere), 0,14 cielo, 0 stelle). Le strisce si preparano una volta alla
+       risoluzione dello schermo col velo già sopra (`telaFondale`), e sotto il prato il
+       tronco non si disegna. La luna resta quella del codice (aspetta O7). Pixel 7 con
+       processore ×4 nel browser di prova (senza scheda grafica): 20-40 fotogrammi al
+       secondo contro 23-52 del fondale nel codice.
+     - *Rami e nuvole* (`SPRITE_RAMI`, `spriteRamo`, `disegnaRamoDipinto`): in `rami/`
+       `ramo` (tronco e chioma), `radice` (radici), `secco`, `foglia` (rami mobili), `molla`;
+       in `nuvole/` `nuvola`, `secca`, `viola` (cielo e stelle); magenta tolto come negli
+       altri giochi, larghi 640. Per ogni larghezza si prepara una tela (a 3×) a pezzi: le
+       colonne `fissi` (estremità, foglie, molla, viticcio) restano in proporzione, il resto
+       si stringe fino alla larghezza del ramo (al massimo 4 volte rispetto alle parti
+       fisse; se non basta il ramo diventa più sottile); `cima` è la riga su cui si
+       appoggia Tino; ombra corta sotto già nella tela. Il ramo a molla si specchia se lancia
+       a sinistra e si abbassa e schiaccia quando vibra. Il fungo resta disegnato nel codice.
+     Provati dal proprietario ("splendido") e uniti in `main`. **Prossima sessione**:
+     oggetti (O1-O7) e poteri (P1-P3), preparati allo stesso modo.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;

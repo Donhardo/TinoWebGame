@@ -137,6 +137,42 @@
   };
   const pronta = (im) => im.complete && im.naturalWidth > 0;
 
+  // Grafica dipinta (carta ritagliata, Gemini). Se un file manca resta il
+  // disegno nel codice. Fondali: il prato (F1) sta in fondo una volta sola, sopra
+  // si impilano le strisce della tappa; tutto scorre a FONDALE.parallasse della
+  // telecamera. `specchia`: una copia sì e una no capovolta (la giunta combacia).
+  const FONDALE = { parallasse: 0.5, sfumaPrato: 0.16 };
+  const FONDALI = {
+    prato: carica('fondali/prato.png'),
+    tronco: carica('fondali/tronco.png'),
+    chioma: carica('fondali/chioma.png'),
+    cielo: carica('fondali/cielo.png'),
+    stelle: carica('fondali/stelle.png'),
+  };
+  // la striscia che si ripete per ogni tappa (le radici: il tronco sopra il prato)
+  // `velo`: bianco sopra il fondale, così rami, ghiande e personaggi si staccano
+  // (nella chioma le ghiande dipinte somigliano a quelle da prendere)
+  const STRISCE = [
+    { im: 'tronco', velo: 0.12 }, { im: 'tronco', velo: 0.12 }, { im: 'chioma', specchia: true, velo: 0.3 },
+    { im: 'cielo', velo: 0.14 }, { im: 'stelle', velo: 0 },
+  ];
+  // Rami e nuvole: misure in pixel delle immagini (larghe 640). `cima` è la riga
+  // su cui si appoggia Tino, `alto` l'altezza in gioco dell'immagine intera,
+  // `fissi` le colonne che non si stringono (estremità, foglie, molla): il resto
+  // si stringe in larghezza fino a fare la misura del ramo. `piu`: px in più del
+  // ramo vero (foglia e nuvole sporgono un po', come nel disegno del codice).
+  const SPRITE_RAMI = {
+    ramo: { file: 'rami/ramo.png', cima: 35, alto: 32, fissi: [[0, 24], [111, 168], [282, 344], [484, 527], [616, 640]] },
+    secco: { file: 'rami/secco.png', cima: 13, alto: 21, fissi: [[0, 40], [600, 640]] },
+    radice: { file: 'rami/radice.png', cima: 6, alto: 20, fissi: [[0, 36], [604, 640]] },
+    foglia: { file: 'rami/foglia.png', cima: 26, alto: 26, fissi: [], piu: 16 },
+    molla: { file: 'rami/molla.png', cima: 39, alto: 40, fissi: [[0, 24], [290, 350], [560, 640]], piu: 8 },
+    nuvola: { file: 'nuvole/nuvola.png', cima: 22, alto: 32, fissi: [], piu: 12 },
+    nuvolaSecca: { file: 'nuvole/secca.png', cima: 20, alto: 30, fissi: [], piu: 12 },
+    nuvolaViola: { file: 'nuvole/viola.png', cima: 39, alto: 30, fissi: [], piu: 12 },
+  };
+  for (const s of Object.values(SPRITE_RAMI)) s.im = carica(s.file);
+
   // ---------------------------------------------------------------- DOM
   const $ = (s) => document.querySelector(s);
   const canvas = $('#campo');
@@ -1362,6 +1398,103 @@
     if (x > W - mezzo) f(x - W);
   }
 
+  function disegnaLuna(a) {
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#fff6d0';
+    ctx.beginPath();
+    ctx.arc(W * 0.78, alt * 0.18, 34, 0, Math.PI * 2);
+    ctx.arc(W * 0.78 + 14, alt * 0.18 - 8, 30, 0, Math.PI * 2, true);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // il prato dipinto con la cima che sfuma nel tronco sopra (preparato una volta)
+  let pratoSfumato = null;
+  function pratoDipinto() {
+    if (pratoSfumato || !pronta(FONDALI.prato)) return pratoSfumato;
+    const im = FONDALI.prato;
+    const t = document.createElement('canvas');
+    t.width = im.naturalWidth; t.height = im.naturalHeight;
+    const c = t.getContext('2d');
+    c.drawImage(im, 0, 0);
+    c.globalCompositeOperation = 'destination-out';
+    const h = t.height * FONDALE.sfumaPrato;
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, t.width, h);
+    pratoSfumato = t;
+    return t;
+  }
+
+  // Fondali già alla risoluzione dello schermo, col velo sopra: ridurre ogni
+  // volta le immagini grandi costava un terzo dei fotogrammi sul telefono.
+  // (Velo per striscia e dissolvenza danno lo stesso risultato del velo mescolato.)
+  const teleFondali = new Map();
+  let fattoreFondali = 0;
+  function telaFondale(chiave, im, velo) {
+    const k = ctx.getTransform().a; // pixel veri per pixel logico
+    if (k !== fattoreFondali) { teleFondali.clear(); fattoreFondali = k; }
+    let t = teleFondali.get(chiave);
+    if (t) return t;
+    const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+    t = document.createElement('canvas');
+    t.width = Math.max(1, Math.round(W * k));
+    t.height = Math.max(1, Math.round(W * ih / iw * k));
+    const c = t.getContext('2d');
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(im, 0, 0, t.width, t.height);
+    if (velo > 0) {
+      c.globalCompositeOperation = 'source-atop';
+      c.fillStyle = `rgba(255, 255, 255, ${velo})`;
+      c.fillRect(0, 0, t.width, t.height);
+    }
+    teleFondali.set(chiave, t);
+    return t;
+  }
+
+  // fondali dipinti: la tappa più presente piena, l'altra sopra in trasparenza
+  function disegnaFondoDipinto(pesi) {
+    const usate = pesi.map((p, i) => [p, i]).filter(([p]) => p > 0.001).sort((a, b) => b[0] - a[0]);
+    for (const [, i] of usate) {
+      if (!pronta(FONDALI[STRISCE[i].im])) return false;
+      if (i === 0 && !pratoDipinto()) return false;
+    }
+    // il fondo del prato è in fondo allo schermo quando la telecamera è a terra
+    const base = alt + stato.cam * FONDALE.parallasse;
+    const hP = W * 1376 / 768;
+    const y0 = base - hP; // da qui in su le strisce
+    usate.forEach(([p, i], n) => {
+      ctx.globalAlpha = n === 0 ? 1 : p;
+      const st = STRISCE[i];
+      const orig = FONDALI[st.im];
+      const hS = W * orig.naturalHeight / orig.naturalWidth;
+      const im = telaFondale(st.im + ':' + st.velo, orig, st.velo);
+      // la striscia k va da y0 - (k + 1) hS a y0 - k hS
+      // (per le radici dalla -1: sotto la cima sfumata del prato c'è ancora il tronco)
+      const k0 = Math.max(i === 0 ? -1 : -Infinity, Math.floor((y0 - alt) / hS));
+      const k1 = Math.floor(y0 / hS);
+      // sotto il prato (che è pieno, tranne la cima sfumata) il tronco non serve
+      const yFine = i === 0 ? y0 + hP * FONDALE.sfumaPrato : Infinity;
+      for (let k = k0; k <= k1; k++) {
+        const y = y0 - (k + 1) * hS;
+        if (st.specchia && (k & 1)) {
+          ctx.save();
+          ctx.translate(0, y + hS);
+          ctx.scale(1, -1);
+          ctx.drawImage(im, 0, 0, W, hS);
+          ctx.restore();
+        } else if (y + hS > yFine) {
+          const parte = clamp(yFine - y, 0, hS);
+          if (parte > 0) ctx.drawImage(im, 0, 0, im.width, im.height * parte / hS, 0, y, W, parte);
+        } else ctx.drawImage(im, 0, y, W, hS);
+      }
+      if (i === 0 && y0 < alt) ctx.drawImage(telaFondale('prato', pratoSfumato, st.velo), 0, y0, W, hP);
+    });
+    ctx.globalAlpha = 1;
+    return true;
+  }
+
   let fondoPagina = '';
   function disegnaFondo(pesi) {
     const top = mescola(TAPPE.map((t) => t.cielo[0]), pesi);
@@ -1369,11 +1502,15 @@
     // anche la pagina attorno al campo prende i colori della tappa
     const pag = `linear-gradient(${top}, ${bot})`;
     if (pag !== fondoPagina && Math.floor(stato.tempo * 10) % 3 === 0) { fondoPagina = pag; document.body.style.background = pag; }
+    const [pR, pT, pC, pCi, pS] = pesi;
+    if (disegnaFondoDipinto(pesi)) {
+      if (pS > 0) disegnaLuna(pS);
+      return;
+    }
     const gr = ctx.createLinearGradient(0, 0, 0, alt);
     gr.addColorStop(0, top); gr.addColorStop(1, bot);
     ctx.fillStyle = gr;
     ctx.fillRect(0, 0, W, alt);
-    const [pR, pT, pC, pCi, pS] = pesi;
 
     // stelle (molto lontane)
     if (pS > 0 || pCi > 0.5) {
@@ -1388,16 +1525,7 @@
         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalAlpha = 1;
-      if (pS > 0) {
-        // la luna
-        ctx.globalAlpha = pS;
-        ctx.fillStyle = '#fff6d0';
-        ctx.beginPath();
-        ctx.arc(W * 0.78, alt * 0.18, 34, 0, Math.PI * 2);
-        ctx.arc(W * 0.78 + 14, alt * 0.18 - 8, 30, 0, Math.PI * 2, true);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
+      if (pS > 0) disegnaLuna(pS);
     }
 
     // nuvole lontane
@@ -1559,7 +1687,8 @@
       ctx.save();
       ctx.translate(x, y);
       if (r.rotto) ctx.rotate((r.id % 2 ? 1 : -1) * r.caduta * 1.5);
-      if (nuvola) disegnaNuvolaRamo(r);
+      if (disegnaRamoDipinto(r, nuvola)) { /* fatto */ }
+      else if (nuvola) disegnaNuvolaRamo(r);
       else if (r.tipo === 'mobile') disegnaFogliaRamo(r);
       else if (r.tipo === 'molla') disegnaMolla(r);
       else disegnaLegno(r);
@@ -1567,6 +1696,81 @@
       ctx.restore();
     });
     ctx.restore();
+  }
+
+  // rami e nuvole dipinti: preparati una volta per ogni larghezza (a pezzi:
+  // le colonne `fissi` in proporzione, il resto stretto quanto serve)
+  const telaRami = new Map();
+  const RISOLUZIONE_RAMI = 3;
+  const OMBRA_RAMI = { margine: 7, colore: 'rgba(45, 28, 12, 0.42)', sfuma: 3, dx: 1.5, dy: 3.5 };
+  function spriteRamo(nome, w) {
+    const S = SPRITE_RAMI[nome];
+    if (!pronta(S.im)) return null;
+    const chiave = nome + ':' + Math.round(w);
+    let sp = telaRami.get(chiave);
+    if (sp) return sp;
+    if (telaRami.size > 400) telaRami.clear();
+    w = Math.round(w);
+    const iw = S.im.naturalWidth, ih = S.im.naturalHeight;
+    const fisso = S.fissi.reduce((a, [x0, x1]) => a + x1 - x0, 0);
+    const libero = iw - fisso;
+    // stretto al massimo di 1/0,25 rispetto alle parti fisse; se non basta, più sottile
+    const s = Math.min(S.alto / ih, w / (fisso + 0.25 * libero));
+    const c = (w - s * fisso) / libero;
+    const R = RISOLUZIONE_RAMI;
+    const pezzi = document.createElement('canvas');
+    pezzi.width = Math.ceil(w * R);
+    pezzi.height = Math.ceil(ih * s * R);
+    const t = pezzi.getContext('2d');
+    t.imageSmoothingQuality = 'high';
+    const tagli = [0];
+    for (const [x0, x1] of S.fissi) { tagli.push(x0, x1); }
+    tagli.push(iw);
+    let dx = 0;
+    for (let i = 0; i < tagli.length - 1; i++) {
+      const x0 = tagli[i], x1 = tagli[i + 1];
+      if (x1 <= x0) continue;
+      const k = i % 2 === 1 ? s : c; // pezzi dispari = fissi
+      const dw = (x1 - x0) * k;
+      // un pixel in più, così tra un pezzo e l'altro non resta una riga chiara
+      t.drawImage(S.im, x0, 0, x1 - x0, ih, dx * R, 0, dw * R + 1, ih * s * R);
+      dx += dw;
+    }
+    // ombra corta sotto, come un foglio staccato dal fondale
+    const M = OMBRA_RAMI.margine;
+    const tela = document.createElement('canvas');
+    tela.width = pezzi.width + 2 * M * R;
+    tela.height = pezzi.height + 2 * M * R;
+    const f = tela.getContext('2d');
+    f.shadowColor = OMBRA_RAMI.colore;
+    f.shadowBlur = OMBRA_RAMI.sfuma * R;
+    f.shadowOffsetX = OMBRA_RAMI.dx * R;
+    f.shadowOffsetY = OMBRA_RAMI.dy * R;
+    f.drawImage(pezzi, M * R, M * R);
+    sp = { tela, w: w + 2 * M, h: ih * s + 2 * M, cima: S.cima * s + M, m: M };
+    telaRami.set(chiave, sp);
+    return sp;
+  }
+
+  function disegnaRamoDipinto(r, nuvola) {
+    const secco = r.tipo === 'secco', mobile = r.tipo === 'mobile';
+    const nome = nuvola ? (secco ? 'nuvolaSecca' : mobile ? 'nuvolaViola' : 'nuvola')
+      : mobile ? 'foglia' : r.tipo === 'molla' ? 'molla' : secco ? 'secco' : r.mondo === 0 ? 'radice' : 'ramo';
+    const S = SPRITE_RAMI[nome];
+    const w = r.w + (S.piu || 0);
+    const sp = spriteRamo(nome, w);
+    if (!sp) return false;
+    ctx.save();
+    if (r.tipo === 'molla') {
+      // il viticcio dalla parte del lancio; si piega e vibra
+      const p = r.piega || 0;
+      const piega = p > 0 ? 14 * p * Math.cos((1 - p) * Math.PI * 5) : 0;
+      ctx.translate(0, piega * 0.7);
+      ctx.scale(r.lato < 0 ? -1 : 1, 1 - piega * 0.012);
+    }
+    ctx.drawImage(sp.tela, -w / 2 - sp.m, -sp.cima, sp.w, sp.h);
+    ctx.restore();
+    return true;
   }
 
   function disegnaLegno(r) {
