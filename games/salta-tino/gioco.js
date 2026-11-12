@@ -116,6 +116,18 @@
     elica: { nome: 'Cappello a elica', durata: 2.6, vel: 1050 },
     bolla: { nome: 'Bolla', durata: 18 },
     calamita: { nome: 'Calamita', durata: 10, raggio: 170 },
+    // elicotterino: resta finché non serve; se Tino cade, Gino arriva in elicottero,
+    // lo ripesca con la canna da pesca e lo posa su un ramo (con Gino che sale, Tino)
+    soccorso: { nome: 'Elicotterino', durata: Infinity, prob: 0.22 },
+  };
+  const SOCCORSO = {
+    arriva: 0.75,              // secondi: l'elicottero arriva sopra Tino e cala il filo
+    porta: 1.1,                // ...lo porta sul ramo
+    via: 1.2,                  // ...se ne va
+    filo: 150,                 // lunghezza del filo sotto la punta della canna
+    canna: { dx: 58, dh: 28 }, // punta della canna rispetto al centro dell'elicottero
+    scala: 1.25,               // grandezza del disegno
+    protetto: 1.5,             // secondi di invulnerabilità dopo
   };
 
   const ASSETS = '../../assets/';
@@ -342,7 +354,9 @@
       // potere sopra il ramo
       if (g.h >= g.prossimoPotere && !mobile && !r.fungo) {
         const scelte = ['elica', 'bolla', 'calamita'].filter((p) => p !== g.ultimoPotere);
-        const id = scelte[Math.floor(casuale() * scelte.length)];
+        let id = scelte[Math.floor(casuale() * scelte.length)];
+        // l'elicotterino è più raro (e non se ne ha già uno)
+        if (casuale() < POTERI.soccorso.prob && g.ultimoPotere !== 'soccorso' && !(stato.attivi && stato.attivi.soccorso)) id = 'soccorso';
         g.ultimoPotere = id;
         stato.poteri.push({ id, x: r.x, h: h + 46, preso: false });
         g.prossimoPotere = g.h + curva('potere', m) * PX_M * tra(0.85, 1.2);
@@ -464,6 +478,9 @@
     megafono: () => { suono(240, 0.18, 'sawtooth', 0.03, 200); suono(200, 0.22, 'sawtooth', 0.03, 170, 0.19); },
     seminato: () => [523, 784, 659, 1046].forEach((f, i) => suono(f, 0.14, 'triangle', 0.06, null, i * 0.1)),
     traguardo: () => [880, 1109, 1319, 1760].forEach((f, i) => suono(f, 0.18, 'sine', 0.05, null, 0.2 + i * 0.07)),
+    elicottero: (d = 1.6) => { for (let t = 0; t < d; t += 0.085) { fruscio(0.05, 0.16, 260, 'lowpass', t); suono(70, 0.05, 'square', 0.018, 55, t); } },
+    lenza: () => { fruscio(0.5, 0.06, 2600, 'highpass'); suono(1400, 0.4, 'sine', 0.02, 700); },
+    ripescato: () => [523, 659, 784, 1046, 784, 1046].forEach((f, i) => suono(f, 0.12, 'triangle', 0.055, null, i * 0.08)),
   };
 
   // ---------------------------------------------------------------- musica
@@ -493,7 +510,7 @@
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
   const musica = { passo: 0, prossimo: 0, suona: false, uscita: null, filtro: null, rumore: null };
 
-  function inGioco() { return stato.fase === 'gioco' || stato.fase === 'cade'; }
+  function inGioco() { return stato.fase === 'gioco' || stato.fase === 'cade' || stato.fase === 'soccorso'; }
   function suonaMusica() {
     return !!audio && audio.state === 'running' && !muto && !musicaSpenta && !stato.test
       && stato.fase !== 'pausa' && !document.hidden;
@@ -698,6 +715,26 @@
     return Promise.resolve(!!D);
   }
 
+  // Schermo sempre acceso mentre si gioca: con l'inclinazione non si tocca lo
+  // schermo e il telefono andava in standby (Screen Wake Lock API; il blocco
+  // cade da solo quando la pagina è nascosta, quindi si richiede al ritorno)
+  let blocco = null;
+  function schermoAcceso(si) {
+    if (stato.test) return;
+    if (!si) {
+      if (blocco) { blocco.release().catch(() => {}); blocco = null; }
+      return;
+    }
+    if (blocco || !('wakeLock' in navigator) || document.hidden) return;
+    navigator.wakeLock.request('screen').then((b) => {
+      blocco = b;
+      b.addEventListener('release', () => { if (blocco === b) blocco = null; });
+    }).catch(() => {});
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && (inGioco() || stato.fase === 'pausa')) schermoAcceso(true);
+  });
+
   // ---------------------------------------------------------------- flusso
   function scegliPersonaggio(chi) {
     stato.chi = MISURE[chi] ? chi : 'tino';
@@ -727,7 +764,8 @@
     stato.tappa = 0;
     stato.risultato = null;
     stato.recordPassato = false;
-    stato.statistiche = { salti: 0, pestoni: 0, colpi: 0, parati: 0, secchi: 0, poteri: 0, tipiPoteri: [], funghi: 0, molle: 0, pigne: 0, raffiche: 0, capi: 0, seminati: 0, causa: null };
+    stato.statistiche = { salti: 0, pestoni: 0, colpi: 0, parati: 0, secchi: 0, poteri: 0, tipiPoteri: [], funghi: 0, molle: 0, pigne: 0, raffiche: 0, capi: 0, seminati: 0, soccorsi: 0, causa: null };
+    stato.elicottero = null;
     stato.nuoviTraguardi = [];
     stato.avvisiTraguardi = [];
     stato.gen = nuovaGenerazione();
@@ -737,6 +775,7 @@
     generaFino(alt + 600);
     stato.fumetto = { testo: stato.chi === 'gino' ? 'Forza Gino!' : 'Forza papà!', t: 2.2 };
     messaggio(TAPPE[0].nome, TAPPE[0].sotto);
+    schermoAcceso(true);
     nascondiPannello();
     aggiornaBarra();
   }
@@ -755,6 +794,7 @@
   }
   function vaiAlMenu() {
     stato.fase = 'menu';
+    schermoAcceso(false);
     demo();
     mostraPannello(pannelloMenu());
   }
@@ -767,7 +807,7 @@
     stato.tino = nuovoTino();
     stato.rami = [nuovoRamo(0, W / 2, 'prato', W * 2)];
     stato.agenti = []; stato.bollette = []; stato.ghiande = []; stato.poteri = [];
-    stato.particelle = []; stato.messaggi = []; stato.attivi = {};
+    stato.particelle = []; stato.messaggi = []; stato.attivi = {}; stato.elicottero = null;
     azzeraPericoli();
     stato.cam = 0; stato.alto = 0; stato.tappa = 0; stato.fumetto = null;
     stato.gen = nuovaGenerazione();
@@ -785,6 +825,7 @@
 
   function finisci() {
     stato.fase = 'fine';
+    schermoAcceso(false);
     const metri = Math.floor(stato.alto / PX_M);
     const nuovo = metri > record;
     if (nuovo) { record = metri; scrivi('record', record); }
@@ -825,7 +866,7 @@
     if (stato.fase === 'pausa') return;
     stato.tempo += dt;
     const T = stato.tino;
-    const giocando = stato.fase === 'gioco' || stato.fase === 'cade';
+    const giocando = stato.fase === 'gioco' || stato.fase === 'cade' || stato.fase === 'soccorso';
 
     // rami mobili e rami che cadono
     for (const r of stato.rami) {
@@ -838,7 +879,7 @@
     let voluto = stato.comando;
     if (touch && comandi === 'inclina' && stato.inclina !== null && stato.fase !== 'menu') voluto = stato.inclina;
     if (stato.fase === 'menu') voluto = pilotaDemo();
-    if (T.colpito) voluto = 0;
+    if (T.colpito || stato.fase === 'soccorso') voluto = 0;
     const vObiettivo = voluto * FISICA.velX;
     const passoV = FISICA.accel * dt;
     T.vx += clamp(vObiettivo - T.vx, -passoV, passoV);
@@ -868,9 +909,11 @@
     T.h += T.vy * dt;
     if (T.schiaccia > 0) T.schiaccia = Math.max(0, T.schiaccia - dt);
     if (T.invulnerabile > 0) T.invulnerabile -= dt;
+    // l'elicotterino tiene Tino appeso al filo
+    aggiornaElicottero(dt);
 
     // appoggio sui rami: solo scendendo, se i piedi passano la cima
-    if (T.vy < 0 && !T.colpito && stato.fase !== 'cade') {
+    if (T.vy < 0 && !T.colpito && stato.fase !== 'cade' && stato.fase !== 'soccorso') {
       for (const r of stato.rami) {
         if (r.rotto) continue;
         if (hPrima < r.h - 0.5 || T.h > r.h) continue;
@@ -937,9 +980,10 @@
     stato.agenti = stato.agenti.filter((a) => a.h > sotto - 200);
     stato.bollette = stato.bollette.filter((b) => b.h > sotto && b.t < 6);
 
-    // caduta fuori dallo schermo
-    if (giocando && T.h < stato.cam - 90) {
-      if (stato.fase === 'gioco') {
+    // caduta fuori dallo schermo (con l'elicotterino si interviene prima, finché si vede)
+    if (giocando && T.h < stato.cam - (stato.attivi.soccorso && T.vy < 0 ? 40 : 90)) {
+      if (stato.fase === 'gioco' && stato.attivi.soccorso) avviaSoccorso();
+      else if (stato.fase === 'gioco') {
         stato.fase = 'cade';
         stato.statistiche.causa = stato.statistiche.causa || 'caduto';
         suoni.cade();
@@ -953,6 +997,108 @@
     if (stato.fase === 'menu' && T.h < stato.cam - 90) {
       demo();
     }
+  }
+
+  // ---------------------------------------------------------------- elicotterino
+  function avviaSoccorso() {
+    const T = stato.tino;
+    delete stato.attivi.soccorso;
+    stato.fase = 'soccorso';
+    const lato = T.x < W / 2 ? 1 : -1;
+    stato.elicottero = {
+      fase: 'arriva', t: 0, x: giro(T.x + lato * 320), h: stato.cam + alt * 0.85,
+      x0: giro(T.x + lato * 320), h0: stato.cam + alt * 0.85, verso: -lato, ramo: null, filo: 0,
+    };
+    T.colpito = false;
+    T.invulnerabile = 99;
+    stato.pigne = stato.pigne.filter((p) => p.avviso <= 0 && Math.abs(dx(p.x, T.x)) > 80);
+    stato.bollette = [];
+    if (stato.statistiche) { stato.statistiche.soccorsi++; stato.statistiche.causa = null; }
+    const chi = stato.chi === 'gino' ? 'Papà' : 'Gino';
+    messaggio(chi + ' al salvataggio!', 'Tieniti forte alla lenza!', 1.8);
+    suoni.elicottero(SOCCORSO.arriva + SOCCORSO.porta + 0.4);
+  }
+
+  // un ramo sicuro, ben dentro lo schermo, senza agenti
+  function ramoDiSalvataggio(x) {
+    let migliore = null, voto = Infinity;
+    for (const r of stato.rami) {
+      if (r.rotto || r.tipo === 'secco') continue;
+      if (stato.agenti.some((a) => a.ramo === r && !a.stordito)) continue;
+      const y = (r.h - stato.cam) / alt;
+      if (r.tipo !== 'prato' && (y < 0.2 || y > 0.62)) continue;
+      const v = Math.abs(y - 0.35) * 600 + Math.abs(dx(x, r.x)) + (r.tipo === 'mobile' ? 80 : 0);
+      if (v < voto) { voto = v; migliore = r; }
+    }
+    if (!migliore) {
+      for (const r of stato.rami) {
+        if (r.rotto || r.tipo === 'secco' || r.h < stato.cam + 60) continue;
+        if (!migliore || r.h < migliore.h) migliore = r;
+      }
+    }
+    return migliore;
+  }
+
+  // punta della canna e gancio
+  function puntaCanna(E) {
+    return { x: giro(E.x + E.verso * SOCCORSO.canna.dx), h: E.h + SOCCORSO.canna.dh };
+  }
+  const liscia = (k) => k * k * (3 - 2 * k);
+
+  function aggiornaElicottero(dt) {
+    const E = stato.elicottero;
+    if (!E) return;
+    const T = stato.tino;
+    E.t += dt;
+    if (E.fase === 'arriva') {
+      // Tino cade sempre più piano, l'elicottero arriva sopra di lui
+      T.vy *= Math.exp(-6 * dt);
+      T.vx = 0;
+      T.h = Math.max(T.h, stato.cam - 30);
+      const k = liscia(Math.min(1, E.t / SOCCORSO.arriva));
+      const dove = { x: giro(T.x - E.verso * SOCCORSO.canna.dx), h: T.h + TINO.alto + SOCCORSO.filo - SOCCORSO.canna.dh };
+      E.x = giro(E.x0 + dx(E.x0, dove.x) * k);
+      E.h = E.h0 + (dove.h - E.h0) * k;
+      E.filo = SOCCORSO.filo * Math.min(1, E.t / SOCCORSO.arriva);
+      if (E.t >= SOCCORSO.arriva) {
+        E.fase = 'porta'; E.t = 0; E.x0 = E.x; E.h0 = E.h;
+        E.ramo = ramoDiSalvataggio(T.x);
+        suoni.lenza();
+      }
+      return;
+    } else if (E.fase === 'porta') {
+      const r = E.ramo;
+      const k = liscia(Math.min(1, E.t / SOCCORSO.porta));
+      const rx = r ? r.x : E.x0, rh = r ? r.h + 8 : E.h0;
+      const dove = { x: giro(rx - E.verso * SOCCORSO.canna.dx), h: rh + TINO.alto + SOCCORSO.filo - SOCCORSO.canna.dh };
+      E.x = giro(E.x0 + dx(E.x0, dove.x) * k);
+      E.h = E.h0 + (dove.h - E.h0) * k + Math.sin(k * Math.PI) * 60;
+      if (E.t >= SOCCORSO.porta) {
+        // posato sul ramo: un saltino e si riparte
+        E.fase = 'via'; E.t = 0; E.x0 = E.x; E.h0 = E.h;
+        T.x = rx; T.h = rh; T.vy = -40;
+        stato.fase = 'gioco';
+        T.invulnerabile = SOCCORSO.protetto;
+        T.deriva = 0;
+        if (stato.capo && stato.capo.fase === 'insegue') stato.capo.h = Math.min(stato.capo.h, stato.cam - 260 - CAPO.alto);
+        suoni.ripescato();
+        scritta('Salvo!', T.x, T.h + TINO.alto + 30, '#ffe066');
+        stato.fumetto = { testo: stato.chi === 'gino' ? 'Grazie papà!' : 'Grazie Gino!', t: 1.6 };
+        return;
+      }
+    } else {
+      // se ne va in alto, girando la canna
+      E.filo = Math.max(0, E.filo - dt * 300);
+      E.h = E.h0 + 260 * (E.t * E.t);
+      E.x = giro(E.x0 + E.verso * 220 * E.t);
+      if (E.t >= SOCCORSO.via) stato.elicottero = null;
+      return;
+    }
+    // Tino appeso al gancio
+    const p = puntaCanna(E);
+    T.x = p.x;
+    T.h = p.h - E.filo - TINO.alto;
+    T.vy = 0; T.vx = 0;
   }
 
   function atterra(r) {
@@ -1120,6 +1266,7 @@
           if (!stato.statistiche.tipiPoteri.includes(p.id)) stato.statistiche.tipiPoteri.push(p.id);
         }
         if (p.id === 'elica') suoni.elica(); else if (p.id === 'bolla') suoni.bolla(); else suoni.potere();
+        if (p.id === 'soccorso') stato.fumetto = null;
         scritta(POTERI[p.id].nome + '!', p.x, p.h + 40, '#fff');
         scintille(p.x, p.h, '#fff6a8', 12);
       }
@@ -1141,7 +1288,7 @@
       'senza-poteri': m >= 300 && s.poteri === 0,
       funghi: s.funghi >= 3,
       seminato: s.seminati >= 1,
-      poteri: s.tipiPoteri.length >= 3,
+      poteri: ['elica', 'bolla', 'calamita'].every((id) => s.tipiPoteri.includes(id)),
       intatto: m >= 600 && s.colpi === 0 && s.parati === 0,
       gino: stato.chi === 'gino' && m >= TAPPE[2].da,
     };
@@ -1364,6 +1511,7 @@
     disegnaTifoso();
     // Tino
     if (T) disegnaTino(T);
+    if (stato.elicottero) disegnaElicottero(stato.elicottero);
     for (const p of stato.pigne) disegnaPigna(p);
     // particelle
     for (const p of stato.particelle) {
@@ -1941,6 +2089,7 @@
     ctx.fillStyle = al;
     ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
     if (id === 'elica') disegnaElica(0, 6, 1, stato.tempo * 12);
+    else if (id === 'soccorso') { ctx.scale(0.42, 0.42); formaElicottero(null, stato.tempo * 30, 1); }
     else if (id === 'bolla') {
       ctx.strokeStyle = 'rgba(120, 200, 255, 0.95)';
       ctx.fillStyle = 'rgba(190, 235, 255, 0.45)';
@@ -1979,6 +2128,98 @@
     ctx.fillStyle = '#4ea844';
     ctx.beginPath(); ctx.ellipse(0, -16, 18 * Math.abs(k) + 2, 3.5, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
+  }
+
+  // elicotterino (disegnato nel codice), guardando a destra, centrato sul corpo;
+  // `chi`: la foto di chi lo guida, nella cabina
+  function formaElicottero(chi, ang, verso) {
+    ctx.save();
+    ctx.scale(verso, 1);
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#5a3414';
+    ctx.lineWidth = 2.5;
+    // pattini
+    ctx.beginPath();
+    ctx.moveTo(-22, 18); ctx.lineTo(-18, 27); ctx.moveTo(14, 18); ctx.lineTo(10, 27);
+    ctx.moveTo(-32, 27); ctx.lineTo(26, 27); ctx.quadraticCurveTo(34, 27, 34, 21);
+    ctx.stroke();
+    // coda con l'elichetta
+    ctx.fillStyle = '#e8483f';
+    ctx.beginPath();
+    ctx.moveTo(-24, -6); ctx.lineTo(-66, -12); ctx.lineTo(-70, -2); ctx.lineTo(-24, 8); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f5c518';
+    ctx.beginPath(); ctx.moveTo(-64, -10); ctx.lineTo(-74, -26); ctx.lineTo(-66, -26); ctx.lineTo(-58, -11); ctx.fill(); ctx.stroke();
+    const kc = Math.cos(ang * 1.7);
+    ctx.fillStyle = '#4ea844';
+    ctx.beginPath(); ctx.ellipse(-68, -6, 3, 12 * Math.abs(kc) + 2, 0, 0, Math.PI * 2); ctx.fill();
+    // corpo
+    ctx.fillStyle = '#e8483f';
+    ctx.beginPath(); ctx.ellipse(0, 2, 32, 21, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath(); ctx.ellipse(-10, -8, 14, 5, -0.2, 0, Math.PI * 2); ctx.fill();
+    // cabina di vetro con chi guida
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(16, -3, 17, 17, 0, 0, Math.PI * 2); ctx.closePath();
+    ctx.fillStyle = '#cfefff';
+    ctx.fill();
+    ctx.clip();
+    if (chi && pronta(chi)) {
+      const hh = chi === immagini.gino ? 30 : 36, ww = hh * chi.naturalWidth / chi.naturalHeight;
+      ctx.drawImage(chi, 17 - ww / 2, 13 - hh, ww, hh);
+    }
+    ctx.fillStyle = 'rgba(190, 235, 255, 0.35)';
+    ctx.fillRect(-2, -22, 36, 40);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.beginPath(); ctx.ellipse(22, -12, 6, 3, -0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.ellipse(16, -3, 17, 17, 0, 0, Math.PI * 2); ctx.stroke();
+    // albero e pale
+    ctx.fillStyle = '#5a3414';
+    ctx.fillRect(-3, -28, 6, 10);
+    const k = Math.cos(ang);
+    ctx.fillStyle = '#4ea844';
+    ctx.beginPath(); ctx.ellipse(0, -29, 50 * Math.abs(k) + 4, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f5c518';
+    ctx.beginPath(); ctx.arc(0, -29, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function disegnaElicottero(E) {
+    const y = sy(E.h);
+    const chi = stato.chi === 'gino' ? immagini.normale : immagini.gino;
+    const v = E.verso;
+    const dondola = Math.sin(stato.tempo * 4) * 0.05 + (E.fase === 'porta' ? -0.08 * v : E.fase === 'via' ? 0.12 * v : 0);
+    ripetiLati(E.x, 110, (x) => {
+      ctx.save();
+      ctx.translate(x, y + Math.sin(stato.tempo * 6) * 2);
+      ctx.rotate(dondola);
+      // canna da pesca che esce dal finestrino
+      ctx.strokeStyle = '#7a4a22';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const S = SOCCORSO.scala;
+      ctx.moveTo(v * 14 * S, 4 * S);
+      ctx.quadraticCurveTo(v * 34 * S, -6 * S, v * SOCCORSO.canna.dx, -SOCCORSO.canna.dh);
+      ctx.stroke();
+      ctx.fillStyle = '#d9dde3';
+      ctx.beginPath(); ctx.arc(v * 22 * S, 1 * S, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.scale(S, S);
+      formaElicottero(chi, stato.tempo * 40, v);
+      ctx.restore();
+      // lenza e gancio (dritti in giù dalla punta)
+      const px = x + v * SOCCORSO.canna.dx, py = y - SOCCORSO.canna.dh;
+      const gy = py + E.filo;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, gy); ctx.stroke();
+      ctx.strokeStyle = '#8a8f99';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(px, gy); ctx.lineTo(px, gy + 8); ctx.arc(px - 5, gy + 8, 5, 0, Math.PI * 0.9); ctx.stroke();
+      ctx.restore();
+    });
   }
 
   function disegnaAgente(a) {
@@ -2222,6 +2463,7 @@
     let espr = 'normale';
     if (stato.fase === 'fine') espr = 'ko';
     else if (T.colpito) espr = 'ferito';
+    else if (stato.fase === 'soccorso') espr = 'arrabbiato';
     else if (T.vy < -900 && !stato.attivi.elica) espr = 'arrabbiato';
     else if (stato.agenti.some((a) => !a.stordito && Math.abs(dx(a.x, T.x)) < 90 && Math.abs(a.h - T.h) < 110)) espr = 'arrabbiato';
     else if (stato.capo && stato.capo.fase === 'insegue' && T.h - (stato.capo.h + CAPO.alto) < 260) espr = 'arrabbiato';
@@ -2239,7 +2481,7 @@
     let sx = 1, syy = 1;
     if (T.schiaccia > 0) { const k = T.schiaccia / 0.14; sx = 1 + 0.18 * k; syy = 1 - 0.2 * k; }
     else if (T.vy > 400) { const k = Math.min(1, (T.vy - 400) / 600); sx = 1 - 0.06 * k; syy = 1 + 0.08 * k; }
-    const lampeggia = T.invulnerabile > 0 && Math.floor(stato.tempo * 12) % 2 === 0;
+    const lampeggia = T.invulnerabile > 0 && stato.fase !== 'soccorso' && Math.floor(stato.tempo * 12) % 2 === 0;
     ripetiLati(T.x, w / 2 + 4, (x) => {
       ctx.save();
       ctx.translate(x, y);
@@ -2255,6 +2497,12 @@
       } else if (T.colpito) ctx.rotate(Math.sin(stato.tempo * 18) * 0.25);
       if (gino && espr === 'arrabbiato' && !T.colpito) ctx.rotate(Math.sin(stato.tempo * 30) * 0.04);
       if (stato.attivi.elica) ctx.rotate(Math.sin(stato.tempo * 10) * 0.06);
+      if (stato.fase === 'soccorso') {
+        // appeso al gancio per la testa: dondola
+        ctx.translate(0, -h);
+        ctx.rotate(Math.sin(stato.tempo * 5) * 0.14);
+        ctx.translate(0, h);
+      }
       ctx.scale(sx * T.verso, syy);
       if (lampeggia) ctx.globalAlpha = 0.45;
       ctx.drawImage(im, -w / 2, -h, w, h);
@@ -2371,7 +2619,7 @@
   function disegnaPoteriAttivi() {
     let x = 30;
     for (const id of Object.keys(stato.attivi)) {
-      const resta = stato.attivi[id] / POTERI[id].durata;
+      const resta = Number.isFinite(POTERI[id].durata) ? stato.attivi[id] / POTERI[id].durata : 1;
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
       ctx.beginPath(); ctx.arc(x, 32, 22, 0, Math.PI * 2); ctx.fill();
@@ -2430,7 +2678,7 @@
         <li>Gli <b>agenti della Tari</b> si stordiscono saltandoci in testa; toccarli di lato o prendere una bolletta fa cadere Tino.</li>
         <li>Se in cima compare un <b>!</b> sta per cadere una pigna: spostati. Nel cielo il <b>vento</b> spinge di lato.</li>
         <li>Ogni 500 m l'<b>ispettore capo</b> sale dal basso su una pila di pratiche: non si stordisce, va seminato salendo in fretta.</li>
-        <li>Poteri: <b>cappello a elica</b> (vola su), <b>bolla</b> (para un colpo), <b>calamita</b> (attira le ghiande).</li>
+        <li>Poteri: <b>cappello a elica</b> (vola su), <b>bolla</b> (para un colpo), <b>calamita</b> (attira le ghiande), <b>elicotterino</b> (se cadi, Gino ti ripesca con la canna da pesca).</li>
       </ol>
       ${touch ? '' : '<p><kbd>P</kbd> pausa · <kbd>M</kbd> tutti i suoni · <kbd>N</kbd> solo la musica</p>'}
     </div>`;
@@ -2597,7 +2845,7 @@
 
   // utile per le prove automatiche
   window.saltaTino = {
-    stato, avvia, aggiorna, finisci, curva, dx, posRamo, tappaA, TRAGUARDI,
+    stato, avvia, aggiorna, finisci, curva, dx, posRamo, tappaA, TRAGUARDI, SOCCORSO,
     get traguardi() { return traguardi; },
     premi: (v) => { stato.comando = clamp(v, -1, 1); },
     FISICA, TINO, TAPPE, CURVE, AGENTE, POTERI, PIGNA, MOLLA, VENTO, CAPO, PX_M, W,
