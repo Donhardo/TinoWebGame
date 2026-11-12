@@ -125,6 +125,7 @@ body {
   transform-origin: 50% 100%;
 }
 .ritratti .gino { max-height: 70%; }
+.ritratti .tifoso { max-height: 72%; }
 .ritratti .salta { animation: saltello 1.2s ease-in-out infinite; }
 .ritratti .vola { animation: vola 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
 .ritratti .caduto { transform: rotate(80deg) scale(0.8); transform-origin: 50% 50%; opacity: 0.85; }
@@ -184,6 +185,16 @@ kbd {
 .scheda.attiva { background: var(--marrone); color: #fff; }
 .scheda:focus-visible { outline: 3px solid #ffd59a; }
 .nota { font-size: 0.9rem; opacity: 0.8; }
+
+/* Traguardi */
+.traguardi { margin-top: 12px; text-align: left; background: #fff; border-radius: 14px; padding: 8px 12px; }
+.traguardi summary { cursor: pointer; font-weight: 700; color: var(--marrone); text-align: center; }
+.traguardi ul { list-style: none; margin: 8px 0 2px; padding: 0; display: grid; gap: 4px; }
+.traguardi li { font-size: 0.92rem; opacity: 0.55; display: grid; grid-template-columns: 1.3em 1fr; column-gap: 4px; }
+.traguardi li.fatto { opacity: 1; }
+.traguardi li span:last-child { grid-column: 2; font-size: 0.85rem; }
+.traguardi .segno { grid-row: span 2; color: #c9930a; font-size: 1.1rem; line-height: 1.2; }
+.nuovi-traguardi { color: #8a5a00; }
 
 @media (max-width: 560px) {
   .barra { grid-template-columns: auto 1fr auto; }
