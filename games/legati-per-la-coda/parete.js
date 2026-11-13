@@ -1,26 +1,29 @@
 /*
  * Legati per la Coda: la parete, generata a caso salendo (senza Three.js).
- * Una catena di appigli "sicuri" (mensole e pioli) mai più lontani di quanto si
- * arriva con un salto, più qualche appiglio in più di lato. La difficoltà cresce
- * con l'altezza (tabella CURVE: punti [metri, valore], lineari tra un punto e l'altro).
+ * Una catena di appigli "sicuri" (sbarre e pioli): ognuno si raggiunge dondolando
+ * appesi al precedente. Ogni tanto un appiglio in più dall'altra parte. La difficoltà
+ * cresce con l'altezza (tabella CURVE: punti [metri, valore], lineari tra un punto e
+ * l'altro): appigli più alti rispetto al perno (bisogna aspettare un dondolo più
+ * ampio), sbarre più corte e poi solo pioli.
  */
 import { FISICA } from './fisica.js';
 
 export const CURVE = {
-  salto: [[0, 1.55], [30, 1.85], [120, 2.1], [300, 2.2]],     // dislivello massimo tra due sicuri
-  largo: [[0, 3.4], [40, 2.6], [150, 1.8], [400, 1.4]],      // larghezza delle mensole
-  dx: [[0, 1.1], [40, 1.8], [150, 2.4], [400, 2.6]],         // spostamento di lato massimo
-  pioli: [[0, 0], [15, 0.12], [100, 0.3], [300, 0.4]],       // quanti sicuri sono pioli
-  extra: [[0, 0.6], [100, 0.45], [300, 0.3]],                // appigli in più
+  angolo: [[0, [0.95, 1.15]], [40, [0.8, 1.15]], [150, [0.68, 1.1]], [300, [0.62, 1.05]]],  // dalla verticale, rad
+  distanza: [[0, [2.0, 2.4]], [150, [2.0, 2.6]]],                                         // dal precedente
+  sbarra: [[0, 2.4], [30, 1.8], [100, 1.1], [200, 0.7]],                                  // lunghezza
+  pioli: [[0, 0], [12, 0.15], [80, 0.45], [200, 0.7], [400, 0.85]],                         // quanti sono pioli
+  extra: [[0, 0]],                                                                          // per ora nessuno
 };
 
 export function curva(punti, h) {
+  const lin = (a, b, k) => (Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * k) : a + (b - a) * k);
   if (h <= punti[0][0]) return punti[0][1];
   for (let i = 1; i < punti.length; i++) {
     const [h1, v1] = punti[i];
     if (h <= h1) {
       const [h0, v0] = punti[i - 1];
-      return v0 + ((v1 - v0) * (h - h0)) / (h1 - h0);
+      return lin(v0, v1, (h - h0) / (h1 - h0));
     }
   }
   return punti[punti.length - 1][1];
@@ -37,64 +40,76 @@ function rng(seme) {
   };
 }
 
+const R_PIOLO = 0.24, R_SBARRA = 0.14;
+const LIM = 2.3;   // gli appigli stanno lontani dai muri: dondolando non si sbatte
+
 export function nuovaParete(seme = 1) {
   const L = FISICA.largo / 2;
-  const isola = { id: 0, tipo: 'mensola', isola: true, x1: -L, x2: L, y: 0, spess: 2.2, sicuro: true };
-  const p = { seme, caso: rng(seme), appigli: [isola], cima: 0, ultimo: isola, n: 1 };
-  return p;
+  const isola = { id: 0, tipo: 'isola', isola: true, x1: -L, x2: L, y: 0 };
+  const primo = { id: 1, tipo: 'sbarra', x1: -1.3, x2: 1.3, y: 3.45, r: R_SBARRA, sicuro: true };
+  return { seme, caso: rng(seme), appigli: [isola, primo], cima: primo.y, ultimo: primo, n: 2, lato: seme % 2 ? -1 : 1 };
 }
 
-const centro = (a) => (a.tipo === 'mensola' ? (a.x1 + a.x2) / 2 : a.x);
+/* Il passo più lungo: dal punto del precedente più lontano al punto più vicino del nuovo. */
+const MAX_PASSO = 2.55;
+const estremi = (a) => (a.tipo === 'sbarra' ? [[a.x1, a.y], [a.x2, a.y]] : [[a.x, a.y]]);
+function vicino(a, x, y) {
+  const px = a.tipo === 'sbarra' ? Math.max(a.x1, Math.min(a.x2, x)) : a.x;
+  return Math.hypot(px - x, a.y - y);
+}
+function lontano(prec, a) { return Math.max(...estremi(prec).map(([x, y]) => vicino(a, x, y))); }
+
+export const centro = (a) => (a.tipo === 'sbarra' ? (a.x1 + a.x2) / 2 : a.x);
+
+function nuovoAppiglio(p, tipo, x, y, lungo, sicuro) {
+  if (tipo === 'piolo') return { id: p.n++, tipo, x, y, r: R_PIOLO, sicuro };
+  const x1 = Math.max(-LIM, x - lungo / 2), x2 = Math.min(LIM, x + lungo / 2);
+  return { id: p.n++, tipo, x1, x2, y, r: R_SBARRA, sicuro };
+}
 
 /* Genera appigli finché la cima non arriva ad almeno y. */
 export function generaFino(p, y) {
-  const L = FISICA.largo / 2;
   const caso = p.caso;
   while (p.cima < y) {
     const prec = p.ultimo;
     const h = prec.y;
-    const gapMax = curva(CURVE.salto, h) - (prec.tipo === 'piolo' ? 0.25 : 0);
-    const gap = gapMax * (0.72 + 0.28 * caso());
-    const ny = prec.y + gap;
-    const dxMax = curva(CURVE.dx, h);
-    const piolo = caso() < curva(CURVE.pioli, h) && prec.tipo !== 'piolo';
-    let a;
-    // centro del nuovo: vicino al precedente, dentro i muri
-    const cPrec = prec.isola ? (caso() - 0.5) * 3 : centro(prec);
-    let cx = cPrec + (caso() * 2 - 1) * dxMax;
-    if (piolo) {
-      cx = cPrec + (caso() * 2 - 1) * Math.min(dxMax, 1.6);
-      cx = Math.max(-L + 0.9, Math.min(L - 0.9, cx));
-      a = { id: p.n++, tipo: 'piolo', x: cx, y: ny, r: 0.26, sicuro: true };
-    } else {
-      const w = curva(CURVE.largo, h) * (0.85 + 0.3 * caso());
-      // dopo un piolo il bordo più vicino della mensola non è troppo di lato
-      if (prec.tipo === 'piolo') cx = Math.max(prec.x - w / 2 - 1.2, Math.min(prec.x + w / 2 + 1.2, cx));
-      cx = Math.max(-L + w / 2, Math.min(L - w / 2, cx));
-      a = { id: p.n++, tipo: 'mensola', x1: cx - w / 2, x2: cx + w / 2, y: ny, spess: 0.5, sicuro: true };
+    const [a0, a1] = curva(CURVE.angolo, h);
+    const [d0, d1] = curva(CURVE.distanza, h);
+    const ang = a0 + (a1 - a0) * caso();
+    const dist = d0 + (d1 - d0) * caso();
+    // di solito si va dall'altra parte; vicino ai muri per forza verso il centro
+    const cx = centro(prec);
+    let lato = caso() < 0.7 ? -p.lato : p.lato;
+    if (cx + lato * dist * Math.sin(ang) > LIM || cx + lato * dist * Math.sin(ang) < -LIM) lato = -lato;
+    // il punto della sbarra più vicino al perno è quello da raggiungere
+    const px = cx + lato * dist * Math.sin(ang);
+    const py = prec.y + dist * Math.cos(ang);
+    const piolo = caso() < curva(CURVE.pioli, h);
+    const lungo = curva(CURVE.sbarra, h) * (0.8 + 0.4 * caso());
+    const xc = piolo ? px : px + lato * lungo * 0.4;
+    let a = nuovoAppiglio(p, piolo ? 'piolo' : 'sbarra', Math.max(-LIM, Math.min(LIM, xc)), py, lungo, true);
+    // da qualunque punto del precedente ci si arriva: se no lo si avvicina
+    for (let k = 0; k < 8 && lontano(prec, a) > MAX_PASSO; k++) {
+      const f = 0.88;
+      const nx = cx + (centro(a) - cx) * f, ny = prec.y + (a.y - prec.y) * (0.94 + 0.06 * f);
+      p.n--;
+      a = nuovoAppiglio(p, a.tipo, nx, ny, a.tipo === 'sbarra' ? (a.x2 - a.x1) : 0, true);
     }
     p.appigli.push(a);
-    // un appiglio in più, dall'altra parte, a metà strada
-    if (caso() < curva(CURVE.extra, h) && !prec.isola) {
-      const lato = cx > 0 ? -1 : 1;
-      const ex = lato * (1.6 + caso() * (L - 2.2));
-      const ey = (prec.y + ny) / 2 + (caso() - 0.5) * 0.6;
-      if (Math.abs(ex - cx) > 2.4 && Math.abs(ex - centro(prec)) > 2.4) {
-        if (caso() < 0.5) p.appigli.push({ id: p.n++, tipo: 'piolo', x: ex, y: ey, r: 0.26 });
-        else {
-          const w = 1 + caso() * 0.8;
-          const x1 = Math.max(-L, Math.min(L - w, ex - w / 2));
-          p.appigli.push({ id: p.n++, tipo: 'mensola', x1, x2: x1 + w, y: ey, spess: 0.45 });
-        }
-      }
+    p.lato = lato;
+    // un appiglio in più, più in basso dall'altra parte: una scorciatoia che non serve
+    if (caso() < curva(CURVE.extra, h)) {
+      const ex = Math.max(-LIM, Math.min(LIM, cx - lato * (1.6 + caso() * 1.2)));
+      const ey = prec.y + 0.8 + caso() * 1.2;
+      if (Math.abs(ex - cx) > 1.2) p.appigli.push(nuovoAppiglio(p, caso() < 0.5 ? 'piolo' : 'sbarra', ex, ey, 1, false));
     }
     p.ultimo = a;
-    p.cima = ny;
+    p.cima = py;
   }
   p.appigli.sort((a, b) => a.y - b.y);
 }
 
-/* Toglie gli appigli ormai troppo in basso. */
+/* Toglie gli appigli ormai troppo in basso (l'isola resta). */
 export function pota(p, yMin) {
-  p.appigli = p.appigli.filter((a) => a.y >= yMin || a === p.ultimo);
+  p.appigli = p.appigli.filter((a) => a.isola || a.y >= yMin || a === p.ultimo);
 }

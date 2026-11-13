@@ -2202,7 +2202,7 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
 
 ## Gioco in corso: Legati per la Coda (`games/legati-per-la-coda/`)
 Salita infinita in due: Tino e Gino sono legati da un filo di lana elastico e salgono
-una parete alternandosi (uno fa da ancora, l'altro salta, dondola e si lancia). Idea scelta in
+una parete alternandosi (uno tiene e fa da perno, l'altro dondola e si aggrappa più su). Idea scelta in
 un brainstorming (novembre 2026) tra altre sei; proposta approvata dal proprietario.
 File: `index.html`, `stile.css`, `fisica.js` (corpi, filo, presa e salto, sul piano; senza
 Three.js, si usa anche da node), `parete.js` (appigli generati a caso), `gioco.js` (scena 3D,
@@ -2212,56 +2212,64 @@ telecamera, comandi, pannelli). Three.js è quello di Tino Golf, importato con
 - **Decisioni prese**: titolo "Legati per la Coda"; salita infinita (non livelli);
   stesso mondo giocattolo morbido di Tino Golf (colori pastello, forme stondate, ibrido
   2D/3D); un tasto per personaggio. Si gioca in verticale (sul telefono in orizzontale
-  compare "Gira il telefono" e il gioco va in pausa).
-- **Comandi** (`premi(m, i, giu)` in `fisica.js`): premere = si aggrappa a ciò che tocca
-  (mensola, piolo, muro); se non tocca niente resta "pronto" e si aggrappa appena tocca
-  qualcosa (alone giallo che pulsa; fermo e acceso quando tiene). Lasciare = si stacca.
-  Tocco breve (meno di 0,2 s) da appoggiato o aggrappato = salto; tocco breve in aria =
-  spinta (al massimo 3 per volo, ogni 0,3 s): col filo teso e l'altro aggrappato lungo la
-  tangente, per dondolare, altrimenti un po' avanti e in su. Computer: A o Maiusc sinistro
-  Tino, L o Maiusc destro Gino; col mouse clic nella metà sinistra Tino, destra Gino (tasto
-  destro sempre Gino); telefono: metà sinistra / metà destra, un dito per personaggio (in due
-  un tasto a testa). P o Esc pausa; i tasti lasciati in pausa contano quando si riprende.
-- **Fisica** (tabella `FISICA`, passo 1/240 s): metri, x verso destra (muri a ±4), y verso
-  l'alto (0 = cima dell'isola). Gravità 22, salto 10,8 in su e 2,4 di lato (~2,6 m), dal muro
-  si salta via dal muro, dal piolo ci si tira su (×1,1) e per 0,35 s non lo si urta. Corpi
-  tondi: Tino r 0,46 (foto alta 1,3), Gino r 0,36 (alta 0,95, massa 0,75). Sulle mensole
-  camminano da soli avanti e indietro (1,1 m/s), si girano ai bordi e verso l'altro se il filo
-  tira; con una spinta del filo oltre `trascina` vengono trascinati (e cadono dal bordo). Le
-  mensole si passano da sotto e ci si atterra sopra; i pioli sono tondi e solidi; i muri di
-  cuscini fanno rimbalzare e si possono prendere. Filo: riposo 2,8, oltre tira (k 30,
-  smorzato), oltre 4,6 non cede (strattone). **Fionda**: lasciando chi è aggrappato col filo
-  teso più di 0,25 e l'altro aggrappato, parte verso l'altro a 8 + 10 × stiramento (al
-  massimo 19): con il filo a 3,8-4,6 arriva ~3 m sopra l'altro.
-- **Parete** (`parete.js`, curve `CURVE` [metri, valore]): isola larga quanto la parete alla
-  partenza, poi una catena di appigli "sicuri" (mensole e pioli) con dislivello massimo
-  1,55 → 2,2 m (300 m; 0,25 in meno dopo un piolo), mensole larghe 3,4 → 1,4, di lato fino a
-  1,1 → 2,6 (i pioli al massimo 1,6; dopo un piolo il bordo della mensola è entro 1,2), pioli
-  dai 15 m (12% → 40%); qualche appiglio in più dall'altra parte a metà strada. **Sempre
-  battibile**: un copione (node, non nel repository) prova per ogni coppia di sicuri, con
-  l'ancora sul primo in 7 posti e chi salta in 7 posti, nei due versi, con 8 istanti per
-  aggrapparsi, se chi salta arriva sul secondo (Tino e Gino): 12 pareti fino a 300 m, 4224
-  prove, 0 fallite. La fionda non serve mai: è una scorciatoia.
+  compare "Gira il telefono" e il gioco va in pausa). **Dopo la prima prova** il proprietario
+  l'ha trovato "macchinoso" (tocco breve = salto, pressione lunga = presa, camminata da sola,
+  spinte e fionda nascoste): scelto il **dondolo**, una regola sola.
+- **Comandi** (`premi(m, i, giu)` in `fisica.js`): **premuto = si tiene, lasciato = si
+  lascia.** Chi tiene fa da perno; chi non tiene, appeso al filo, dondola da solo, ogni volta
+  più in alto. Premendo il tasto di chi dondola (o cade, o saltella sull'isola) si aggrappa al
+  primo appiglio che tocca, ma solo più in alto di quello dell'altro (`aPortata`, `perno`; se
+  l'altro non tiene, a qualunque). Se nessuno dei due tiene cadono tutti e due. Sull'isola di
+  partenza si saltella da soli (`FISICA.saltello`, ogni 1,1 s, ~2,9 m): tenendo premuto ci si
+  aggrappa alla prima sbarra; se l'altro tiene in alto, chi è sull'isola salta subito e si lascia
+  penzolare. Computer: A o Maiusc sinistro Tino, L o Maiusc destro Gino; mouse: clic a
+  sinistra Tino, a destra Gino (tasto destro sempre Gino); telefono: metà sinistra / metà
+  destra, un dito per personaggio (in due un tasto a testa). P o Esc pausa; i tasti lasciati in
+  pausa contano quando si riprende.
+- **Fisica** (tabelle `FISICA` e `DONDOLO`, passo 1/240 s): metri, x verso destra (muri di
+  cuscini a ±5), y verso l'alto (0 = cima dell'isola). Gravità 22, filo lungo 2,3. Corpi tondi:
+  Tino r 0,46 (foto alta 1,3), Gino r 0,36 (alta 0,95). Il dondolo è un pendolo ad asta
+  (`dondola`, angolo `th` dal basso e velocità `om`) che si spinge da solo (4,5 m/s² lungo il
+  giro) fino a 160° (`ampiezza`): quando il filo si tende parte ad almeno 1,3 rad/s, verso
+  l'appiglio più alto vicino (`versoSpinta`). Contro i cuscini dei muri e l'isola rimbalza
+  (0,92). In volo libero il filo non si allunga oltre 2,3 (strattone sopra 5 m/s). Si arriva ad
+  aggrapparsi entro r + 0,32 dall'appiglio (`FISICA.presa`). Prove fatte e scartate: muri che
+  smorzano il dondolo (con un perno vicino al muro non si saliva più), scivolare su lungo il muro
+  (il dondolo non ripartiva), spinta più forte all'inizio (alcune salite si bloccavano).
+- **Parete** (`parete.js`, curve `CURVE` [metri, valore]): isola larga quanto la parete, prima
+  sbarra a 3,45 m, poi una catena di appigli (sbarre e pioli) ognuno a 2-2,6 m dal precedente,
+  a 35°-66° dalla verticale (sempre più verso l'alto salendo: serve un dondolo più ampio), di
+  solito dall'altra parte; da qualunque punto del precedente il nuovo è entro 2,55 m
+  (`MAX_PASSO`, se no lo si avvicina). Appigli tra x = ±2,3, lontani dai muri. Sbarre lunghe
+  2,4 → 0,7 m, pioli dai 12 m (15% → 85% a 400 m). Per ora niente appigli in più (`extra` a 0:
+  da uno in più si poteva restare senza strada). **Sempre battibile**, provato con copioni in
+  node (non nel repository): un giocatore perfetto (si aggrappa appena ha a portata un appiglio
+  più alto, poi l'altro lascia) arriva a 120 m in 30 salite su 30, ~0,5 m/s (~2 s per metro);
+  una "persona" che preme quando l'anello si accende con 0,15-0,6 s di ritardo arriva a 60 m in
+  18-20 salite su 20 (~130-150 s).
 - **Telecamera**: vede almeno 9,8 m di larghezza e 14 di altezza; sale con la coppia e scende
   al massimo 3 m sotto il punto più alto raggiunto; se tutti e due finiscono 7,4 m sotto il
   centro la salita finisce (0,6 s dopo). Altezza = piedi del più basso, la più alta raggiunta;
   record in `localStorage` `legati-per-la-coda:record` (e `salite`).
-- **Grafica** (palette menta in `PALETTE`): mensole a cuscino crema col prato sopra, pioli rosa
+- **Grafica** (palette menta in `PALETTE`): sbarre colorate coi pomelli e i sostegni, pioli rosa
   a righe, muri di cuscini verdi, isola di partenza con fiorellini e alberelli, isolette e
   nuvole lontane; foto di Tino (specchiato secondo la direzione) e Gino su piani con ombra;
-  filo di lana a righe (tubo che si incurva quando è lento, si assottiglia e diventa più rosso
-  quando è teso). Tino arrabbiato quando tiene col filo molto teso, ferito agli strattoni, ko a
-  fine salita; Gino saltella, trema agli strattoni, cade ruotato. Aiuti all'inizio che vanno
-  avanti da soli; nel menu Gino saltella sull'isola. Niente suoni per ora.
+  chi dondola si inclina col filo; filo di lana a righe (tubo che si incurva quando è lento).
+  **Anello giallo** sull'appiglio più in alto che chi dondola sta per raggiungere
+  (`aggiornaSegni`: si accende 0,9 m prima, pieno quando è a portata) e il suo tasto in basso
+  lampeggia. Tino arrabbiato quando tiene e l'altro dondola forte, ferito agli strattoni, ko a
+  fine salita; Gino saltella, trema agli strattoni, cade ruotato. Aiuti dell'inizio in 4 passi
+  che vanno avanti da soli; nel menu Tino e Gino salgono da soli (`demo`, fino a 25 m). Niente
+  suoni per ora.
 - **Prove automatiche**: `window.legatiPerLaCoda` (`stato`, `nuovaSalita`, `aggiorna`, `premi`,
-  `tieni`, tabelle); `fisica.js` e `parete.js` girano anche in node.
+  `tieni`, `aPortata`, `distanza`, tabelle); `fisica.js` e `parete.js` girano anche in node.
 - **Provarlo su Claude**: in una cartella di appoggio `index.html` (senza doctype, html, head
   e body, percorsi `../../` tolti, link alla home `#`), `css/sito.css`, `stile.css`,
   `fisica.js`, `parete.js`, `gioco.js` (con `ASSETS = 'assets/'` e l'import di
   `./three.module.min.js`), `three.module.min.js` (da Tino Golf), `assets/tino/`,
   `assets/gino/`; si pubblica con `files` e `root`.
-- **Stato**: tappa 1 (prototipo del nucleo) fatta, da far provare al proprietario con
-  l'artifact e tarare prima di andare avanti.
+- **Stato**: tappa 1 (prototipo del nucleo) rifatta col dondolo, da far provare al
+  proprietario con l'artifact e tarare prima di andare avanti.
 - **Contenuti proposti** (crescono salendo): appigli (mensole, pioli tondi a cui ci si
   appende anche da sotto, cuscini che rimbalzano senza presa, ghiaccio o sapone dove non
   si fa presa); pericoli (chiodi e forbici che tagliano il filo, mensole che girano,

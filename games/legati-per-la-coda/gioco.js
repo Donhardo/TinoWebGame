@@ -7,7 +7,7 @@
  * Three.js è quello di Tino Golf (../tino-golf/three.module.min.js).
  */
 import * as THREE from '../tino-golf/three.module.min.js';
-import { FISICA, CORPI, nuovoMondo, premi, passo, stiramento, contatto } from './fisica.js';
+import { FISICA, CORPI, nuovoMondo, premi, passo, aPortata, distanza } from './fisica.js';
 import { nuovaParete, generaFino, pota } from './parete.js';
 
 const ASSETS = '../../assets/';
@@ -50,7 +50,7 @@ const stato = {
   salite: leggi('salite', 0),
   aiuti: 0,
   finita: 0,
-  statistiche: { salti: 0, fionde: 0, spinte: 0, prese: 0, strattoni: 0 },
+  statistiche: { prese: 0, lasciate: 0, strattoni: 0 },
 };
 
 /* ---------------------------------------------------------------- pagina */
@@ -140,19 +140,30 @@ function cuscino(w, h, d, smusso) {
   return g;
 }
 
+const geoSfera = new THREE.SphereGeometry(1, 20, 14);
+
 /* ---------------------------------------------------------------- appigli */
 const appigliMesh = new Map();   // id → gruppo
 
-function meshMensola(a) {
+const COLORI_SBARRE = ['#ffb4a2', '#a8d8ff', '#ffd98a', '#c9b6ff', '#9fe3c0'];
+const matSbarre = COLORI_SBARRE.map((c) => mat(c, { roughness: 0.45 }));
+function meshSbarra(a) {
   const g = new THREE.Group();
   const w = a.x2 - a.x1;
-  const corpo = new THREE.Mesh(cuscino(w, a.spess, 1.5, 0.12), MAT.lati);
-  corpo.position.y = -a.spess / 2;
-  corpo.castShadow = true; corpo.receiveShadow = true;
-  const erba = new THREE.Mesh(cuscino(w + 0.08, 0.2, 1.6, 0.08), MAT.prato);
-  erba.position.y = -0.06;
-  erba.receiveShadow = true; erba.castShadow = true;
-  g.add(corpo, erba);
+  const m = matSbarre[a.id % matSbarre.length];
+  const asta = new THREE.Mesh(new THREE.CapsuleGeometry(a.r, w, 6, 14).rotateZ(Math.PI / 2), m);
+  asta.castShadow = true; asta.receiveShadow = true;
+  g.add(asta);
+  // due pomelli ai capi e due sostegni che la tengono alla parete, dietro
+  for (const x of [-w / 2, w / 2]) {
+    const pomo = new THREE.Mesh(geoSfera, MAT.righe);
+    pomo.scale.setScalar(a.r * 1.5);
+    pomo.position.x = x;
+    pomo.castShadow = true;
+    const sost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 8).rotateX(Math.PI / 2), MAT.righe);
+    sost.position.set(x * 0.8, 0, -0.65);
+    g.add(pomo, sost);
+  }
   g.position.set((a.x1 + a.x2) / 2, a.y, 0);
   return g;
 }
@@ -194,14 +205,14 @@ function alberello(x, y, z, s, k) {
   return g;
 }
 
-const geoPiolo = new THREE.CapsuleGeometry(0.26, 1.1, 6, 16).rotateX(Math.PI / 2);
-const geoRiga = new THREE.TorusGeometry(0.262, 0.035, 6, 20);
+const geoPiolo = new THREE.CapsuleGeometry(0.24, 0.9, 6, 16).rotateX(Math.PI / 2);
+const geoRiga = new THREE.TorusGeometry(0.242, 0.035, 6, 20);
 function meshPiolo(a) {
   const g = new THREE.Group();
   const p = new THREE.Mesh(geoPiolo, MAT.piolo);
   p.castShadow = true; p.receiveShadow = true;
   g.add(p);
-  for (const z of [-0.35, 0, 0.35]) {
+  for (const z of [-0.3, 0, 0.3]) {
     const r = new THREE.Mesh(geoRiga, MAT.righe);
     r.position.z = z;
     g.add(r);
@@ -222,7 +233,7 @@ function aggiornaAppigli() {
   for (const a of p.appigli) {
     vivi.add(a.id);
     if (appigliMesh.has(a.id)) continue;
-    const m = a.isola ? meshIsola(a) : a.tipo === 'piolo' ? meshPiolo(a) : meshMensola(a);
+    const m = a.isola ? meshIsola(a) : a.tipo === 'piolo' ? meshPiolo(a) : meshSbarra(a);
     scena.add(m);
     appigliMesh.set(a.id, m);
   }
@@ -270,7 +281,6 @@ function rng(seme) {
 }
 const TRATTO = 12;
 const lontani = new Map();   // tratto → gruppo
-const geoSfera = new THREE.SphereGeometry(1, 20, 14);
 function tratto(k) {
   const caso = rng(1000 + k * 7919 + stato.seme * 31);
   const g = new THREE.Group();
@@ -380,8 +390,8 @@ function puntoCoda(i) {
 
 function aggiornaPersonaggi(dt) {
   const m = stato.mondo;
-  const tira = stiramento(m);
   m.corpi.forEach((c, i) => {
+    const o = m.corpi[1 - i];
     const p = PERS[i];
     p.animT += dt;
     // specchiatura: Tino guarda a destra nella foto, Gino è di fronte
@@ -389,19 +399,19 @@ function aggiornaPersonaggi(dt) {
     let sx = 1, sy = 1, ry = 0, rot = 0;
     const tiene = c.stato === 'presa' || c.pronto;
     if (c.stato === 'terra') {
-      // passo: un piccolo saltello a ogni passo
-      const f = stato.t * 9 + i;
-      ry = Math.abs(Math.sin(f)) * 0.06;
-      rot = Math.sin(f) * 0.05;
-    } else if (c.stato === 'aria') {
+      // sull'isola: respira e aspetta
+      sy = 1 + Math.sin(stato.t * 3 + i) * 0.02;
+    } else if (c.dondolo) {
+      // appeso: la testa guarda verso il perno
+      rot = Math.max(-1.3, Math.min(1.3, c.th * 0.75));
+    } else if (c.stato === 'libero') {
       rot = Math.max(-0.5, Math.min(0.5, -c.vx * 0.04));
       const v = Math.min(1, Math.abs(c.vy) / 14);
       sy = 1 + v * 0.1; sx = 1 - v * 0.07;
     } else {
-      // aggrappato: si piega verso l'altro se il filo tira
-      const o = m.corpi[1 - i];
-      if (tira > 0.2) rot = Math.max(-0.3, Math.min(0.3, (o.x - c.x) * -0.05));
-      sy = 0.94; sx = 1.05;
+      // aggrappato: tiene stretto, si piega un poco verso chi dondola
+      if (o.dondolo) rot = Math.max(-0.25, Math.min(0.25, (o.x - c.x) * -0.06));
+      sy = 0.95; sx = 1.04;
     }
     if (p.anim) {
       const k = p.animT;
@@ -426,10 +436,54 @@ function aggiornaPersonaggi(dt) {
       let f = p.faccia;
       if (stato.fase === 'fine') f = 'ko';
       else if (p.faccia2 && stato.t < p.fino) f = p.faccia2;
-      else if (tiene && tira > 0.6) f = 'arrabbiato';
+      else if (c.stato === 'presa' && o.dondolo && Math.abs(o.om) > 1.6) f = 'arrabbiato';
       if (p.mat.map !== FACCE[f]) { p.mat.map = FACCE[f]; p.mat.needsUpdate = true; }
     }
   });
+}
+
+/* ---------------------------------------------------------------- appigli a portata */
+/* Un anello che si accende sull'appiglio che chi non tiene può prendere adesso: giallo se
+ * è più in alto del perno (premi!), bianco tenue se no. */
+const segni = [0, 1].map(() => {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 28), new THREE.MeshBasicMaterial({ color: '#ffe14d', transparent: true, opacity: 0, depthWrite: false }));
+  m.renderOrder = 3;
+  scena.add(m);
+  return m;
+});
+const ora = [false, false];
+const ANTICIPO = 0.9;   // l'anello si accende un po' prima, così si fa in tempo a premere
+/* L'appiglio più in alto del perno più vicino a chi non tiene, con la sua distanza. */
+function prossimo(m, c, o) {
+  let best = null, bd = Infinity;
+  const perno = pernoDi(o);
+  for (const a of m.parete.appigli) {
+    if (a.isola || a.y <= perno + 0.3 || Math.abs(a.y - c.y) > 5) continue;
+    const d = distanza(c, a);
+    if (d < bd) { bd = d; best = a; }
+  }
+  return best ? { a: best, d: bd - c.r - FISICA.presa } : null;
+}
+function aggiornaSegni(dt) {
+  const m = stato.mondo;
+  m.corpi.forEach((c, i) => {
+    const o = m.corpi[1 - i];
+    const p = c.stato === 'libero' && o.stato !== 'libero' ? prossimo(m, c, o) : null;
+    const vicino = !!p && p.d < ANTICIPO, preso = !!p && p.d < 0;
+    ora[i] = vicino && stato.fase === 'gioco';
+    const seg = segni[i];
+    if (p) {
+      const a = p.a;
+      const x = a.tipo === 'sbarra' ? Math.max(a.x1, Math.min(a.x2, c.x)) : a.x;
+      seg.position.set(x, a.y, 0.35);
+      seg.material.color.set(preso ? '#ffe14d' : '#fff6c2');
+    }
+    const obj = vicino ? (preso ? 1 : 0.55 * (1 - p.d / ANTICIPO) + 0.2) : 0;
+    seg.material.opacity += (obj - seg.material.opacity) * Math.min(1, dt * 20);
+    seg.scale.setScalar((preso ? 1.15 : 1) + 0.1 * Math.sin(stato.t * 14));
+  });
+  $('.tasto-tino').classList.toggle('ora', ora[0]);
+  $('.tasto-gino').classList.toggle('ora', ora[1]);
 }
 
 /* ---------------------------------------------------------------- filo di lana */
@@ -453,19 +507,17 @@ const curvaFilo = new THREE.QuadraticBezierCurve3(new THREE.Vector3(), new THREE
 function aggiornaFilo() {
   const a = puntoCoda(0), b = puntoCoda(1);
   const d = a.distanceTo(b);
-  const L = FISICA.filo.riposo;
+  const L = FISICA.filo;
   const pancia = d < L ? 0.55 * Math.sqrt(L * L - d * d) : 0;
   const mid = a.clone().add(b).multiplyScalar(0.5);
   mid.y -= pancia;
   mid.z -= 0.05;
   curvaFilo.v0.copy(a); curvaFilo.v1.copy(mid); curvaFilo.v2.copy(b);
-  const tira = Math.max(0, d - L);
-  const raggio = Math.max(0.045, 0.075 - tira * 0.015);
+  const raggio = 0.07;
   if (meshFilo) { scena.remove(meshFilo); meshFilo.geometry.dispose(); }
   meshFilo = new THREE.Mesh(new THREE.TubeGeometry(curvaFilo, 28, raggio, 7, false), matFilo);
   meshFilo.castShadow = true;
   matFilo.map.repeat.set(Math.max(1, d * 2.5), 1);
-  matFilo.emissive.setRGB(Math.min(0.35, tira * 0.25), 0, 0);
   scena.add(meshFilo);
 }
 
@@ -480,7 +532,7 @@ function nuovaSalita(fase = 'gioco') {
   stato.resto = 0;
   stato.finita = 0;
   stato.fase = fase;
-  stato.statistiche = { salti: 0, fionde: 0, spinte: 0, prese: 0, strattoni: 0 };
+  stato.statistiche = { prese: 0, lasciate: 0, strattoni: 0 };
   svuotaAppigli();
   svuotaLontani();
   for (const p of PERS) { p.anim = null; p.faccia = 'normale'; p.faccia2 = null; }
@@ -493,9 +545,13 @@ function nuovaSalita(fase = 'gioco') {
   } else nascondiAiuto();
 }
 
-const AIUTI = dito
-  ? ['Tieni il dito a sinistra: Tino si aggrappa e fa da ancora', 'Tocca a destra: Gino salta. Tienilo sulla mensola!', 'Il filo teso? Lascia chi sta sotto: parte come una fionda!']
-  : ['Tieni premuto A: Tino si aggrappa e fa da ancora', 'Premi e lascia L: Gino salta. Tieni premuto L per aggrapparti!', 'Filo teso? Lascia chi sta sotto: parte come una fionda!'];
+const TASTO = dito ? ['il dito a sinistra', 'il dito a destra'] : ['A', 'L'];
+const AIUTI = [
+  `Tieni premuto ${TASTO[0]}: Tino si aggrappa alla sbarra appena ci arriva saltellando`,
+  'Chi non tiene dondola da solo. Quando arriva a una sbarra più in alto (anello giallo), tieni premuto il suo tasto',
+  'Ora lascia il tasto dell\'altro: adesso dondola lui, sotto',
+  'Così, uno alla volta: chi tiene fa da perno, l\'altro dondola e si aggrappa più su',
+];
 function mostraAiuto(i) {
   if (i >= AIUTI.length) return nascondiAiuto();
   stato.aiuti = i;
@@ -510,14 +566,10 @@ function eventi() {
   for (const e of m.eventi) {
     const i = e.chi === 'tino' ? 0 : 1;
     const p = PERS[i];
-    if (e.tipo === 'salto') { stato.statistiche.salti++; animazione(p, 'saltello'); }
-    else if (e.tipo === 'atterra') { if (e.info > 4) animazione(p, 'atterra'); }
-    else if (e.tipo === 'presa') { stato.statistiche.prese++; }
-    else if (e.tipo === 'fionda') {
-      stato.statistiche.fionde++;
-      if (e.info > 0.8 && stato.fase === 'gioco') messaggio('Fionda!');
-      if (p.chi === 'gino') animazione(p, 'saltello'); else faccia(p, 'arrabbiato', 0.5);
-    } else if (e.tipo === 'spinta') stato.statistiche.spinte++;
+    if (e.tipo === 'saltello') animazione(p, 'saltello');
+    else if (e.tipo === 'atterra') animazione(p, 'atterra');
+    else if (e.tipo === 'presa') { stato.statistiche.prese++; if (e.info !== 'isola') animazione(p, 'atterra'); }
+    else if (e.tipo === 'lascia') stato.statistiche.lasciate++;
     else if (e.tipo === 'strattone') {
       stato.statistiche.strattoni++;
       if (p.chi === 'gino') animazione(p, 'trema'); else faccia(p, 'ferito', 0.7);
@@ -527,9 +579,11 @@ function eventi() {
   // gli aiuti dell'inizio vanno avanti da soli quando si fa la cosa giusta
   if (stato.fase === 'gioco' && stato.aiuti < AIUTI.length) {
     const [T, G] = m.corpi;
-    if (stato.aiuti === 0 && T.stato === 'presa') mostraAiuto(1);
-    else if (stato.aiuti === 1 && ((G.stato === 'terra' && !G.su.isola) || (G.stato === 'presa' && G.y > 1.5))) mostraAiuto(2);
-    else if (stato.aiuti === 2 && (stato.statistiche.fionde > 0 || stato.altezza > 12)) nascondiAiuto();
+    const su = (c) => c.stato === 'presa';
+    if (stato.aiuti === 0 && (su(T) || su(G))) mostraAiuto(1);
+    else if (stato.aiuti === 1 && su(T) && su(G) && T.presa.cosa !== G.presa.cosa) mostraAiuto(2);
+    else if (stato.aiuti === 2 && (T.stato === 'libero' || G.stato === 'libero')) mostraAiuto(3);
+    else if (stato.aiuti === 3 && stato.altezza >= 8) nascondiAiuto();
   }
 }
 
@@ -547,13 +601,16 @@ function aggiornaCamera(dt) {
   sole.target.position.set(0, c.y, 0);
 }
 
-function controllaFine(dt) {
-  if (stato.fase !== 'gioco') return;
+function misuraAltezza() {
   const [A, B] = stato.mondo.corpi;
-  const limite = stato.cam.y - CAMERA.sotto;
   const piedi = Math.min(A.y - A.r, B.y - B.r);
   stato.altezza = Math.max(stato.altezza, Math.floor(Math.max(0, piedi)));
-  if (A.y < limite && B.y < limite) {
+  const limite = stato.cam.y - CAMERA.sotto;
+  return A.y < limite && B.y < limite;
+}
+function controllaFine(dt) {
+  if (stato.fase !== 'gioco') return;
+  if (misuraAltezza()) {
     stato.finita += dt;
     if (stato.finita > 0.6) fine();
   } else stato.finita = 0;
@@ -581,14 +638,21 @@ function aggiornaHud() {
 }
 
 /* ---------------------------------------------------------------- dimostrazione nel menu */
-/* Nel menu Tino e Gino passeggiano sull'isola e ogni tanto Gino fa un saltello. */
-let prossimoDemo = 2;
+/* Nel menu Tino e Gino salgono da soli: chi dondola si aggrappa appena tocca un appiglio
+ * più in alto del perno, poi l'altro lascia. Dopo ~25 m (o una caduta) si ricomincia. */
+const demoStato = { lascia: null };
+function pernoDi(o) { return o.stato === 'presa' ? o.presa.cosa.y : -99; }
 function demo() {
-  if (stato.t < prossimoDemo) return;
   const m = stato.mondo;
-  const G = m.corpi[1];
-  if (G.stato === 'terra') { premi(m, 1, true); premi(m, 1, false); }
-  prossimoDemo = stato.t + 2.5 + Math.random() * 2;
+  m.corpi.forEach((c, i) => {
+    const o = m.corpi[1 - i];
+    if (c.stato === 'presa') return;
+    const a = aPortata(m, c);
+    if (a && a.y > pernoDi(o) + 0.3 && !c.premuto) { premi(m, i, true); demoStato.lascia = { i: 1 - i, t: stato.t + 0.35 }; }
+  });
+  const l = demoStato.lascia;
+  if (l && stato.t >= l.t) { if (m.corpi[1 - l.i].stato === 'presa') premi(m, l.i, false); demoStato.lascia = null; }
+  if (stato.altezza > 25) nuovaSalita('menu');
 }
 
 /* ---------------------------------------------------------------- ciclo */
@@ -604,7 +668,7 @@ function ciclo(ora) {
 function aggiorna(dt) {
   if (stato.fase === 'pausa') return;
   stato.t += dt;
-  if (stato.fase === 'menu') demo();
+  if (stato.fase === 'menu') { demo(); if (misuraAltezza()) nuovaSalita('menu'); }
   stato.resto += dt;
   while (stato.resto >= FISICA.passo) { passo(stato.mondo, FISICA.passo); stato.resto -= FISICA.passo; }
   eventi();
@@ -616,6 +680,7 @@ function aggiorna(dt) {
 function disegna(dt) {
   if (stato.fase !== 'pausa') {
     aggiornaPersonaggi(dt);
+    aggiornaSegni(dt);
     aggiornaFilo();
     aggiornaMuri();
     aggiornaLontani();
@@ -721,30 +786,26 @@ const FILO_SVG = '<svg viewBox="0 0 120 40" aria-hidden="true"><path d="M8 12 Q6
 const RITRATTI = (cls = 'salta') => `<div class="ritratti">${FILO_SVG}<img class="${cls}" src="${ASSETS}tino/${cls === 'caduto' ? 'tino-ko' : 'tino-normale'}.png" alt="Tino"><img class="gino ${cls} dopo" src="${ASSETS}gino/gino.png" alt="Gino"></div>`;
 
 function comandiHtml() {
-  if (dito) return `<div class="comandi">
-    <p><b>Un dito per personaggio</b>: metà sinistra dello schermo Tino, metà destra Gino.</p>
-    <ul>
-      <li><b>Tieni premuto</b>: si aggrappa a quello che tocca e fa da ancora.</li>
-      <li><b>Tocco breve</b>: salta (da una mensola, da un piolo o dal muro).</li>
-      <li><b>Lascia</b> chi è aggrappato col filo teso: parte come da una fionda verso l'altro.</li>
-      <li>Tocco breve in aria, col filo teso: una spinta per dondolare.</li>
-    </ul></div>`;
+  const tasti = dito
+    ? '<p><b>Un dito per personaggio</b>: metà sinistra dello schermo Tino, metà destra Gino.</p>'
+    : '<p><b>Un tasto per personaggio</b>: <kbd>A</kbd> (o <kbd>Maiusc</kbd> sinistro) Tino, <kbd>L</kbd> (o <kbd>Maiusc</kbd> destro) Gino. In due: un tasto a testa. Col mouse: clic a sinistra Tino, a destra Gino.</p>';
   return `<div class="comandi">
-    <p><b>Un tasto per personaggio</b>: <kbd>A</kbd> (o <kbd>Maiusc</kbd> sinistro) Tino, <kbd>L</kbd> (o <kbd>Maiusc</kbd> destro) Gino. In due: un tasto a testa. Anche col mouse: clic a sinistra Tino, a destra Gino.</p>
+    ${tasti}
     <ul>
-      <li><b>Tieni premuto</b>: si aggrappa a quello che tocca e fa da ancora.</li>
-      <li><b>Premi e lascia subito</b>: salta (da una mensola, da un piolo o dal muro).</li>
-      <li><b>Lascia</b> chi è aggrappato col filo teso: parte come da una fionda verso l'altro.</li>
-      <li>Premi e lascia in aria, col filo teso: una spinta per dondolare.</li>
+      <li><b>Premuto</b> = si tiene. <b>Lasciato</b> = si lascia.</li>
+      <li>Chi tiene fa da perno; l'altro, appeso al filo, <b>dondola da solo</b>, ogni volta più in alto.</li>
+      <li>Quando chi dondola arriva a un appiglio più in alto (si accende un anello <span class="giallo">giallo</span> e il suo tasto lampeggia), premi il suo tasto: si aggrappa appena lo tocca.</li>
+      <li>Poi lascia l'altro: adesso dondola lui. E così via, uno alla volta.</li>
+      <li>Se lasciate tutti e due, cadete!</li>
     </ul>
-    <p><kbd>P</kbd> o <kbd>Esc</kbd> pausa.</p></div>`;
+    ${dito ? '' : '<p><kbd>P</kbd> o <kbd>Esc</kbd> pausa.</p>'}</div>`;
 }
 
 function pannelloMenu() {
   return `<div class="riquadro">
     ${RITRATTI()}
     <h1>Legati per la Coda</h1>
-    <p>Tino e Gino sono legati da un filo di lana: salite insieme più in alto che potete! Uno si aggrappa e fa da ancora, l'altro salta. Se cadete tutti e due, la salita è finita.</p>
+    <p>Tino e Gino sono legati da un filo di lana: salite insieme più in alto che potete! Uno tiene, l'altro dondola e si aggrappa più su.</p>
     ${stato.record ? `<p class="dettagli">Il vostro record: <b>${stato.record} m</b></p>` : ''}
     <div class="scelte"><button class="bottone" data-azione="gioca" data-primo>Si sale!</button></div>
     ${comandiHtml()}
@@ -771,7 +832,7 @@ function pannelloFine(record) {
     <h2>${record ? 'Nuovo record!' : 'Che volo!'}</h2>
     <div class="risultato">${stato.altezza} m</div>
     <p class="dettagli">${record ? 'Mai così in alto!' : `Record: ${stato.record} m`}</p>
-    <p class="dettagli">${s.salti} salti · ${s.fionde} fionde · ${s.prese} prese</p>
+    <p class="dettagli">${s.prese} prese</p>
     <div class="scelte">
       <button class="bottone" data-azione="ricomincia" data-primo>Ancora!</button>
       <button class="bottone secondario" data-azione="menu">Menu</button>
@@ -798,6 +859,6 @@ requestAnimationFrame(ciclo);
 /* ---------------------------------------------------------------- prove automatiche */
 window.legatiPerLaCoda = {
   get stato() { return stato; },
-  nuovaSalita, aggiorna, premi: (i, giu) => premi(stato.mondo, i, giu), tieni, contatto,
+  nuovaSalita, aggiorna, premi: (i, giu) => premi(stato.mondo, i, giu), tieni, aPortata, distanza,
   FISICA, CAMERA, VISTA,
 };

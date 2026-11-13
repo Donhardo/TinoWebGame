@@ -96,6 +96,9 @@ body {
 .tasto-gino { flex-direction: row-reverse; padding: 5px 5px 5px 12px; }
 .tasto img { width: 34px; height: 34px; object-fit: contain; }
 .tasto.premuto { transform: scale(0.94); background: #ffe58a; }
+.tasto.ora { box-shadow: 0 0 0 4px #ffe14d, 0 4px 12px rgba(60, 60, 90, 0.2); animation: pulsa 0.5s ease-in-out infinite alternate; }
+@keyframes pulsa { to { box-shadow: 0 0 0 7px rgba(255, 225, 77, 0.6), 0 4px 12px rgba(60, 60, 90, 0.2); } }
+.giallo { background: #ffe14d; padding: 0 0.3em; border-radius: 6px; font-weight: 600; }
 .tasto kbd { margin: 0 2px; }
 .dito .solo-pc { display: none; }
 
