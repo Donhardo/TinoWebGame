@@ -1932,8 +1932,9 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
   ("molto carino"). Passi 1-3 (pericoli, Gino giocabile, traguardi) provati dal
   proprietario con l'artifact ("bellissimo") e uniti in `main`. Passo 4 (grafica dipinta)
   in corso: fondali, rami e nuvole fatti, provati dal proprietario con l'artifact
-  ("splendido") e uniti in `main`; oggetti, poteri ed elicotterino dipinti fatti (da far
-  provare al proprietario).
+  ("splendido") e uniti in `main`; oggetti, poteri ed elicotterino dipinti fatti, provati
+  ("splendido") e uniti in `main` (pull request 46): la grafica dipinta è completa. Progetto
+  chiuso dal proprietario (novembre 2026).
 - **Prossimi passi (approvati tutti dal proprietario)**:
   1. *Più cose per strada*: fatto (pigne, ramo a molla, vento, ispettore capo: vedi sopra).
   2. *Gino giocabile*: fatto. Nel menu "Chi sale: Tino / Gino" (`localStorage`
@@ -2007,7 +2008,7 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
        anche le pale grandi, tagliate sopra l'albero; ci vanno le stesse `pale` (larghe 106).
        La cabina (`cabina`: centro e raggio in frazioni) sta dove era quella del codice, con
        dentro la foto di chi guida, un velo azzurro e un riflesso; canna e lenza come prima.
-       Da far provare al proprietario con l'artifact.
+       Provati dal proprietario con l'artifact ("splendido") e uniti in `main` (pull request 46).
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
