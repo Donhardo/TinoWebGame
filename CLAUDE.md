@@ -2155,8 +2155,8 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   voluto (premio "Al primo colpo!"), per le persone è difficile.
 - **Stato**: prototipo con 6 buche, provato dal proprietario con l'artifact ("grafica e
   colori molto carini"; il miele non si capiva: rifatto); unito in `main` per provarlo sul
-  telefono (telecamera): sul telefono va bene. Poi le buche 5-6, 8-9 e 11-12 (da far
-  provare con l'artifact). Prossimi passi: i gruppi limone e blu notte (pulsanti che muovono
+  telefono (telecamera): sul telefono va bene. Poi le buche 5-6, 8-9 e 11-12, provate dal
+  proprietario con l'artifact ("carino") e unite in `main`. Prossimi passi: i gruppi limone e blu notte (pulsanti che muovono
   le cose, poi tutto insieme) fino a 18 buche, robivecchi nascosti, eventuali texture dipinte
   (erba, sabbia).
 
