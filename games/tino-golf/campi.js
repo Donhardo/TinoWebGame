@@ -77,7 +77,7 @@ export const CAMPI = [
     ],
     zone: [
       { t: 'acqua', x: -0.55, z: 1.0, rx: 1.25, rz: 1.5 },
-      { t: 'miele', x: 1.25, z: -1.3, rx: 0.5, rz: 0.55 },
+      { t: 'miele', x: 1.15, z: -1.25, rx: 0.62, rz: 0.66 },
       { t: 'sabbia', x: -1.0, z: -3.4, rx: 0.85, rz: 0.65 },
     ],
     campane: [

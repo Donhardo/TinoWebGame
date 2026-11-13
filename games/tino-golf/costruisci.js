@@ -228,7 +228,7 @@ export function costruisci(m, n) {
     disco.rotateX(-Math.PI / 2);
     let materiale, sopra = 0.012;
     if (z.t === 'sabbia') materiale = new THREE.MeshStandardMaterial({ map: T.sabbia, roughness: 1 });
-    else if (z.t === 'miele') materiale = mat('#f5b52e', { roughness: 0.25, metalness: 0.05, emissive: '#7a4a00', emissiveIntensity: 0.12 });
+    else if (z.t === 'miele') materiale = mat('#f3a21b', { roughness: 0.12, metalness: 0.05, emissive: '#8a4b00', emissiveIntensity: 0.25 });
     else materiale = mat('#7ccdf2', { roughness: 0.15, transparent: true, opacity: 0.92 });
     const mesh = new THREE.Mesh(disco, materiale);
     mesh.scale.set(z.rx, 1, z.rz);
@@ -255,17 +255,7 @@ export function costruisci(m, n) {
         o.material.opacity = 0.5 * (1 - u);
       }));
     }
-    if (z.t === 'miele') {
-      const goccia = new THREE.SphereGeometry(0.09, 12, 10);
-      const r = rng(Math.round(z.x * 100 + z.z * 7) + 3);
-      for (let k = 0; k < 5; k++) {
-        const a = r() * Math.PI * 2, d = 0.3 + r() * 0.5;
-        const s = new THREE.Mesh(goccia, materiale);
-        s.position.set(z.x + Math.cos(a) * z.rx * d, z.y + 0.03, z.z + Math.sin(a) * z.rz * d);
-        s.scale.set(1 + r(), 0.45, 1 + r());
-        gruppo.add(s);
-      }
-    }
+    if (z.t === 'miele') decoraMiele(gruppo, animati, z, materiale);
   }
 
   // buca e bandiera
@@ -475,6 +465,99 @@ export function costruisci(m, n) {
 
   gruppo.userData.aggiorna = (t) => { for (const f of animati) f(t); };
   return gruppo;
+}
+
+/* La pozza di miele: lucida e un po' gonfia, col vasetto rovesciato da cui cola,
+ * bollicine e un'ape che ci gira sopra, così si capisce subito cos'è. */
+function decoraMiele(gruppo, animati, z, materiale) {
+  const lucido = new THREE.MeshStandardMaterial({ color: '#ffb52a', roughness: 0.06, metalness: 0.1, emissive: '#a65a00', emissiveIntensity: 0.3, transparent: true, opacity: 0.93 });
+  // pozza gonfia
+  const pozza = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 12, 0, Math.PI * 2, 0, Math.PI / 2), lucido);
+  pozza.scale.set(z.rx * 0.97, 0.07, z.rz * 0.97);
+  pozza.position.set(z.x, z.y + 0.005, z.z);
+  pozza.receiveShadow = true;
+  gruppo.add(pozza);
+  // riflessi bianchi
+  const mRiflesso = new THREE.MeshBasicMaterial({ color: '#fff6d8', transparent: true, opacity: 0.75 });
+  for (const [dx, dz, s] of [[-0.35, -0.3, 0.16], [-0.1, -0.45, 0.08]]) {
+    const r = new THREE.Mesh(new THREE.CircleGeometry(1, 20), mRiflesso);
+    r.rotation.x = -Math.PI / 2;
+    r.scale.set(s * z.rx * 2, s * z.rz * 1.2, 1);
+    r.position.set(z.x + dx * z.rx, z.y + 0.08, z.z + dz * z.rz);
+    gruppo.add(r);
+  }
+  // vasetto rovesciato sul bordo, verso la sponda più vicina al centro della pozza
+  const vaso = new THREE.Group();
+  const vetro = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.34, 20), new THREE.MeshStandardMaterial({ color: '#ffd27a', roughness: 0.15, transparent: true, opacity: 0.8 }));
+  vetro.castShadow = true;
+  vaso.add(vetro);
+  const interno = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.2, 16), lucido);
+  interno.position.y = -0.06;
+  vaso.add(interno);
+  const etichetta = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.12, 20, 1, true), mat('#fff3d6'));
+  etichetta.position.y = -0.04;
+  vaso.add(etichetta);
+  // sdraiato in fondo alla pozza, con la bocca verso il centro
+  vaso.rotation.x = Math.PI / 2;
+  vaso.position.set(z.x + z.rx * 0.15, z.y + 0.17, z.z - z.rz * 1.0);
+  gruppo.add(vaso);
+  // il tappo caduto lì accanto
+  const tappo = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.08, 20), mat('#e8483f', { roughness: 0.5 }));
+  tappo.position.set(z.x - z.rx * 0.75, z.y + 0.04, z.z - z.rz * 0.95);
+  tappo.rotation.z = 0.15;
+  tappo.castShadow = true;
+  gruppo.add(tappo);
+  // colata dal vasetto alla pozza
+  const colata = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), lucido);
+  colata.scale.set(0.17, 0.07, 0.3);
+  colata.position.set(z.x + z.rx * 0.15, z.y + 0.04, z.z - z.rz * 0.72);
+  gruppo.add(colata);
+  // bollicine che si gonfiano e scoppiano
+  const bolle = [];
+  const r = rng(Math.round(z.x * 100 + z.z * 7) + 3);
+  for (let k = 0; k < 4; k++) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), lucido);
+    const a = r() * Math.PI * 2, d = 0.2 + r() * 0.5;
+    b.position.set(z.x + Math.cos(a) * z.rx * d, z.y + 0.06, z.z + Math.sin(a) * z.rz * d);
+    b.userData.f = r();
+    gruppo.add(b); bolle.push(b);
+  }
+  // l'ape
+  const ape = new THREE.Group();
+  const corpo = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), mat('#ffd23f', { roughness: 0.5 }));
+  corpo.scale.set(1.35, 1, 1);
+  ape.add(corpo);
+  for (const x of [-0.03, 0.05]) {
+    const riga = new THREE.Mesh(new THREE.TorusGeometry(0.083, 0.018, 6, 16), mat('#3a2a1a'));
+    riga.rotation.y = Math.PI / 2;
+    riga.position.x = x;
+    riga.scale.set(1, 0.98, 1);
+    ape.add(riga);
+  }
+  const testa = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), mat('#3a2a1a'));
+  testa.position.x = 0.13;
+  ape.add(testa);
+  const mAla = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+  const ali = [];
+  for (const lato of [-1, 1]) {
+    const ala = new THREE.Mesh(new THREE.CircleGeometry(0.08, 14), mAla);
+    ala.scale.set(1, 0.6, 1);
+    ala.position.set(0, 0.07, lato * 0.06);
+    ala.rotation.x = -Math.PI / 2;
+    ape.add(ala); ali.push([ala, lato]);
+  }
+  gruppo.add(ape);
+  animati.push((t) => {
+    const a = t * 1.3;
+    ape.position.set(z.x + Math.cos(a) * z.rx * 0.8, z.y + 0.75 + Math.sin(t * 3.1) * 0.12, z.z + Math.sin(a) * z.rz * 0.8);
+    ape.rotation.y = -a - Math.PI / 2 + Math.PI;
+    for (const [ala, lato] of ali) ala.rotation.x = -Math.PI / 2 + lato * Math.sin(t * 60) * 0.6;
+    for (const b of bolle) {
+      const u = (t * 0.45 + b.userData.f) % 1;
+      const s = u < 0.85 ? 0.3 + u : 0.01;
+      b.scale.set(s, s * 0.8, s);
+    }
+  });
 }
 
 function top0(m, x, z) {

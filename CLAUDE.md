@@ -2063,6 +2063,10 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   giù), se prende la pallina la tiene finché non si rialza e poi la risputa verso il punto
   del tiro (senza colpi in più); da chiusa è un ostacolo. Massimo 8 colpi a buca ("Basta
   così!").
+  Il miele (`decoraMiele`) dopo la prima prova "non si capiva": ora è una pozza lucida e
+  gonfia con il vasetto rovesciato, il tappo caduto, le bollicine e un'ape che gira; la
+  pallina entrando fa uno schizzo (evento `miele`), resta coperta di miele finché è dentro,
+  compare "Appiccicata!" e in mira l'aiuto ricorda la metà forza.
 - **Grafica** (`costruisci.js`): blocchi = `ExtrudeGeometry` del contorno con gli spigoli
   arrotondati e lo smusso (le rampe spostano i vertici della cima); sponde = `TubeGeometry`
   su una curva morbida con le sfere ai capi; palette in `PALETTE` (spazio, prato, lati,
@@ -2125,7 +2129,11 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
   `stile.css`, tutti i `.js` (in `gioco.js` `ASSETS = 'assets/'`), `assets/tino/`,
   `assets/gino/`; si pubblica con `files` e `root`.
-- **Stato**: prototipo con 6 buche, da far provare al proprietario. Prossimi passi: le 18
+- **Tiro solo**: col giocatore simulato perfetto le buche 1-5 si fanno al primo colpo, la 6
+  (ascensore) no; è voluto (premio "Al primo colpo!"), per le persone è difficile.
+- **Stato**: prototipo con 6 buche, provato dal proprietario con l'artifact ("grafica e
+  colori molto carini"; il miele non si capiva: rifatto); unito in `main` per provarlo sul
+  telefono (telecamera). Prossimi passi: le 18
   buche del piano (gruppi limone e blu notte con pulsanti che muovono le cose), robivecchi
   nascosti, eventuali texture dipinte (erba, sabbia), prove di velocità sul telefono.
 

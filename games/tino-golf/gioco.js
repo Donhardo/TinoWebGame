@@ -124,6 +124,12 @@ function nuovaPallina(scura) {
   return g;
 }
 const pallineVis = { tino: nuovaPallina(false), gino: nuovaPallina(true) };
+for (const v of Object.values(pallineVis)) {
+  const velo = new THREE.Mesh(new THREE.SphereGeometry(R * 1.08, 20, 14), new THREE.MeshStandardMaterial({ color: '#ffb52a', roughness: 0.05, transparent: true, opacity: 0.6 }));
+  velo.visible = false;
+  v.add(velo);
+  v.userData.velo = velo;
+}
 
 // anello che dice "trascina da qui"
 const anelloMira = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.26, 32), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false }));
@@ -449,6 +455,7 @@ function ev(tipo, info) {
     }
     case 'molla': suoni.molla(); if (info.o.vis) info.o.vis.colpo = t; break;
     case 'presa': suoni.presa(); messaggio('Presa!', 'la campana tiene la pallina', 1.2); faccia(PERS.tino, 'arrabbiato', 1.5); break;
+    case 'miele': suoni.miele(); scintille(info.x, info.y, info.z, '#ffb52a', 10, 1.2); break;
     case 'sputa': suoni.sputa(); break;
     case 'campana': suoni.palo(info.v); break;
     case 'atterra': suoni.atterra(info.v); break;
@@ -516,6 +523,7 @@ function finisciTiro(esito) {
   }
   // fermo
   if (g.colpi >= MAX_COLPI) { bastaCosi(); return; }
+  if (b.miele) { messaggio('Appiccicata!', 'nel miele il prossimo tiro ha metà forza', 1.8); if (p.chi === 'tino') faccia(p, 'arrabbiato', 1.8); else animazione(p, 'trema'); }
   prontoAlTiro();
 }
 
@@ -843,6 +851,7 @@ function disegna(dt) {
   }
   if (t - ud.tele < 0.3) ud.sfera.scale.setScalar(Math.max(0.05, (t - ud.tele) / 0.3));
   else if (!ud.affonda) ud.sfera.scale.setScalar(1);
+  ud.velo.visible = !!b.miele;
   const vel = stato.fase === 'rotola' && !b.aria ? Math.hypot(b.vx, b.vz) : 0;
   rotola(vel);
 
@@ -1122,7 +1131,8 @@ function aiuto() {
   if (stato.fase === 'mira' && g && !g.cpu && stato.modo !== 'demo' && stato.statistiche.tiri < 3 && stato.buca === 0) {
     testo = dito ? 'Trascina indietro dalla pallina e lascia · con un dito altrove giri la vista'
       : 'Trascina indietro dalla pallina e lascia · trascina altrove per girare la vista · oppure ← → ↑ ↓ e Spazio';
-  } else if (stato.fase === 'mira' && g && g.cpu && stato.modo !== 'demo') testo = 'Gino ci pensa…';
+  } else if (stato.fase === 'mira' && g && !g.cpu && stato.palla && stato.palla.miele) testo = 'La pallina è nel miele: questo tiro ha metà forza';
+  else if (stato.fase === 'mira' && g && g.cpu && stato.modo !== 'demo') testo = 'Gino ci pensa…';
   el.textContent = testo;
   el.classList.toggle('nascosto', !testo);
 }

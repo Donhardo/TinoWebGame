@@ -427,6 +427,7 @@ export function passo(m, b, ev) {
     const frena = (mu * g + F.viscoso * v) * dt;
     if (v <= frena) { b.vx = 0; b.vz = 0; v = 0; } else { b.vx *= (v - frena) / v; b.vz *= (v - frena) / v; v -= frena; }
     if (v < F.fermo && Math.hypot(ax, az) < mu * g * 1.05) { b.vx = 0; b.vz = 0; v = 0; }
+    if (inMiele && !b.miele && ev) ev('miele', { x: b.x, y: b.y, z: b.z });
     b.miele = inMiele;
     const y0 = b.y;
     b.x += b.vx * dt; b.z += b.vz * dt;
