@@ -50,13 +50,30 @@ const stato = {
   faseInPausa: null,
   mira: { ang: 0, pot: 0.4, trascina: null, tastiera: false, visibile: false },
   ia: null,
-  sbloccati: Math.max(1, Math.min(CAMPI.length, leggi('sbloccati', 1))),
-  stelle: leggi('stelle', []),
-  migliori: leggi('migliori', []),
+  stelle: {},            // per id della buca
+  migliori: {},
+  giro: { da: 0, a: CAMPI.length },  // buche della partita contro Gino o in due
   viste: leggi('novita', []),
   statistiche: { tiri: 0 },
 };
 audio.muto = leggi('muto', false);
+caricaProgressi();
+
+/* Progressi per id della buca. Il prototipo li salvava per numero (6 buche):
+ * li si converte una volta, perché le buche nuove stanno in mezzo ai gruppi. */
+function caricaProgressi() {
+  const VECCHIE = ['primo-tiro', 'curva', 'girandola', 'miele-e-laghetto', 'anelli-magici', 'ascensore'];
+  const conv = (v) => {
+    if (!Array.isArray(v)) return v && typeof v === 'object' ? v : {};
+    const o = {};
+    v.forEach((x, i) => { if (x && VECCHIE[i]) o[VECCHIE[i]] = x; });
+    return o;
+  };
+  stato.stelle = conv(leggi('stelle', {}));
+  stato.migliori = conv(leggi('migliori', {}));
+}
+/* Una buca è aperta se è la prima o se quella prima è stata finita. */
+const bucaAperta = (i) => i === 0 || !!stato.stelle[CAMPI[i - 1].id];
 audio.musicaSpenta = leggi('musica-spenta', false);
 
 /* ---------------------------------------------------------------- pagina */
@@ -571,20 +588,19 @@ function fineBucaGiocatore(colpi) {
   // tutti hanno finito la buca
   const campo = stato.mondo.campo;
   if (stato.modo === 'avventura') {
-    const n = stato.buca;
+    const id = campo.id;
     const st = stelleDi(colpi, campo.par);
-    const nuovaStella = st > (stato.stelle[n] || 0);
-    stato.stelle[n] = Math.max(stato.stelle[n] || 0, st);
-    const record = !stato.migliori[n] || colpi < stato.migliori[n];
-    if (record) stato.migliori[n] = colpi;
-    if (n + 1 < CAMPI.length && stato.sbloccati < n + 2) stato.sbloccati = n + 2;
-    scrivi('stelle', stato.stelle); scrivi('migliori', stato.migliori); scrivi('sbloccati', stato.sbloccati);
+    const nuovaStella = st > (stato.stelle[id] || 0);
+    stato.stelle[id] = Math.max(stato.stelle[id] || 0, st);
+    const record = !stato.migliori[id] || colpi < stato.migliori[id];
+    if (record) stato.migliori[id] = colpi;
+    scrivi('stelle', stato.stelle); scrivi('migliori', stato.migliori);
     stato.fase = 'fine';
     if (!stato.test) mostraPannello(pannelloFineBuca(colpi, st, record && colpi < MAX_COLPI, nuovaStella));
     return;
   }
   stato.fase = 'fine';
-  if (!stato.test) mostraPannello(stato.buca + 1 < CAMPI.length ? pannelloCartellino(false) : pannelloCartellino(true));
+  if (!stato.test) mostraPannello(pannelloCartellino(stato.buca + 1 >= stato.giro.a));
 }
 
 function dopo(s, f) { stato.dopo = { t: s, f }; }
@@ -1102,7 +1118,8 @@ function messaggio(testo, sotto = '', durata = 1.5) {
 function aggiornaHud() {
   const campo = CAMPI[stato.buca];
   const demo = stato.modo === 'demo';
-  $('#info-buca').innerHTML = demo ? 'Tino Golf' : `Buca <b>${stato.buca + 1}</b> di ${CAMPI.length} · par ${campo.par}`;
+  const fino = stato.modo === 'avventura' ? CAMPI.length : stato.giro.a;
+  $('#info-buca').innerHTML = demo ? 'Tino Golf' : `Buca <b>${stato.buca + 1}</b> di ${fino} · par ${campo.par}`;
   const g = giocatore();
   const tu = $('#turno');
   tu.classList.toggle('nascosto', demo || !g);
@@ -1117,7 +1134,7 @@ function aggiornaHud() {
     pu.innerHTML = stato.giocatori.map((x, i) => {
       const tot = x.punti.reduce((a, c) => a + (c || 0), 0) + (i === stato.turno ? x.colpi : 0);
       const img = x.pers === 'tino' ? 'tino/tino-normale.png' : 'gino/gino.png';
-      const diff = x.punti.reduce((a, c, k) => a + (c || 0) - CAMPI[k].par, 0);
+      const diff = x.punti.reduce((a, c, k) => a + (c ? c - CAMPI[k].par : 0), 0);
       const cls = diff < 0 ? 'sotto' : diff > 0 ? 'sopra' : '';
       return `<div><img src="${ASSETS}${img}" alt="">${x.nome}<b class="${cls}">${tot}</b></div>`;
     }).join('');
@@ -1150,7 +1167,7 @@ function chiudiPannello() { pannello.classList.remove('visibile'); pannello.inne
 const ritratto = (cls = '', clsG = '') => `<div class="ritratti"><img class="${cls}" src="${ASSETS}tino/tino-normale.png" alt="Tino"><img class="gino ${clsG}" src="${ASSETS}gino/gino.png" alt="Gino"></div>`;
 
 function pannelloMenu() {
-  const stelle = stato.stelle.reduce((a, c) => a + (c || 0), 0);
+  const stelle = CAMPI.reduce((a, c) => a + (stato.stelle[c.id] || 0), 0);
   return `<div class="riquadro">
     ${ritratto('', 'salta')}
     <h1>Tino Golf</h1>
@@ -1174,18 +1191,45 @@ function pannelloMenu() {
 }
 
 function pannelloBuche() {
-  const schede = CAMPI.map((c, i) => {
+  let schede = '', gruppo = null;
+  CAMPI.forEach((c, i) => {
     const pal = PALETTE[c.palette] || PALETTE.menta;
-    const aperta = i < stato.sbloccati;
-    const st = stato.stelle[i] || 0;
-    return `<button class="buca-scheda" style="--colore:${pal.prato}" data-buca="${i}" ${aperta ? '' : 'disabled'}>
+    if (c.palette !== gruppo) {
+      if (gruppo) schede += '</div>';
+      gruppo = c.palette;
+      schede += `<h3 class="gruppo" style="--colore:${pal.lati}">${pal.nome}</h3><div class="buche">`;
+    }
+    const aperta = bucaAperta(i);
+    const st = stato.stelle[c.id] || 0;
+    const mig = stato.migliori[c.id];
+    schede += `<button class="buca-scheda" style="--colore:${pal.prato}" data-buca="${i}" ${aperta ? '' : 'disabled'}>
       <b>Buca ${i + 1} · par ${c.par}</b><span>${aperta ? c.nome : '???'}</span>
-      <i>${'★'.repeat(st)}${'☆'.repeat(3 - st)}${stato.migliori[i] ? ` · ${stato.migliori[i]} colpi` : ''}</i></button>`;
-  }).join('');
+      <i>${'★'.repeat(st)}${'☆'.repeat(3 - st)}${mig ? ` · ${mig} colpi` : ''}</i></button>`;
+  });
+  if (gruppo) schede += '</div>';
   return `<div class="riquadro">
     <h2>Avventura</h2>
     <p class="dettagli">Finisci una buca per aprire quella dopo. Tre stelle al par o meglio.</p>
-    <div class="buche">${schede}</div>
+    <div class="elenco-buche">${schede}</div>
+    <div class="scelte"><button class="bottone secondario" data-azione="menu">Indietro</button></div>
+  </div>`;
+}
+
+/* Contro Gino e in due: si sceglie quante buche giocare. */
+function giri() {
+  const N = CAMPI.length, meta = Math.ceil(N / 2);
+  return [{ da: 0, a: meta }, { da: meta, a: N }, { da: 0, a: N }];
+}
+function pannelloGiro(modo) {
+  const par = (g) => CAMPI.slice(g.da, g.a).reduce((a, c) => a + c.par, 0);
+  const nomi = (g) => [...new Set(CAMPI.slice(g.da, g.a).map((c) => (PALETTE[c.palette] || PALETTE.menta).nome))].join(', ');
+  const voci = giri().map((g, i) => `<button class="bottone ${i ? 'secondario' : ''}" data-giro="${i}" data-modo="${modo}" ${i ? '' : 'data-primo'}>
+    ${g.da === 0 && g.a === CAMPI.length ? `Tutte e ${CAMPI.length}` : `Buche ${g.da + 1}-${g.a}`}<small>${nomi(g)} · par ${par(g)}</small></button>`).join('');
+  return `<div class="riquadro">
+    ${ritratto('', modo === 'cpu' ? 'salta' : '')}
+    <h2>${modo === 'cpu' ? 'Contro Gino' : 'In due'}</h2>
+    <p class="dettagli">Quante buche giocate?</p>
+    <div class="scelte giri">${voci}</div>
     <div class="scelte"><button class="bottone secondario" data-azione="menu">Indietro</button></div>
   </div>`;
 }
@@ -1211,7 +1255,7 @@ function pannelloFineBuca(colpi, st, record, nuovaStella) {
     <div class="risultato">${ko ? 'Basta così!' : NOMI_ESITO(colpi, campo.par)}</div>
     <div class="stelle">${'★'.repeat(st)}<span class="vuota">${'★'.repeat(3 - st)}</span></div>
     <p class="dettagli">${colpi} colpi · par ${campo.par}${record ? ' · il tuo migliore!' : ''}${nuovaStella && st === 3 ? ' · tre stelle!' : ''}</p>
-    ${ultima ? '<p>Hai finito tutte le buche del prototipo! Le altre arriveranno presto.</p>' : ''}
+    ${ultima ? '<p>Hai finito tutte le buche! Le altre arriveranno presto.</p>' : ''}
     <div class="scelte">
       ${ultima ? '' : '<button class="bottone" data-azione="prossima" data-primo>Buca dopo</button>'}
       <button class="bottone ${ultima ? '' : 'secondario'}" data-azione="riprova" ${ultima ? 'data-primo' : ''}>Riprova</button>
@@ -1222,15 +1266,17 @@ function pannelloFineBuca(colpi, st, record, nuovaStella) {
 
 function pannelloCartellino(finale) {
   const G = stato.giocatori;
-  const n = stato.buca + 1;
-  const tot = G.map((g) => g.punti.slice(0, n).reduce((a, c) => a + (c || 0), 0));
+  const n = stato.buca + 1, da = stato.giro.da;
+  const buche = CAMPI.slice(da, n);
+  const tot = G.map((g) => g.punti.slice(da, n).reduce((a, c) => a + (c || 0), 0));
   const minimo = Math.min(...tot);
-  const righe = G.map((g, i) => `<tr><td><img src="${ASSETS}${g.pers === 'tino' ? 'tino/tino-normale.png' : 'gino/gino.png'}" alt=""> ${g.nome}</td>${CAMPI.slice(0, n).map((c, k) => {
+  const righe = G.map((g, i) => `<tr><td><img src="${ASSETS}${g.pers === 'tino' ? 'tino/tino-normale.png' : 'gino/gino.png'}" alt=""> ${g.nome}</td>${buche.map((c, j) => {
+    const k = da + j;
     const v = g.punti[k];
     const best = Math.min(...G.map((x) => x.punti[k]));
     return `<td class="${v === best && G.length > 1 ? 'meglio' : ''}">${v}</td>`;
   }).join('')}<td class="tot">${tot[i]}</td></tr>`).join('');
-  const intest = `<tr><th></th>${CAMPI.slice(0, n).map((c, k) => `<th>${k + 1}</th>`).join('')}<th>Tot</th></tr><tr><td>Par</td>${CAMPI.slice(0, n).map((c) => `<td>${c.par}</td>`).join('')}<td class="tot">${CAMPI.slice(0, n).reduce((a, c) => a + c.par, 0)}</td></tr>`;
+  const intest = `<tr><th></th>${buche.map((c, j) => `<th>${da + j + 1}</th>`).join('')}<th>Tot</th></tr><tr><td>Par</td>${buche.map((c) => `<td>${c.par}</td>`).join('')}<td class="tot">${buche.reduce((a, c) => a + c.par, 0)}</td></tr>`;
   let titolo = `Dopo la buca ${n}`, sotto = '', tinoImg = 'tino-normale.png', clsT = '', clsG = '';
   if (finale) {
     const vincitori = G.filter((g, i) => tot[i] === minimo);
@@ -1281,20 +1327,26 @@ pannello.addEventListener('click', (e) => {
   sblocca(); avviaMusica();
   suoni.clic();
   const a = el.dataset.azione;
+  if (el.dataset.giro !== undefined) {
+    const g = giri()[+el.dataset.giro], m = el.dataset.modo;
+    stato.giro = { ...g };
+    conNovita(g.da, () => iniziaPartita(m, g.da));
+    return;
+  }
   if (el.dataset.buca !== undefined) {
     const n = +el.dataset.buca;
     conNovita(n, () => iniziaPartita('avventura', n));
     return;
   }
   if (a === 'avventura' || a === 'buche') { mostraPannello(pannelloBuche()); if (stato.modo !== 'demo') iniziaPartita('demo', 0); }
-  else if (a === 'cpu' || a === 'due') conNovita(0, () => iniziaPartita(a, 0));
+  else if (a === 'cpu' || a === 'due') mostraPannello(pannelloGiro(a));
   else if (a === 'via') { chiudiPannello(); const f = azioneDopoNovita; azioneDopoNovita = null; if (f) f(); }
   else if (a === 'prossima') {
     const n = stato.buca + 1;
     if (stato.modo === 'avventura') conNovita(n, () => iniziaPartita('avventura', n));
     else conNovita(n, () => { stato.turno = 0; caricaBuca(n); });
   } else if (a === 'riprova') { chiudiPannello(); iniziaPartita('avventura', stato.buca); }
-  else if (a === 'ancora') { const m = stato.modo; conNovita(0, () => iniziaPartita(m, 0)); }
+  else if (a === 'ancora') { const m = stato.modo, da = stato.giro.da; conNovita(da, () => iniziaPartita(m, da)); }
   else if (a === 'riprendi') riprendi();
   else if (a === 'ricomincia') { chiudiPannello(); stato.fase = 'mira'; ricominciaBuca(); }
   else if (a === 'menu') menu();

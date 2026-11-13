@@ -66,8 +66,8 @@ e poi si visita http://localhost:8000.
   colorato: isole di prato tondeggianti con sponde a cuscino, dossi, girandole, funghi
   che rimbalzano, laghetti, miele, sabbia, campane che acchiappano la pallina, anelli magici
   e ascensori. Si tira trascinando all'indietro dalla pallina, come una fionda. Avventura a
-  stelle, contro Gino (il computer prova davvero i tiri) o in due. Per ora 6 buche; le
-  buche si modificano in `games/tino-golf/campi.js`.
+  stelle, contro Gino (il computer prova davvero i tiri) o in due. Per ora 12 buche in 4
+  gruppi di colori; le buche si modificano in `games/tino-golf/campi.js`.
 - **Tino Pro Skate** (`games/tino-pro-skate/`): Tino corre sullo skate per le strade di
   Firenze per recuperare lo skate di Gino, rubato dall'ispettore capo della Tari. Salti,
   trick in aria (Giglio, presa, frontflip e backflip con ← →: bisogna atterrare dritti),
