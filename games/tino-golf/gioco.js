@@ -8,7 +8,7 @@
  * comandi, personaggi, pannelli).
  */
 import * as THREE from './three.module.min.js';
-import { FISICA, creaMondo, nuovaPalla, tira, passo, copiaPalla, supporto, dirDa, angDa, strada } from './motore.js';
+import { FISICA, creaMondo, nuovaPalla, tira, passo, copiaPalla, supporto, dirDa, angDa, strada, catenaPer, usaPulsanti } from './motore.js';
 import { CAMPI, NOVITA } from './campi.js';
 import { costruisci, decorazioni, PALETTE, texturaOmbra } from './costruisci.js';
 import { cercaTiro, sbaglia, aspettaAscensore, muove } from './ia.js';
@@ -273,7 +273,7 @@ function vistaAlto() {
 /* Verso dove guardare: il punto dopo, lungo la strada per la buca. */
 function direzioneConsigliata(m, b) {
   let best = Infinity, punto = null;
-  const C = m.catena;
+  const C = catenaPer(m, b).catena;
   for (let i = 0; i < C.length; i++) {
     const s = C[i];
     if (s.salto) continue;
@@ -320,6 +320,13 @@ function caricaBuca(n) {
   scena.background = new THREE.Color(pal.spazio);
   scena.fog = new THREE.Fog(pal.spazio, 26, 75);
   cielo.groundColor = new THREE.Color(pal.spazio).lerp(new THREE.Color(pal.lati), 0.35);
+  // di notte la luce è più fioca e azzurrina
+  const L0 = pal.luci || {};
+  cielo.intensity = L0.cielo ?? 1.5;
+  cielo.color.set(pal.notte ? '#aebdff' : '#ffffff');
+  if (L0.terra) cielo.groundColor.set(L0.terra);
+  sole.intensity = L0.sole ?? 1.9;
+  sole.color.set(L0.coloreSole || '#fff6e8');
   document.body.style.background = pal.spazio;
   $('.barra').style.background = new THREE.Color(pal.lati).lerp(new THREE.Color('#2f4f4f'), 0.25).getStyle();
   // ombre: la luce copre tutta la buca
@@ -474,6 +481,13 @@ function ev(tipo, info) {
     case 'presa': suoni.presa(); messaggio('Presa!', 'la campana tiene la pallina', 1.2); faccia(PERS.tino, 'arrabbiato', 1.5); break;
     case 'miele': suoni.miele(); scintille(info.x, info.y, info.z, '#ffb52a', 10, 1.2); break;
     case 'sputa': suoni.sputa(); break;
+    case 'pulsante': {
+      suoni.pulsante();
+      const p = info.p;
+      scintille(p.x, p.y + 0.1, p.z, '#ffffff', 10, 1.4);
+      messaggio('Clic!', p.testo || '', Number.isFinite(p.durata) ? 1.6 : 1.3);
+      break;
+    }
     case 'campana': suoni.palo(info.v); break;
     case 'atterra': suoni.atterra(info.v); break;
     case 'rimbalzo': suoni.atterra(info.v); break;
@@ -532,6 +546,7 @@ function finisciTiro(esito) {
     dopo(1.5, () => {
       if (g.colpi >= MAX_COLPI) { bastaCosi(); return; }
       const nb = nuovaPalla(stato.mondo, b.da.x, b.da.z, stato.t);
+      nb.premuti = { ...b.premuti };
       stato.palla = nb;
       v.userData.affonda = 0; v.userData.sfera.scale.setScalar(1);
       prontoAlTiro();
@@ -561,7 +576,7 @@ function prontoAlTiro() {
   stato.ia = null;
   if (!cam.manuale && !cam.vista) cam.yawObj = direzioneConsigliata(stato.mondo, b);
   stato.mira.ang = direzioneConsigliata(stato.mondo, b);
-  stato.mira.pot = Math.min(0.6, Math.max(0.12, strada(stato.mondo, b.x, b.y, b.z) / 16));
+  stato.mira.pot = Math.min(0.6, Math.max(0.12, strada(stato.mondo, b.x, b.y, b.z, b) / 16));
   const p = PERS[giocatore().pers];
   posaGolfista(p, false);
   // tiro decisivo: Tino si concentra
@@ -844,7 +859,8 @@ function aggiorna(dt) {
 function disegna(dt) {
   if (!stato.mondo) { renderer.render(scena, camera); return; }
   const t = stato.t;
-  gruppoBuca.userData.aggiorna(t);
+  usaPulsanti(stato.mondo, stato.palla.premuti);
+  gruppoBuca.userData.aggiorna(t, stato.palla.premuti);
   gruppoDeco.userData.aggiorna(t);
   const b = stato.palla;
   // pallina

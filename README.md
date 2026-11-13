@@ -64,10 +64,11 @@ e poi si visita http://localhost:8000.
   in `games/sparabolle/livelli.js`.
 - **Tino Golf** (`games/tino-golf/`): minigolf in 3D (Three.js) in un mondo morbido e
   colorato: isole di prato tondeggianti con sponde a cuscino, dossi, girandole, funghi
-  che rimbalzano, laghetti, miele, sabbia, campane che acchiappano la pallina, anelli magici
-  e ascensori. Si tira trascinando all'indietro dalla pallina, come una fionda. Avventura a
-  stelle, contro Gino (il computer prova davvero i tiri) o in due. Per ora 12 buche in 4
-  gruppi di colori; le buche si modificano in `games/tino-golf/campi.js`.
+  che rimbalzano, laghetti, miele, sabbia, campane che acchiappano la pallina, anelli magici,
+  ascensori, pulsanti che alzano ponti e aprono cancelli, e le ultime buche di notte con le
+  lucine. Si tira trascinando all'indietro dalla pallina, come una fionda. Avventura a
+  stelle, contro Gino (il computer prova davvero i tiri) o in due. 18 buche in 6 gruppi di
+  colori; le buche si modificano in `games/tino-golf/campi.js`.
 - **Tino Pro Skate** (`games/tino-pro-skate/`): Tino corre sullo skate per le strade di
   Firenze per recuperare lo skate di Gino, rubato dall'ispettore capo della Tari. Salti,
   trick in aria (Giglio, presa, frontflip e backflip con ← →: bisogna atterrare dritti),

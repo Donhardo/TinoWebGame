@@ -112,6 +112,7 @@ const E = {
   },
   peccato() { [440, 392, 330].forEach((f, i) => tono('triangle', f, f, 0.3, 0.1, i * 0.16)); },
   clic() { tono('sine', 700, 700, 0.04, 0.06); },
+  pulsante() { tono('square', 1200, 900, 0.03, 0.06); tono('sine', 520, 780, 0.18, 0.18, 0.04); tono('sine', 780, 1170, 0.2, 0.12, 0.16); },
   gino() { tono('sine', 700, 1000, 0.1, 0.08); tono('sine', 1000, 1300, 0.1, 0.06, 0.1); },
 };
 

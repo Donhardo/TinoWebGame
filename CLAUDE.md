@@ -2028,8 +2028,8 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   orizzontale.
 - **Piano**: 18 buche in 6 gruppi da 3 (menta e crema: tiro e pendenze; pesca: trappoline;
   lilla: anelli magici; cielo: elevatori; limone: pulsanti che muovono le cose; blu notte con
-  lucine: tutto insieme). **Fatte 12 buche** (i primi quattro gruppi completi; ogni buca ha
-  un `id` fisso, usato per i salvataggi):
+  lucine: tutto insieme). **Fatte tutte e 18** (ogni buca ha un `id` fisso, usato per i
+  salvataggi):
   - menta: 1 Il primo tiro (dosso), 2 La curva (funghi), 3 La girandola (buca spostata a
     destra in cima alla rampa);
   - pesca: 4 Miele e laghetto (sabbia e campana), 5 Il guado (due laghetti con un varco
@@ -2044,7 +2044,18 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   - cielo: 10 L'ascensore (poi la molla per saltare il fosso), 11 Le scale mobili (par 4: due
     ascensori di fila, 0 → 0,9 e 0,9 → 1,8, sfasati in modo che scendendo dal primo il
     secondo sia giù), 12 La discesa (ascensore fino a 2, poi una rampa in discesa coi funghi
-    fino all'isola della buca: va dosata la forza).
+    fino all'isola della buca: va dosata la forza);
+  - limone: 13 Il ponte giallo (pulsante sul prato della partenza che alza il ponte sul
+    fosso; senza ponte la pallina cade), 14 La porta a tempo (pulsante blu in mezzo al
+    corridoio che abbassa il cancello per 2,4 s: col tiro giusto si passa in un colpo solo),
+    15 La sala dei pulsanti (par 5: ponte giallo, poi pulsante rosso a tempo, 3,5 s, contro
+    la sponda sinistra e cancello nel corridoio a destra, da prendere di sponda o
+    fermandosi sul pulsante);
+  - blu notte: 16 Le lucciole (anelli magici verso un'isola alta con due campane sfasate
+    davanti alla buca), 17 La giostra (ascensore, girandola sul ponte alto, pulsante viola
+    che alza il ponte verso l'isola della buca), 18 La notte stellata (molla per saltare il
+    fosso tra laghetto e miele, girandola, pulsante rosso a tempo e cancello, campana
+    accanto alla buca).
 - **Fisica** (`motore.js`, tabella `FISICA`, passo 1/120 s): x destra, z verso chi guarda
   (le buche vanno verso -z), y in alto; la y della pallina è il punto in cui tocca terra
   (raggio `R` 0,13). Il campo è fatto di **blocchi**: prismi con contorno, fondo e cima
@@ -2070,6 +2081,30 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   pallina sopra viene portata con sé; quando è su il suo lato è un muro per chi sta sotto e
   quando è giù il blocco alto dopo fa da muro). Tutto quello che si muove è una funzione pura
   del tempo (`altAscensore`, `altCampana`, `angGirandola`), così il computer può prevedere.
+- **Pulsanti** (`pulsanti: { id, x, z, durata, testo }`, l'id è anche il colore: giallo, blu,
+  rosso, viola, verde; tabella `COLORI_PULSANTE` in `costruisci.js`): basta passarci sopra.
+  Comandano i blocchi con `comando: { pulsante, spento, acceso, sparisce }`, che vanno dalla
+  quota spento ad acceso in 0,8 s (`FISICA.pulsante.corsa`): ponti che salgono da sotto (con
+  `sparisce` il ponte spento non c'è proprio: si cade nel fosso) e cancelli che sprofondano
+  (`acceso: -0.03`, `sponde: false`). Senza `durata` restano per sempre; con la durata tornano
+  com'erano dopo quei secondi, ma se la pallina si ferma sul pulsante il tempo riparte di
+  continuo (resta acceso). Lo stato è nella pallina (`b.premuti`: { id: quando è stato
+  premuto }), così le copie del computer e la traccia della mira hanno il loro; `passo`
+  chiama `usaPulsanti` e i blocchi lo leggono (`altComando(c, tp, t)`, funzione pura). Dopo
+  il laghetto o una caduta la pallina nuova tiene i pulsanti premuti; ogni giocatore parte
+  con tutto spento. Disegno: pulsante tondo che si schiaccia e brilla, puntini attorno che si
+  spengono per quelli a tempo, fila di puntini del suo colore verso quello che comanda (con
+  un'onda quando è acceso); ponte di assi chiare coi fianchi del colore del pulsante e la
+  sua sagoma tratteggiata sul fosso finché non c'è; cancello colorato a strisce bianche.
+  Per il computer: `iaVarianti: [{ senza: id, dove: [x1, z1, x2, z2], ia: [...] }]`, la
+  strada da seguire finché quel pulsante è spento (e la pallina è nel rettangolo `dove`):
+  di solito dalla partenza al pulsante; alla fine si aggiunge da solo quanto manca dal
+  pulsante alla buca (`catenaPer`, `strada(m, x, y, z, palla)`). Un pulsante a tempo conta
+  come acceso se lo sarà ancora 2 s dopo che la pallina si è fermata.
+- **Notte** (palette `notte`, con `notte: true`, `luci` e `lucine`): luce più fioca e
+  azzurrina, stelle (`Points`), luna, lucciole che girano sopra il campo, nuvole viola
+  trasparenti; lucine colorate ogni 0,55 lungo le sponde dei blocchi fissi, che brillano
+  piano, e un lampioncino con una `PointLight` accanto alla buca.
 - **Trappoline e penalità** (decise da Claude): laghetto e caduta giù dalle isole = un colpo
   in più e si riparte da dove si era tirato; miele = la pallina si ferma e il tiro dopo ha
   metà forza; sabbia = frena molto; campana = si abbassa a tempo (ciclo, `giu` secondi
@@ -2118,9 +2153,12 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   sbaglia apposta (`sbaglia`, Gino: 2,6° e 7%). Sull'ascensore aspetta di essere in cima. Nel
   gioco pensa 10 ms a fotogramma e tira al momento previsto (se niente si muove, appena
   pronto). Partite simulate (node, 10 a buca): Gino fa 1,4 / 3,7 / 2,4 · 3,8 / 2,7 / 2,7 ·
-  2,3 / 3,2 / 3,9 · 3,9 / 4,2 / 3,6 colpi (par 2, 3, 3 · 3, 3, 3 · 2, 3, 3 · 3, 4, 3), ~37,7
-  in tutto contro un par di 35 (battibile); il giocatore perfetto fa le buche 1-3 al primo
-  colpo, le altre in 2 (la 11 in 3). Copione: per ogni buca `creaMondo(CAMPI[i])` e
+  2,3 / 3,2 / 3,9 · 3,9 / 4,2 / 3,6 · 3,8 / 3,0 / 5,8 · 3,2 / 4,3 / 3,6 colpi (par 2, 3, 3 ·
+  3, 3, 3 · 2, 3, 3 · 3, 4, 3 · 3, 3, 5 · 3, 4, 4), ~61,5 in tutto contro un par di 57
+  (battibile); il giocatore perfetto fa le buche 1-3, 14 e 16 al primo colpo, le altre in
+  2-3 (la 15 in 4). Nel gioco vero (Playwright, Gino da solo) la 18 viene ~3,9 di media:
+  prima, con la girandola più in mezzo e il cancello di 3 s, ~5. Per le partite simulate da
+  node: `node --experimental-default-type=module` (i file sono moduli ES senza package.json). Copione: per ogni buca `creaMondo(CAMPI[i])` e
   `giocaBuca(m, 'gino', rnd)` 10 volte, `'perfetto'` 3 volte; conviene una buca per processo
   in parallelo (~20-50 s l'una).
 - **Rampe**: sopra una rampa che scende il bordo alto non fa da muro (prima la pallina veniva
@@ -2156,8 +2194,9 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
 - **Stato**: prototipo con 6 buche, provato dal proprietario con l'artifact ("grafica e
   colori molto carini"; il miele non si capiva: rifatto); unito in `main` per provarlo sul
   telefono (telecamera): sul telefono va bene. Poi le buche 5-6, 8-9 e 11-12, provate dal
-  proprietario con l'artifact ("carino") e unite in `main`. Prossimi passi: i gruppi limone e blu notte (pulsanti che muovono
-  le cose, poi tutto insieme) fino a 18 buche, robivecchi nascosti, eventuali texture dipinte
+  proprietario con l'artifact ("carino") e unite in `main`. Poi i gruppi limone (pulsanti) e
+  blu notte (tutto insieme, di notte): 18 buche, provate dal proprietario con
+  l'artifact ("ok") e unite in `main`. Prossimi passi possibili: robivecchi nascosti, eventuali texture dipinte
   (erba, sabbia).
 
 ## Per il prossimo gioco

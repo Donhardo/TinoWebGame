@@ -32,6 +32,7 @@ export const FISICA = {
   tele: { r: 0.3, minimo: 1.8, pausa: 0.5 },
   molla: { r: 0.4 },
   campana: { chiusa: 0.28, alta: 0.9, chiude: 0.2, apre: 0.4, sputa: 3.2 },
+  pulsante: { r: 0.3, corsa: 0.8 },
   durataMax: 24,
 };
 
@@ -96,6 +97,33 @@ export function angGirandola(g, t) {
   return (g.fase || 0) + g.vel * t;
 }
 
+/* Blocchi comandati da un pulsante: tp = quando è stato premuto (null = mai).
+ * Il blocco va da "spento" ad "acceso" in "corsa" secondi; se il pulsante è a
+ * tempo, dopo "durata" secondi torna com'era. Tutto dipende solo da t e tp. */
+export function altComando(c, tp, t) {
+  if (tp === null || tp === undefined) return c.spento;
+  const corsa = c.corsa;
+  const su = Math.min(1, Math.max(0, (t - tp) / corsa));
+  const giu = Math.min(1, Math.max(0, (t - tp - c.durata) / corsa));
+  return c.spento + (c.acceso - c.spento) * liscio(su) * (1 - liscio(giu));
+}
+
+/* Il pulsante id è acceso al tempo t? (per il computer e per i disegni) */
+export function acceso(m, premuti, id, t) {
+  const p = m.pulsantiPer[id];
+  const tp = premuti ? premuti[id] : undefined;
+  if (!p || tp === null || tp === undefined) return false;
+  return t - tp < p.durata;
+}
+
+/* I blocchi comandati leggono lo stato dei pulsanti della pallina che si sta
+ * muovendo (ogni pallina, anche quelle del computer, ha il suo). */
+export function usaPulsanti(m, premuti) {
+  for (const b of m.comandati) b.cmd.tp = premuti ? premuti[b.cmd.pulsante] : undefined;
+}
+
+const assente = (b, t) => b.cmd && b.cmd.sparisce && cima(b, 0, 0, t) <= b.cmd.spento + 1e-4;
+
 /* ---------- costruzione del mondo ---------- */
 
 function nuovoBlocco(d, i) {
@@ -108,6 +136,7 @@ function nuovoBlocco(d, i) {
     h: d.h || 0,
     gx: 0, gz: 0, cx: 0, cz: 0,
     asc: d.ascensore || null,
+    cmd: d.comando ? { corsa: F.pulsante.corsa, durata: Infinity, ...d.comando, tp: undefined } : null,
     lati: [],
     minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity,
   };
@@ -129,12 +158,14 @@ function nuovoBlocco(d, i) {
     if (orario) { nx = -nx; nz = -nz; }
     b.lati.push({ ax, az, bx, bz, nx, nz, len, aperto: (d.aperti || []).includes(k) });
   }
-  if (b.base === undefined) b.base = Math.min(...p.map(([x, z]) => cima(b, x, z, 0))) - 0.7;
+  if (b.cmd) b.h = b.cmd.acceso;
+  if (b.base === undefined) b.base = b.cmd ? Math.min(b.cmd.spento, b.cmd.acceso) - 0.7 : Math.min(...p.map(([x, z]) => cima(b, x, z, 0))) - 0.7;
   return b;
 }
 
 export function cima(b, x, z, t) {
   if (b.asc) return altAscensore(b.asc, t);
+  if (b.cmd) return altComando(b.cmd, b.cmd.tp, t);
   return b.h + b.gx * (x - b.cx) + b.gz * (z - b.cz);
 }
 
@@ -211,6 +242,10 @@ export function creaMondo(campo) {
     campane: [],
     tele: [],
     molle: [],
+    pulsanti: [],
+    pulsantiPer: {},
+    comandati: [],
+    varianti: [],
     buca: null,
     fondo: 0,
     catena: [],
@@ -254,6 +289,18 @@ export function creaMondo(campo) {
     const sa = supporto(m, t.a[0], t.a[1], 99, 0), sb = supporto(m, t.b[0], t.b[1], 99, 0);
     m.tele.push({ ...t, ya: sa ? sa.h : 0, yb: sb ? sb.h : 0, d: dirDa(t.dir) });
   }
+  for (const p of campo.pulsanti || []) {
+    const s = supporto(m, p.x, p.z, 99, 0);
+    const q = { durata: Infinity, ...p, y: s ? s.h : 0 };
+    m.pulsanti.push(q);
+    m.pulsantiPer[q.id] = q;
+  }
+  for (const b of m.blocchi) {
+    if (!b.cmd) continue;
+    const p = m.pulsantiPer[b.cmd.pulsante];
+    if (p) b.cmd.durata = p.durata;
+    m.comandati.push(b);
+  }
   for (const o of campo.molle || []) {
     const s = supporto(m, o.x, o.z, 99, 0);
     m.molle.push({ salto: 5.2, ...o, y: s ? s.h : 0 });
@@ -265,7 +312,18 @@ export function creaMondo(campo) {
   }
   m.fondo = Math.min(...m.blocchi.map((b) => b.base)) - 1.2;
   // catena per il computer: distanza che resta fino alla buca
-  const C = campo.ia || [];
+  m.catena = catena(campo.ia || []);
+  // con i pulsanti: strade da seguire finché un pulsante non è acceso
+  // (extra: la strada che resta dalla fine della variante, se non è data)
+  m.varianti = (campo.iaVarianti || []).map((v) => {
+    const fine = v.ia[v.ia.length - 1];
+    const extra = v.extra ?? strada({ varianti: [], catena: m.catena }, fine[0], fine[1], fine[2]);
+    return { senza: v.senza, dove: v.dove || null, catena: catena(v.ia), extra };
+  });
+  return m;
+}
+
+function catena(C) {
   let resto = 0;
   const seg = [];
   for (let i = C.length - 2; i >= 0; i--) {
@@ -275,8 +333,21 @@ export function creaMondo(campo) {
     seg.unshift({ ax, ay, az, bx, by, bz, resto, salto });
     resto += len;
   }
-  m.catena = seg;
-  return m;
+  return seg;
+}
+
+/* La strada da seguire per questa pallina (dipende dai pulsanti accesi). Per i
+ * pulsanti a tempo conta se saranno ancora accesi al tiro dopo (anticipo). */
+export function catenaPer(m, b, anticipo = 2) {
+  if (!b) return { catena: m.catena, extra: 0 };
+  for (const v of m.varianti) {
+    if (b && v.dove) {
+      const [x1, z1, x2, z2] = v.dove;
+      if (b.x < x1 || b.x > x2 || b.z < z1 || b.z > z2) continue;
+    }
+    if (!b.premuti || !acceso(m, b.premuti, v.senza, b.t + anticipo)) return v;
+  }
+  return { catena: m.catena, extra: 0 };
 }
 
 /* La cima più alta sotto la pallina, che si raggiunge da y (con il gradino). */
@@ -285,6 +356,7 @@ export function supporto(m, x, z, y, t) {
   for (const b of m.blocchi) {
     if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ) continue;
     if (!dentroPoligono(b.p, x, z)) continue;
+    if (b.cmd && assente(b, t)) continue;
     const h = cima(b, x, z, t);
     if (h <= y + F.gradino && h > bh) { bh = h; best = b; }
   }
@@ -299,12 +371,12 @@ export function nuovaPalla(m, x, z, t = 0) {
     x, y: s ? s.h : 0, z, vx: 0, vy: 0, vz: 0, t,
     aria: false, fermo: true, esito: null,
     presa: -1, dirPresa: null, tc: 0, labbro: false,
-    miele: false, da: { x, z }, sponde: 0, viaggio: 0,
+    miele: false, da: { x, z }, sponde: 0, viaggio: 0, premuti: {},
   };
 }
 
 export function copiaPalla(b) {
-  return { ...b, da: { ...b.da }, dirPresa: b.dirPresa ? { ...b.dirPresa } : null };
+  return { ...b, da: { ...b.da }, dirPresa: b.dirPresa ? { ...b.dirPresa } : null, premuti: { ...b.premuti } };
 }
 
 /* Tiro: angolo (vedi dirDa) e potenza 0..1. */
@@ -368,6 +440,7 @@ export function passo(m, b, ev) {
   const dt = F.dt, g = F.g, R = F.R;
   b.t += dt;
   const t = b.t;
+  if (m.comandati.length) usaPulsanti(m, b.premuti);
 
   // trattenuta da una campana
   if (b.presa >= 0) {
@@ -443,6 +516,7 @@ export function passo(m, b, ev) {
   for (const blk of m.blocchi) {
     if (b.x < blk.minX - 0.3 || b.x > blk.maxX + 0.3 || b.z < blk.minZ - 0.3 || b.z > blk.maxZ + 0.3) continue;
     if (b.y < blk.base - R) continue;
+    if (blk.cmd && assente(blk, t)) continue;
     for (const l of blk.lati) {
       const sx = l.bx - l.ax, sz = l.bz - l.az;
       let u = ((b.x - l.ax) * sx + (b.z - l.az) * sz) / (l.len * l.len);
@@ -478,6 +552,7 @@ export function passo(m, b, ev) {
   const rs = F.sponda.r;
   for (const sp of m.sponde) {
     if (b.x < sp.minX || b.x > sp.maxX || b.z < sp.minZ || b.z > sp.maxZ) continue;
+    if (sp.b.cmd && assente(sp.b, t)) continue;
     const ya = cima(sp.b, sp.ax, sp.az, t) + rs, yb = cima(sp.b, sp.bx, sp.bz, t) + rs;
     if (b.y + R < Math.min(ya, yb) - 0.6 || b.y > Math.max(ya, yb) + 0.6) continue;
     urtaSegmento(b, sp.ax, ya, sp.az, sp.bx, yb, sp.bz, rs, F.sponda.rimbalzo, ev);
@@ -526,6 +601,21 @@ export function passo(m, b, ev) {
   }
 
   if (!b.aria) {
+    // pulsanti: basta passarci sopra
+    for (const p of m.pulsanti) {
+      if (Math.abs(b.y - p.y) > 0.12) continue;
+      if (Math.hypot(b.x - p.x, b.z - p.z) >= F.pulsante.r) continue;
+      const tp = b.premuti[p.id], corsa = F.pulsante.corsa;
+      if (tp === undefined || t - tp >= p.durata + corsa) {
+        b.premuti[p.id] = t;
+        if (ev) ev('pulsante', { x: b.x, y: b.y, z: b.z, p });
+      } else if (t - tp > p.durata) {
+        // si stava richiudendo: torna su da dove si trova
+        const u = (t - tp - p.durata) / corsa;
+        b.premuti[p.id] = t - corsa * (1 - u);
+        if (ev) ev('pulsante', { x: b.x, y: b.y, z: b.z, p });
+      } else if (t - tp >= corsa) b.premuti[p.id] = t - corsa; // il tempo riparte
+    }
     // molle
     for (const o of m.molle) {
       if (Math.abs(b.y - o.y) > 0.1) continue;
@@ -602,9 +692,10 @@ export function simula(m, b0, ang, pot, maxT = F.durataMax) {
 }
 
 /* Quanta strada manca alla buca (per il computer). */
-export function strada(m, x, y, z) {
+export function strada(m, x, y, z, b = null) {
   let best = Infinity;
-  for (const s of m.catena) {
+  const V = m.varianti.length ? catenaPer(m, b ? { ...b, x, z } : null) : { catena: m.catena, extra: 0 };
+  for (const s of V.catena) {
     if (s.salto) continue;
     const sx = s.bx - s.ax, sy = (s.by - s.ay) * 4, sz = s.bz - s.az;
     const l2 = sx * sx + sy * sy + sz * sz;
@@ -615,5 +706,5 @@ export function strada(m, x, y, z) {
     const tot = lat * 1.2 + Math.sqrt(l2) * (1 - u) + s.resto;
     if (tot < best) best = tot;
   }
-  return best;
+  return best + V.extra;
 }
