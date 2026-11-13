@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Legati per la Coda · I giochi di Tino</title>
+  <meta name="description" content="Tino e Gino legati da un filo di lana salgono una parete infinita: uno si aggrappa e fa da ancora, l'altro salta, dondola e si lancia come da una fionda.">
+  <link rel="icon" href="../../assets/tino/tino-normale.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/sito.css">
+  <link rel="stylesheet" href="stile.css">
+  <link rel="manifest" href="../../manifest.webmanifest">
+  <meta name="theme-color" content="#3f8f6a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tino">
+  <link rel="apple-touch-icon" href="../../assets/icone/apple-touch-icon.png">
+  <script src="../../js/sito.js" defer></script>
+</head>
+<body>
+  <header class="barra">
+    <a class="barra-home" href="../../index.html" aria-label="Torna ai giochi">&larr; <span>Giochi</span></a>
+    <div class="tabellone" aria-live="polite">
+      <span id="info">Legati per la Coda</span>
+    </div>
+    <div class="barra-destra">
+      <button id="btn-pausa" class="barra-btn" type="button" aria-label="Pausa" title="Pausa (P)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="palco" class="palco">
+    <canvas id="campo" aria-label="Parete da scalare"></canvas>
+    <div id="altezza" class="altezza nascosto"><b>0</b> m<small></small></div>
+    <div id="tasti" class="tasti nascosto">
+      <div class="tasto tasto-tino"><img src="../../assets/tino/tino-normale.png" alt=""><span>Tino</span><kbd class="solo-pc">A</kbd></div>
+      <div class="tasto tasto-gino"><img src="../../assets/gino/gino.png" alt=""><span>Gino</span><kbd class="solo-pc">L</kbd></div>
+    </div>
+    <div id="messaggio" class="messaggio"></div>
+    <div id="aiuto" class="aiuto nascosto"></div>
+    <div id="gira" class="gira nascosto"><div>Gira il telefono in verticale</div></div>
+    <div id="pannello" class="pannello" role="dialog" aria-modal="true"></div>
+  </main>
+
+  <script type="module" src="gioco.js"></script>
+</body>
+</html>

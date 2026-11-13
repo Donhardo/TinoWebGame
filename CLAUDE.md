@@ -2200,39 +2200,76 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   2026: "va bene così"); scartati per ora robivecchi nascosti, texture dipinte e altre
   aggiunte.
 
-## Gioco in progetto: Legati per la Coda (`games/legati-per-la-coda/`, da fare)
+## Gioco in corso: Legati per la Coda (`games/legati-per-la-coda/`)
 Salita infinita in due: Tino e Gino sono legati da un filo di lana elastico e salgono
-una parete alternandosi (uno fa da ancora, l'altro dondola e si lancia). Idea scelta in
-un brainstorming (novembre 2026) tra altre sei; proposta approvata dal proprietario,
-codice non ancora iniziato.
+una parete alternandosi (uno fa da ancora, l'altro salta, dondola e si lancia). Idea scelta in
+un brainstorming (novembre 2026) tra altre sei; proposta approvata dal proprietario.
+File: `index.html`, `stile.css`, `fisica.js` (corpi, filo, presa e salto, sul piano; senza
+Three.js, si usa anche da node), `parete.js` (appigli generati a caso), `gioco.js` (scena 3D,
+telecamera, comandi, pannelli). Three.js è quello di Tino Golf, importato con
+`../tino-golf/three.module.min.js` (non copiato). Non ancora nella home né nel README
+(tappa 3).
 - **Decisioni prese**: titolo "Legati per la Coda"; salita infinita (non livelli);
   stesso mondo giocattolo morbido di Tino Golf (colori pastello, forme stondate, ibrido
-  2D/3D); un tasto per personaggio.
-- **Comandi**: tenere premuto = si aggrappa a ciò che tocca (pavimento, muro, ramo,
-  piolo) e resta fermo come ancora; lasciare = si stacca (se il filo è teso parte come da
-  una fionda); tocco breve da appoggiato = salto. Computer: A per Tino, L per Gino (o i due
-  Maiusc); telefono: metà sinistra / metà destra dello schermo; in due un tasto a testa.
-  Si gioca in verticale.
-- **Filo**: elastico con una lunghezza di riposo, oltre tira; chi cade viene trattenuto
-  dall'altro e rimbalza. Se cadono tutti e due sotto il bordo basso (la telecamera sale e
-  scende poco) la salita finisce.
-- **Grafica**: fisica su un piano (2D), scena in 3D con Three.js (il
-  `three.module.min.js` di Tino Golf, da copiare o riusare con percorso relativo):
-  isolette e mensole tonde in uno spazio a tinta unita, luce morbida e ombre; foto di
-  Tino e Gino su piani girati verso la telecamera come nel golf; il filo è un tubo
-  morbido che si tende e si allenta. Tappe salendo con le palette (menta, pesca, lilla,
-  cielo, limone, notte con le lucine).
+  2D/3D); un tasto per personaggio. Si gioca in verticale (sul telefono in orizzontale
+  compare "Gira il telefono" e il gioco va in pausa).
+- **Comandi** (`premi(m, i, giu)` in `fisica.js`): premere = si aggrappa a ciò che tocca
+  (mensola, piolo, muro); se non tocca niente resta "pronto" e si aggrappa appena tocca
+  qualcosa (alone giallo che pulsa; fermo e acceso quando tiene). Lasciare = si stacca.
+  Tocco breve (meno di 0,2 s) da appoggiato o aggrappato = salto; tocco breve in aria =
+  spinta (al massimo 3 per volo, ogni 0,3 s): col filo teso e l'altro aggrappato lungo la
+  tangente, per dondolare, altrimenti un po' avanti e in su. Computer: A o Maiusc sinistro
+  Tino, L o Maiusc destro Gino; col mouse clic nella metà sinistra Tino, destra Gino (tasto
+  destro sempre Gino); telefono: metà sinistra / metà destra, un dito per personaggio (in due
+  un tasto a testa). P o Esc pausa; i tasti lasciati in pausa contano quando si riprende.
+- **Fisica** (tabella `FISICA`, passo 1/240 s): metri, x verso destra (muri a ±4), y verso
+  l'alto (0 = cima dell'isola). Gravità 22, salto 10,8 in su e 2,4 di lato (~2,6 m), dal muro
+  si salta via dal muro, dal piolo ci si tira su (×1,1) e per 0,35 s non lo si urta. Corpi
+  tondi: Tino r 0,46 (foto alta 1,3), Gino r 0,36 (alta 0,95, massa 0,75). Sulle mensole
+  camminano da soli avanti e indietro (1,1 m/s), si girano ai bordi e verso l'altro se il filo
+  tira; con una spinta del filo oltre `trascina` vengono trascinati (e cadono dal bordo). Le
+  mensole si passano da sotto e ci si atterra sopra; i pioli sono tondi e solidi; i muri di
+  cuscini fanno rimbalzare e si possono prendere. Filo: riposo 2,8, oltre tira (k 30,
+  smorzato), oltre 4,6 non cede (strattone). **Fionda**: lasciando chi è aggrappato col filo
+  teso più di 0,25 e l'altro aggrappato, parte verso l'altro a 8 + 10 × stiramento (al
+  massimo 19): con il filo a 3,8-4,6 arriva ~3 m sopra l'altro.
+- **Parete** (`parete.js`, curve `CURVE` [metri, valore]): isola larga quanto la parete alla
+  partenza, poi una catena di appigli "sicuri" (mensole e pioli) con dislivello massimo
+  1,55 → 2,2 m (300 m; 0,25 in meno dopo un piolo), mensole larghe 3,4 → 1,4, di lato fino a
+  1,1 → 2,6 (i pioli al massimo 1,6; dopo un piolo il bordo della mensola è entro 1,2), pioli
+  dai 15 m (12% → 40%); qualche appiglio in più dall'altra parte a metà strada. **Sempre
+  battibile**: un copione (node, non nel repository) prova per ogni coppia di sicuri, con
+  l'ancora sul primo in 7 posti e chi salta in 7 posti, nei due versi, con 8 istanti per
+  aggrapparsi, se chi salta arriva sul secondo (Tino e Gino): 12 pareti fino a 300 m, 4224
+  prove, 0 fallite. La fionda non serve mai: è una scorciatoia.
+- **Telecamera**: vede almeno 9,8 m di larghezza e 14 di altezza; sale con la coppia e scende
+  al massimo 3 m sotto il punto più alto raggiunto; se tutti e due finiscono 7,4 m sotto il
+  centro la salita finisce (0,6 s dopo). Altezza = piedi del più basso, la più alta raggiunta;
+  record in `localStorage` `legati-per-la-coda:record` (e `salite`).
+- **Grafica** (palette menta in `PALETTE`): mensole a cuscino crema col prato sopra, pioli rosa
+  a righe, muri di cuscini verdi, isola di partenza con fiorellini e alberelli, isolette e
+  nuvole lontane; foto di Tino (specchiato secondo la direzione) e Gino su piani con ombra;
+  filo di lana a righe (tubo che si incurva quando è lento, si assottiglia e diventa più rosso
+  quando è teso). Tino arrabbiato quando tiene col filo molto teso, ferito agli strattoni, ko a
+  fine salita; Gino saltella, trema agli strattoni, cade ruotato. Aiuti all'inizio che vanno
+  avanti da soli; nel menu Gino saltella sull'isola. Niente suoni per ora.
+- **Prove automatiche**: `window.legatiPerLaCoda` (`stato`, `nuovaSalita`, `aggiorna`, `premi`,
+  `tieni`, tabelle); `fisica.js` e `parete.js` girano anche in node.
+- **Provarlo su Claude**: in una cartella di appoggio `index.html` (senza doctype, html, head
+  e body, percorsi `../../` tolti, link alla home `#`), `css/sito.css`, `stile.css`,
+  `fisica.js`, `parete.js`, `gioco.js` (con `ASSETS = 'assets/'` e l'import di
+  `./three.module.min.js`), `three.module.min.js` (da Tino Golf), `assets/tino/`,
+  `assets/gino/`; si pubblica con `files` e `root`.
+- **Stato**: tappa 1 (prototipo del nucleo) fatta, da far provare al proprietario con
+  l'artifact e tarare prima di andare avanti.
 - **Contenuti proposti** (crescono salendo): appigli (mensole, pioli tondi a cui ci si
   appende anche da sotto, cuscini che rimbalzano senza presa, ghiaccio o sapone dove non
   si fa presa); pericoli (chiodi e forbici che tagliano il filo, mensole che girano,
   ventilatori, agente della Tari col retino su una mensola); aiuti (ghiande da prendere
   anche col filo teso, gomitolo che allunga il filo per un po', bottone-molla che lancia).
-- **Tappe di lavoro**: 1) prototipo del nucleo (fisica di filo, presa e salto, parete
-  generata a caso con soli appigli, telecamera, comandi computer e telefono, grafica 3D
-  di base), da far provare come artifact e tarare prima di andare avanti; 2) contenuti
-  (pericoli, aiuti, tappe e palette, agenti, punteggio e record, modalità in due);
-  3) rifinitura (suoni e musica, espressioni, taratura con salite simulate, scheda nella
-  home).
+- **Tappe di lavoro**: 1) prototipo del nucleo (fatta); 2) contenuti (pericoli, aiuti, tappe e
+  palette, agenti, punteggio e record, modalità in due); 3) rifinitura (suoni e musica,
+  espressioni, taratura con salite simulate, scheda nella home e nel README).
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
