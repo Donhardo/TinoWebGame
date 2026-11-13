@@ -7,7 +7,7 @@ Stile scelto: **carta ritagliata** (collage di carta colorata a strati, come un 
 metà immagine (non il 40%) e in cima ha due rami con le foglie: nel gioco la parte alta sfuma nel
 tronco F2, che per questo chiede lo stesso tronco, della stessa larghezza.
 
-**F2-F5, R1-R5, N1-N3 fatti** (novembre 2026) e usati dal gioco. Mancano O1-O7 e P1-P3.
+**F2-F5, R1-R5, N1-N3 fatti** (novembre 2026) e usati dal gioco. Mancano O1-O7, P1-P3 ed E1 (l'elicotterino, aggiunto dopo).
 
 Ogni riquadro è già completo (stile + immagine): si copia così com'è. **F1 va fatto per primo**, in una chat
 nuova e senza allegati: è il riferimento di stile. In tutti gli altri si allega F1 ("same style as the
@@ -20,7 +20,7 @@ Se un'immagine non va, si rifà: il gioco userà i PNG solo se ci sono, altrimen
 
 - File: `fondali/` prato, tronco, chioma, cielo, stelle (F1-F5); `rami/` ramo, secco, radice, foglia, molla
   (R1-R5); `nuvole/` nuvola, secca, viola (N1-N3); `oggetti/` fungo, pigna, grandine, stella, pratiche,
-  bolletta, luna (O1-O7); `poteri/` berretto, pale, calamita (P1-P3).
+  bolletta, luna (O1-O7); `poteri/` berretto, pale, calamita (P1-P3), elicottero (E1).
 - Fondali: 9:16, il campo è largo 480 e alto 720-1040. F2-F5 si impilano in colonna (se la giunta si vede,
   una copia sì e una no specchiata in alto e in basso: per questo il cielo è di un colore piatto) e sfumano
   da una tappa all'altra come adesso; F1 sta sotto, una volta sola, con il prato al posto di quello del codice.
@@ -229,4 +229,12 @@ Game object, side view, landscape 4:1: two propeller blades of a toy propeller c
 Cut-paper collage style for a 2D vertical jumping game for children, same style as the attached image: every shape is cut from colored construction paper and thin craft card, stacked in a few layers like a handmade shadow-box diorama, with soft short drop shadows between the paper layers, visible paper grain and fibers, slightly irregular hand-cut edges and an occasional torn edge. Flat matte colors, warm and cheerful palette, no glossy highlights, no gradients except the soft shadows between layers. Strict side view (orthographic, no perspective), no people, no animals, no characters, no logos, no text unless requested.
 
 Game object, square (1:1): a red horseshoe magnet cut from paper, open side up, with the two tips covered in silver-grey paper. The object has a thin off-white paper rim around its outline. On a solid magenta #FF00FF background: the magenta must be perfectly flat and uniform, with no shadows, gradients or texture on it, and the object casts no shadow on it.
+```
+
+### E1 · elicotterino del salvataggio (senza le pale grandi)
+
+```
+Cut-paper collage style for a 2D vertical jumping game for children, same style as the attached image: every shape is cut from colored construction paper and thin craft card, stacked in a few layers like a handmade shadow-box diorama, with soft short drop shadows between the paper layers, visible paper grain and fibers, slightly irregular hand-cut edges and an occasional torn edge. Flat matte colors, warm and cheerful palette, no glossy highlights, no gradients except the soft shadows between layers. Strict side view (orthographic, no perspective), no people, no animals, no characters, no logos, no text unless requested.
+
+Game object, side view, landscape 2:1: a small round toy helicopter facing right, cut from red paper, with a short tail boom going to the left ending in a small yellow fin and a tiny green tail rotor, two dark brown landing skids at the bottom, and a short brown rotor mast on top of the body with NO main rotor blades. On the right front of the body a big round cockpit window, empty, cut from flat pale sky-blue paper with one small white shine in the upper right: nobody inside, the window must be plain and empty. The object has a thin off-white paper rim around its outline. On a solid magenta #FF00FF background: the magenta must be perfectly flat and uniform, with no shadows, gradients or texture on it, and the object casts no shadow on it.
 ```
