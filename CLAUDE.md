@@ -2196,8 +2196,9 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   telefono (telecamera): sul telefono va bene. Poi le buche 5-6, 8-9 e 11-12, provate dal
   proprietario con l'artifact ("carino") e unite in `main`. Poi i gruppi limone (pulsanti) e
   blu notte (tutto insieme, di notte): 18 buche, provate dal proprietario con
-  l'artifact ("ok") e unite in `main`. Prossimi passi possibili: robivecchi nascosti, eventuali texture dipinte
-  (erba, sabbia).
+  l'artifact ("ok") e unite in `main`. **Progetto chiuso dal proprietario** (novembre
+  2026: "va bene così"); scartati per ora robivecchi nascosti, texture dipinte e altre
+  aggiunte.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
