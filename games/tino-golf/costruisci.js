@@ -5,7 +5,7 @@
  * una funzione aggiorna(t) per le cose che si muovono.
  */
 import * as THREE from './three.module.min.js';
-import { FISICA, cima, altAscensore, altCampana, angGirandola } from './motore.js';
+import { FISICA, cima, altAscensore, altCampana, angGirandola, altComando, supporto } from './motore.js';
 
 export const PALETTE = {
   menta: {
@@ -24,10 +24,23 @@ export const PALETTE = {
     nome: 'Cielo', spazio: '#d9f0ff', prato: '#94dccd', lati: '#6ab0e6', sponda: '#ffffff',
     accento: '#ffa64d', bandiera: '#ff8a3d', deco: ['#ffffff', '#cfe9ff', '#fff2b8', '#ffd9e8'],
   },
+  notte: {
+    nome: 'Blu notte', spazio: '#1f2a55', prato: '#7fcaa6', lati: '#5566b8', sponda: '#fff1cf',
+    accento: '#ffb347', bandiera: '#ffcf4d', deco: ['#7f8fe0', '#ffe9a8', '#c7a6ff', '#e6dcff'],
+    notte: true, luci: { cielo: 1.25, sole: 1.45, coloreSole: '#d6dfff', terra: '#34407a' },
+    lucine: ['#ffd84d', '#ff7aa8', '#7fe0ff', '#b6ff8a', '#ffa64d'],
+  },
+  limone: {
+    nome: 'Limone', spazio: '#fff6cc', prato: '#b5df7a', lati: '#e8c23a', sponda: '#fffdf4',
+    accento: '#ff8a5c', bandiera: '#ff7043', deco: ['#fff09a', '#d4f2a6', '#ffd9b8', '#ffffff'],
+  },
 };
 
 const R = FISICA.R;
 const RS = FISICA.sponda.r;
+
+export const COLORI_PULSANTE = { giallo: '#ffc928', blu: '#3f9cff', rosso: '#ff5a5f', viola: '#a77bff', verde: '#3fcf74' };
+const colorePulsante = (id) => COLORI_PULSANTE[id] || id;
 
 /* Generatore a seme per le decorazioni. */
 export function rng(seme) {
@@ -214,6 +227,7 @@ export function costruisci(m, n) {
       });
       continue;
     }
+    if (b.cmd) { bloccoComandato(gruppo, animati, b, pal, mSponda); continue; }
     const topAt = b.gx || b.gz ? (x, z) => cima(b, x, z, 0) : b.h;
     const g = prisma(b.p, b.base, topAt);
     const mesh = new THREE.Mesh(g, [mPrato, mLati]);
@@ -463,8 +477,201 @@ export function costruisci(m, n) {
     });
   }
 
-  gruppo.userData.aggiorna = (t) => { for (const f of animati) f(t); };
+  // pulsanti
+  for (const p of m.pulsanti) pulsante(gruppo, animati, m, p, pal);
+
+  // di notte: lucine colorate lungo le sponde, e lampioncini accanto alla buca
+  if (pal.lucine) lucine(gruppo, animati, m, pal);
+
+  gruppo.userData.aggiorna = (t, premuti = {}) => { for (const f of animati) f(t, premuti); };
   return gruppo;
+}
+
+/* Lucine di notte: una fila di lampadine colorate sopra ogni sponda (che
+ * brillano piano, ognuna col suo ritmo) e un lampioncino vicino alla buca. */
+function lucine(gruppo, animati, m, pal) {
+  const sfera = new THREE.SphereGeometry(0.045, 10, 8);
+  const alone = new THREE.SphereGeometry(0.09, 10, 8);
+  const mFilo = new THREE.MeshBasicMaterial({ color: '#2a2f45' });
+  const tutte = [];
+  let k = 0;
+  for (const b of m.blocchi) {
+    if (b.asc || b.cmd || !b.catene) continue;
+    for (const c of b.catene) {
+      const P = c.punti;
+      let resto = 0.25;
+      for (let i = 0; i + 1 < P.length; i++) {
+        const [ax, az] = P[i], [bx, bz] = P[i + 1];
+        const L = Math.hypot(bx - ax, bz - az);
+        let s = resto;
+        while (s < L) {
+          const x = ax + ((bx - ax) * s) / L, z = az + ((bz - az) * s) / L;
+          const y = cima(b, x, z, 0) + RS * 2 + 0.03;
+          const col = pal.lucine[k++ % pal.lucine.length];
+          const l = new THREE.Mesh(sfera, new THREE.MeshBasicMaterial({ color: col }));
+          l.position.set(x, y, z);
+          const a = new THREE.Mesh(alone, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.25, depthWrite: false }));
+          a.position.copy(l.position);
+          const filo = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.05, 4), mFilo);
+          filo.position.set(x, y - 0.04, z);
+          gruppo.add(l, a, filo);
+          tutte.push({ a, f: (x * 3.1 + z * 1.7) % 6.28 });
+          s += 0.55;
+        }
+        resto = s - L;
+      }
+    }
+  }
+  // lampioncino accanto alla buca
+  const B = m.buca;
+  const lamp = new THREE.Group();
+  const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.25, 10), mat('#3b4170', { roughness: 0.5 }));
+  palo.position.y = 0.62; palo.castShadow = true;
+  lamp.add(palo);
+  const vetro = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), new THREE.MeshBasicMaterial({ color: '#fff1b8' }));
+  vetro.position.y = 1.32;
+  lamp.add(vetro);
+  const cappello = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.12, 16), mat('#3b4170'));
+  cappello.position.y = 1.47;
+  lamp.add(cappello);
+  const luce = new THREE.PointLight('#ffe3a0', 2.2, 4.5, 1.6);
+  luce.position.y = 1.3;
+  lamp.add(luce);
+  // dove c'è prato vicino alla buca, ma non sulla strada della pallina
+  let pos = [B.x + 0.9, B.z - 0.6];
+  for (const [ox, oz] of [[0.9, -0.6], [-0.9, -0.6], [0.9, 0.6], [-0.9, 0.6]]) {
+    const s = supporto(m, B.x + ox, B.z + oz, B.y + 0.05, 0);
+    if (s && Math.abs(s.h - B.y) < 0.02) { pos = [B.x + ox, B.z + oz]; break; }
+  }
+  lamp.position.set(pos[0], B.y, pos[1]);
+  gruppo.add(lamp);
+  animati.push((t) => {
+    for (const l of tutte) l.a.material.opacity = 0.18 + 0.2 * (0.5 + 0.5 * Math.sin(t * 2.2 + l.f));
+    luce.intensity = 2.1 + Math.sin(t * 7) * 0.08;
+  });
+}
+
+/* Ponte che sale da sotto o cancello che sprofonda: un prisma col colore del
+ * suo pulsante che si sposta in su e in giù. */
+function bloccoComandato(gruppo, animati, b, pal, mSponda) {
+  const c = b.cmd;
+  const col = colorePulsante(c.pulsante);
+  const alto = Math.max(c.spento, c.acceso);
+  const g = new THREE.Group();
+  const ponte = c.acceso > c.spento;
+  const mCima = ponte ? mat('#f6deb0', { roughness: 0.8 }) : mat(new THREE.Color(col).lerp(new THREE.Color('#ffffff'), 0.35), { roughness: 0.6 });
+  const mesh = new THREE.Mesh(prisma(b.p, b.base, alto, 0.12, 0.06), [mCima, mat(col, { roughness: 0.6 })]);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  g.add(mesh);
+  if (ponte) {
+    // assi del ponte
+    const lx = b.maxX - b.minX, lz = b.maxZ - b.minZ, lungo = lz > lx;
+    const n = Math.max(3, Math.round((lungo ? lz : lx) / 0.32));
+    const mAsse = mat('#e3bd84', { roughness: 0.85 });
+    for (let k = 1; k < n; k++) {
+      const u = k / n;
+      const riga = new THREE.Mesh(new THREE.BoxGeometry(lungo ? lx * 0.9 : 0.03, 0.012, lungo ? 0.03 : lz * 0.9), mAsse);
+      riga.position.set(lungo ? (b.minX + b.maxX) / 2 : b.minX + lx * u, alto + 0.004, lungo ? b.minZ + lz * u : (b.minZ + b.maxZ) / 2);
+      g.add(riga);
+    }
+  } else {
+    // righe bianche, come una sbarra
+    const lx = b.maxX - b.minX, lz = b.maxZ - b.minZ, lungo = lx > lz;
+    const n = Math.max(2, Math.round((lungo ? lx : lz) / 0.5));
+    const mRiga = mat('#ffffff', { roughness: 0.5 });
+    for (let k = 0; k < n; k++) {
+      const u = (k + 0.5) / n;
+      const r = new THREE.Mesh(new THREE.BoxGeometry(lungo ? 0.16 : lx + 0.01, (alto - b.base) * 0.5, lungo ? lz + 0.01 : 0.16), mRiga);
+      r.position.set(lungo ? b.minX + lx * u : (b.minX + b.maxX) / 2, alto - (alto - b.base) * 0.22, lungo ? (b.minZ + b.maxZ) / 2 : b.minZ + lz * u);
+      g.add(r);
+    }
+  }
+  for (const k of b.catene || []) g.add(tubo(k.punti, k.chiusa, () => alto + RS, RS, mSponda));
+  gruppo.add(g);
+  // dove salirà il ponte: la sua sagoma tratteggiata, appena accennata
+  let sagoma = null;
+  if (c.sparisce) {
+    const pts = b.p.map(([x, z]) => new THREE.Vector3(x, c.acceso + 0.01, z));
+    pts.push(pts[0].clone());
+    sagoma = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: col, dashSize: 0.16, gapSize: 0.12, transparent: true, opacity: 0.8 }));
+    sagoma.computeLineDistances();
+    gruppo.add(sagoma);
+    const velo = new THREE.Mesh(new THREE.ShapeGeometry(forma(b.p, 0.08)), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }));
+    velo.rotation.x = -Math.PI / 2; velo.position.y = c.acceso + 0.005;
+    sagoma.add(velo);
+  }
+  animati.push((t, premuti) => {
+    const h = altComando(c, premuti[c.pulsante], t);
+    g.position.y = h - alto;
+    g.visible = !(c.sparisce && h <= c.spento + 1e-4);
+    if (sagoma) { sagoma.visible = h < c.acceso - 0.05; sagoma.material.opacity = 0.45 + Math.sin(t * 3) * 0.25; }
+  });
+}
+
+/* Pulsante tondo sul prato: si schiaccia quando è acceso. Se è a tempo, i
+ * puntini attorno si spengono uno a uno. Una fila di puntini del suo colore
+ * porta verso quello che comanda. */
+function pulsante(gruppo, animati, m, p, pal) {
+  const col = colorePulsante(p.id);
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.38, 0.05, 32), mat(pal.sponda, { roughness: 0.5 }));
+  base.position.y = 0.025; base.receiveShadow = true;
+  g.add(base);
+  const mBott = mat(col, { roughness: 0.35, emissive: col, emissiveIntensity: 0.1 });
+  const bottone = new THREE.Mesh(new THREE.SphereGeometry(0.24, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), mBott);
+  bottone.scale.y = 0.5; bottone.position.y = 0.045; bottone.castShadow = true;
+  g.add(bottone);
+  const tempo = Number.isFinite(p.durata);
+  const lucine = [];
+  if (tempo) {
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+      l.position.set(Math.sin(a) * 0.3, 0.06, -Math.cos(a) * 0.3);
+      g.add(l); lucine.push(l);
+    }
+  }
+  g.position.set(p.x, p.y, p.z);
+  gruppo.add(g);
+  // la fila di puntini verso i blocchi comandati (solo dove c'è prato alla stessa quota)
+  const fila = [];
+  const mFila = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55 });
+  const disco = new THREE.CircleGeometry(0.045, 12);
+  disco.rotateX(-Math.PI / 2);
+  for (const b of m.comandati) {
+    if (b.cmd.pulsante !== p.id) continue;
+    // punto del blocco più vicino al pulsante
+    let qx = (b.minX + b.maxX) / 2, qz = (b.minZ + b.maxZ) / 2;
+    qx = Math.max(b.minX, Math.min(b.maxX, p.x)); qz = Math.max(b.minZ, Math.min(b.maxZ, p.z));
+    const L = Math.hypot(qx - p.x, qz - p.z);
+    const n = Math.floor((L - 0.5) / 0.28);
+    for (let k = 1; k <= n; k++) {
+      const u = (0.4 + k * 0.28) / L;
+      const x = p.x + (qx - p.x) * u, z = p.z + (qz - p.z) * u;
+      const s = supporto(m, x, z, p.y + 0.02, 0);
+      if (!s || Math.abs(s.h - p.y) > 0.02 || s.b.cmd) continue;
+      if (m.zone.some((zn) => ((x - zn.x) / zn.rx) ** 2 + ((z - zn.z) / zn.rz) ** 2 < 1)) continue;
+      const d = new THREE.Mesh(disco, mFila.clone());
+      d.position.set(x, p.y + 0.008, z);
+      gruppo.add(d); fila.push({ d, u: k / Math.max(1, n) });
+    }
+  }
+  animati.push((t, premuti) => {
+    const tp = premuti[p.id];
+    const dt = tp === undefined ? Infinity : t - tp;
+    const on = dt < p.durata;
+    bottone.position.y = on ? 0.012 : 0.045;
+    mBott.emissiveIntensity = on ? 0.55 + Math.sin(t * 6) * 0.15 : 0.1 + Math.max(0, Math.sin(t * 2.5)) * 0.15;
+    if (tempo) {
+      const resto = on ? 1 - dt / p.durata : 0;
+      lucine.forEach((l, k) => { l.material.color.set(k / 12 < resto ? col : '#ffffff'); l.scale.setScalar(k / 12 < resto ? 1.3 : 0.8); });
+    }
+    for (const f of fila) {
+      const onda = on ? Math.max(0, Math.sin(f.u * 6 - t * 7)) : 0;
+      f.d.material.opacity = on ? 0.45 + onda * 0.55 : 0.32;
+      f.d.scale.setScalar(1 + onda * 0.6);
+    }
+  });
 }
 
 /* La pozza di miele: lucida e un po' gonfia, col vasetto rovesciato da cui cola,
@@ -582,7 +789,7 @@ export function decorazioni(m, seme) {
   const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
   const fuori = (x, z, margine) => x < minX - margine || x > maxX + margine || z < minZ - margine || z > maxZ + margine;
   const sfera = new THREE.SphereGeometry(1, 24, 16);
-  const mNuvola = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, transparent: true, opacity: 0.92 });
+  const mNuvola = new THREE.MeshStandardMaterial({ color: pal.notte ? '#7d88c8' : '#ffffff', roughness: 1, transparent: true, opacity: pal.notte ? 0.55 : 0.92 });
   const nuvole = [];
   for (let i = 0; i < 11; i++) {
     let x, z;
@@ -647,7 +854,37 @@ export function decorazioni(m, seme) {
     c.position.set(cx + Math.cos(a) * d, -7 - r() * 3, cz + Math.sin(a) * d);
     g.add(c);
   }
+  // di notte: stelle, luna e lucciole
+  const lucciole = [];
+  if (pal.notte) {
+    const pos = [];
+    for (let i = 0; i < 420; i++) {
+      const a = r() * Math.PI * 2, e = 0.05 + r() * 1.3, d = 60;
+      pos.push(cx + Math.cos(a) * Math.cos(e) * d, Math.sin(e) * d - 4, cz + Math.sin(a) * Math.cos(e) * d);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const stelle = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#fff6dc', size: 0.35, sizeAttenuation: true, fog: false, transparent: true, opacity: 0.9 }));
+    g.add(stelle);
+    const luna = new THREE.Mesh(new THREE.SphereGeometry(2.6, 24, 16), new THREE.MeshBasicMaterial({ color: '#fff3cf', fog: false }));
+    luna.position.set(cx - 22, 20, cz - 40);
+    g.add(luna);
+    const mLu = new THREE.MeshBasicMaterial({ color: '#e9ff7a' });
+    const gLu = new THREE.SphereGeometry(0.04, 8, 6);
+    for (let i = 0; i < 26; i++) {
+      const l = new THREE.Mesh(gLu, mLu.clone());
+      l.material.transparent = true;
+      l.userData = { x: minX - 1 + r() * (maxX - minX + 2), z: minZ - 1 + r() * (maxZ - minZ + 2), y: 0.4 + r() * 1.4, f: r() * 10, v: 0.3 + r() * 0.5 };
+      g.add(l); lucciole.push(l);
+    }
+  }
+
   g.userData.aggiorna = (t) => {
+    for (const l of lucciole) {
+      const u = l.userData;
+      l.position.set(u.x + Math.sin(t * u.v + u.f) * 0.8, u.y + Math.sin(t * u.v * 1.7 + u.f) * 0.3, u.z + Math.cos(t * u.v * 0.8 + u.f) * 0.8);
+      l.material.opacity = 0.25 + 0.75 * Math.max(0, Math.sin(t * 1.6 + u.f * 3));
+    }
     for (const n of nuvole) {
       if (n.userData.v) n.position.x = n.userData.x0 + Math.sin(t * n.userData.v * 0.3) * 1.5;
       else n.position.y = n.userData.y0 + Math.sin(t * 0.6 + n.userData.f) * 0.15;

@@ -23,11 +23,11 @@ export const IA = {
 const stima = (d) => 1 + d / 5;
 function voto(m, b0, r) {
   if (r.esito === 'buca') return 0;
-  if (r.esito === 'fuori' || r.esito === 'acqua') return 1 + stima(strada(m, b0.x, b0.y, b0.z));
-  return stima(strada(m, r.x, r.y, r.z)) + (r.miele ? 0.4 : 0);
+  if (r.esito === 'fuori' || r.esito === 'acqua') return 1 + stima(strada(m, b0.x, b0.y, b0.z, { premuti: r.premuti, t: r.t }));
+  return stima(strada(m, r.x, r.y, r.z, r)) + (r.miele ? 0.4 : 0);
 }
 
-export const muove = (m) => m.girandole.length > 0 || m.campane.length > 0 || m.blocchi.some((b) => b.asc);
+export const muove = (m) => m.girandole.length > 0 || m.campane.length > 0 || m.blocchi.some((b) => b.asc) || m.pulsanti.some((p) => Number.isFinite(p.durata));
 
 /* La pallina sta su un ascensore che non è in cima? Allora si aspetta. */
 export function aspettaAscensore(m, b) {
@@ -149,6 +149,7 @@ export function giocaBuca(m, livello = 'gino', rnd = Math.random, max = 8) {
     if (r.esito === 'fuori' || r.esito === 'acqua') {
       colpi++;
       const nb = nuovaPalla(m, r.da.x, r.da.z, r.t);
+      nb.premuti = { ...r.premuti };
       b = nb;
     } else {
       b = r;
