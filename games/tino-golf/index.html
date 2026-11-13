@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tino Golf · I giochi di Tino</title>
+  <meta name="description" content="Minigolf in 3D con Tino e Gino: un mondo morbido di buche con dossi, girandole, laghetti, miele, anelli magici e ascensori.">
+  <link rel="icon" href="../../assets/tino/tino-normale.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/sito.css">
+  <link rel="stylesheet" href="stile.css">
+  <link rel="manifest" href="../../manifest.webmanifest">
+  <meta name="theme-color" content="#3f8f6a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tino">
+  <link rel="apple-touch-icon" href="../../assets/icone/apple-touch-icon.png">
+  <script src="../../js/sito.js" defer></script>
+</head>
+<body>
+  <header class="barra">
+    <a class="barra-home" href="../../index.html" aria-label="Torna ai giochi">&larr; <span>Giochi</span></a>
+    <div class="tabellone" aria-live="polite">
+      <span id="info-buca">Tino Golf</span>
+    </div>
+    <div class="barra-destra">
+      <button id="btn-vista" class="barra-btn" type="button" aria-label="Vista dall'alto" title="Vista dall'alto (V)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5 0 9 4.5 10 7-1 2.5-5 7-10 7S3 14.5 2 12c1-2.5 5-7 10-7z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </button>
+      <button id="btn-pausa" class="barra-btn" type="button" aria-label="Pausa" title="Pausa (P)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      </button>
+      <button id="btn-musica" class="barra-btn" type="button" aria-label="Musica" title="Musica (N)">
+        <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V6l10-2v11.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6.5" cy="17.5" r="2.8"/><circle cx="16.5" cy="15.5" r="2.8"/><path d="M9 6l10-2v3L9 9z"/></svg>
+        <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V6l10-2v11.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6.5" cy="17.5" r="2.8"/><circle cx="16.5" cy="15.5" r="2.8"/><path d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <button id="btn-audio" class="barra-btn" type="button" aria-label="Suoni" title="Suoni (M)">
+        <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="palco" class="palco">
+    <canvas id="campo" aria-label="Campo da minigolf"></canvas>
+    <div id="turno" class="turno nascosto"></div>
+    <div id="punteggi" class="punteggi nascosto"></div>
+    <div id="potenza" class="potenza nascosto"><span></span></div>
+    <div id="messaggio" class="messaggio"></div>
+    <div id="aiuto" class="aiuto nascosto"></div>
+    <div id="pannello" class="pannello" role="dialog" aria-modal="true"></div>
+  </main>
+
+  <script type="module" src="gioco.js"></script>
+</body>
+</html>
