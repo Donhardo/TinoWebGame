@@ -2200,6 +2200,40 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   2026: "va bene così"); scartati per ora robivecchi nascosti, texture dipinte e altre
   aggiunte.
 
+## Gioco in progetto: Legati per la Coda (`games/legati-per-la-coda/`, da fare)
+Salita infinita in due: Tino e Gino sono legati da un filo di lana elastico e salgono
+una parete alternandosi (uno fa da ancora, l'altro dondola e si lancia). Idea scelta in
+un brainstorming (novembre 2026) tra altre sei; proposta approvata dal proprietario,
+codice non ancora iniziato.
+- **Decisioni prese**: titolo "Legati per la Coda"; salita infinita (non livelli);
+  stesso mondo giocattolo morbido di Tino Golf (colori pastello, forme stondate, ibrido
+  2D/3D); un tasto per personaggio.
+- **Comandi**: tenere premuto = si aggrappa a ciò che tocca (pavimento, muro, ramo,
+  piolo) e resta fermo come ancora; lasciare = si stacca (se il filo è teso parte come da
+  una fionda); tocco breve da appoggiato = salto. Computer: A per Tino, L per Gino (o i due
+  Maiusc); telefono: metà sinistra / metà destra dello schermo; in due un tasto a testa.
+  Si gioca in verticale.
+- **Filo**: elastico con una lunghezza di riposo, oltre tira; chi cade viene trattenuto
+  dall'altro e rimbalza. Se cadono tutti e due sotto il bordo basso (la telecamera sale e
+  scende poco) la salita finisce.
+- **Grafica**: fisica su un piano (2D), scena in 3D con Three.js (il
+  `three.module.min.js` di Tino Golf, da copiare o riusare con percorso relativo):
+  isolette e mensole tonde in uno spazio a tinta unita, luce morbida e ombre; foto di
+  Tino e Gino su piani girati verso la telecamera come nel golf; il filo è un tubo
+  morbido che si tende e si allenta. Tappe salendo con le palette (menta, pesca, lilla,
+  cielo, limone, notte con le lucine).
+- **Contenuti proposti** (crescono salendo): appigli (mensole, pioli tondi a cui ci si
+  appende anche da sotto, cuscini che rimbalzano senza presa, ghiaccio o sapone dove non
+  si fa presa); pericoli (chiodi e forbici che tagliano il filo, mensole che girano,
+  ventilatori, agente della Tari col retino su una mensola); aiuti (ghiande da prendere
+  anche col filo teso, gomitolo che allunga il filo per un po', bottone-molla che lancia).
+- **Tappe di lavoro**: 1) prototipo del nucleo (fisica di filo, presa e salto, parete
+  generata a caso con soli appigli, telecamera, comandi computer e telefono, grafica 3D
+  di base), da far provare come artifact e tarare prima di andare avanti; 2) contenuti
+  (pericoli, aiuti, tappe e palette, agenti, punteggio e record, modalità in due);
+  3) rifinitura (suoni e musica, espressioni, taratura con salite simulate, scheda nella
+  home).
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   copiare dalle altre pagine le righe del `<head>` per l'app (manifest, meta, icona,
