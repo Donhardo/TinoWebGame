@@ -7,7 +7,8 @@ Stile scelto: **carta ritagliata** (collage di carta colorata a strati, come un 
 metà immagine (non il 40%) e in cima ha due rami con le foglie: nel gioco la parte alta sfuma nel
 tronco F2, che per questo chiede lo stesso tronco, della stessa larghezza.
 
-**F2-F5, R1-R5, N1-N3 fatti** (novembre 2026) e usati dal gioco. Mancano O1-O7, P1-P3 ed E1 (l'elicotterino, aggiunto dopo).
+**F2-F5, R1-R5, N1-N3 fatti** (novembre 2026) e usati dal gioco. **O1-O7, P1-P3 ed E1 fatti** (novembre 2026) e usati dal gioco: le pale P2 sono
+venute viste dall'alto e vanno bene (si stringono per girare); E1 aveva anche le pale grandi, tagliate.
 
 Ogni riquadro è già completo (stile + immagine): si copia così com'è. **F1 va fatto per primo**, in una chat
 nuova e senza allegati: è il riferimento di stile. In tutti gli altri si allega F1 ("same style as the

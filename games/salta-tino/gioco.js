@@ -185,6 +185,26 @@
     nuvolaViola: { file: 'nuvole/viola.png', cima: 39, alto: 46, fissi: [], piu: 32 },
   };
   for (const s of Object.values(SPRITE_RAMI)) s.im = carica(s.file);
+  // Oggetti e poteri dipinti: `largo` in gioco; l'altezza viene dall'immagine.
+  const DIPINTI = {
+    fungo: { file: 'oggetti/fungo.png', largo: 38 },           // poggia sul ramo col bordo basso
+    pigna: { file: 'oggetti/pigna.png', largo: 25 },           // centrate sul punto che cade
+    grandine: { file: 'oggetti/grandine.png', largo: 30 },
+    stella: { file: 'oggetti/stella.png', largo: 34, centro: 0.86 }, // centro della stella (frazione dell'altezza)
+    bolletta: { file: 'oggetti/bolletta.png', largo: 27 },
+    pratiche: { file: 'oggetti/pratiche.png', largo: CAPO.largo + 22 }, // si ripete in altezza
+    luna: { file: 'oggetti/luna.png', largo: 78 },
+    berretto: { file: 'poteri/berretto.png', largo: 34 },      // bordo basso al centro, con l'albero in cima
+    pale: { file: 'poteri/pale.png', largo: 42, alto: 8 },     // sul berretto; si stringono in larghezza per girare
+    calamita: { file: 'poteri/calamita.png', largo: 30 },
+    // elicotterino guardando a destra, senza le pale grandi (sono `pale`); misure in
+    // frazioni dell'immagine: cabina (centro e raggio in larghezze), albero delle pale
+    elicottero: { file: 'poteri/elicottero.png', largo: 100, cabina: [0.77, 0.45, 0.15], albero: 0.65 },
+  };
+  for (const d of Object.values(DIPINTI)) d.im = carica(d.file);
+  // l'immagine dipinta, se c'è (altrimenti null: resta il disegno del codice)
+  const dipinto = (nome) => (pronta(DIPINTI[nome].im) ? DIPINTI[nome] : null);
+  const altoDi = (d) => d.largo * d.im.naturalHeight / d.im.naturalWidth;
 
   // ---------------------------------------------------------------- DOM
   const $ = (s) => document.querySelector(s);
@@ -1549,6 +1569,13 @@
 
   function disegnaLuna(a) {
     ctx.globalAlpha = a;
+    const d = dipinto('luna');
+    if (d) {
+      const h = altoDi(d);
+      ctx.drawImage(d.im, W * 0.78 - d.largo / 2, alt * 0.18 - h / 2, d.largo, h);
+      ctx.globalAlpha = 1;
+      return;
+    }
     ctx.fillStyle = '#fff6d0';
     ctx.beginPath();
     ctx.arc(W * 0.78, alt * 0.18, 34, 0, Math.PI * 2);
@@ -2066,6 +2093,13 @@
     ctx.save();
     ctx.translate(f.dx, 0);
     ctx.scale(1 + f.schiaccia * 0.25, s);
+    const d = dipinto('fungo');
+    if (d) {
+      const h = altoDi(d);
+      ctx.drawImage(d.im, -d.largo / 2, -h + 2, d.largo, h);
+      ctx.restore();
+      return;
+    }
     ctx.fillStyle = '#f3ead8';
     ctx.strokeStyle = '#6b4424';
     ctx.lineWidth = 2;
@@ -2097,6 +2131,9 @@
       ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.beginPath(); ctx.ellipse(-6, -7, 5, 3, -0.6, 0, Math.PI * 2); ctx.fill();
+    } else if (id === 'calamita' && dipinto('calamita')) {
+      const d = dipinto('calamita'), h = altoDi(d);
+      ctx.drawImage(d.im, -d.largo / 2, -h / 2 - 3, d.largo, h);
     } else if (id === 'calamita') {
       ctx.lineCap = 'butt';
       ctx.strokeStyle = '#e8483f';
@@ -2114,6 +2151,14 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(s, s);
+    const b = dipinto('berretto');
+    if (b) {
+      const h = altoDi(b);
+      ctx.drawImage(b.im, -b.largo / 2, -h + 2, b.largo, h);
+      disegnaPale(0, -h + 3, DIPINTI.pale.largo, DIPINTI.pale.alto, ang);
+      ctx.restore();
+      return;
+    }
     ctx.fillStyle = '#f5c518';
     ctx.strokeStyle = '#7a4a22';
     ctx.lineWidth = 2;
@@ -2130,11 +2175,48 @@
     ctx.restore();
   }
 
+  // pale dell'elica che girano (dipinte o nel codice), centrate sul mozzo
+  function disegnaPale(x, y, largo, alto, ang) {
+    const k = Math.abs(Math.cos(ang));
+    const d = dipinto('pale');
+    if (d) {
+      const w = largo * (k * 0.92 + 0.08);
+      ctx.drawImage(d.im, x - w / 2, y - alto / 2, w, alto);
+      return;
+    }
+    ctx.fillStyle = '#4ea844';
+    ctx.beginPath(); ctx.ellipse(x, y, largo / 2 * k + 2, alto / 2, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // elicotterino dipinto: la foto di chi guida dentro la cabina, poi il vetro sopra
+  function elicotteroDipinto(d, chi, ang) {
+    const w = d.largo, h = altoDi(d);
+    const [cx, cy, cr] = d.cabina;
+    // la cabina sta dove era quella del disegno nel codice (16, -3)
+    const x0 = 16 - cx * w, y0 = -3 - cy * h;
+    ctx.drawImage(d.im, x0, y0, w, h);
+    const r = cr * w;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(16, -3, r, 0, Math.PI * 2); ctx.clip();
+    if (chi && pronta(chi)) {
+      const hh = chi === immagini.gino ? 28 : 34, ww = hh * chi.naturalWidth / chi.naturalHeight;
+      ctx.drawImage(chi, 17 - ww / 2, -3 + r - hh + 2, ww, hh);
+      ctx.fillStyle = 'rgba(190, 235, 255, 0.3)';
+      ctx.fillRect(16 - r, -3 - r, r * 2, r * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.beginPath(); ctx.ellipse(16 + r * 0.42, -3 - r * 0.5, r * 0.28, r * 0.13, -0.7, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    disegnaPale(x0 + d.albero * w, y0 + 2, 106, 12, ang);
+  }
+
   // elicotterino (disegnato nel codice), guardando a destra, centrato sul corpo;
   // `chi`: la foto di chi lo guida, nella cabina
   function formaElicottero(chi, ang, verso) {
     ctx.save();
     ctx.scale(verso, 1);
+    const d = dipinto('elicottero');
+    if (d) { elicotteroDipinto(d, chi, ang); ctx.restore(); return; }
     ctx.lineJoin = 'round';
     ctx.strokeStyle = '#5a3414';
     ctx.lineWidth = 2.5;
@@ -2252,6 +2334,13 @@
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(Math.sin(b.rot) * 0.5);
+      const d = dipinto('bolletta');
+      if (d) {
+        const h = altoDi(d);
+        ctx.drawImage(d.im, -d.largo / 2, -h / 2, d.largo, h);
+        ctx.restore();
+        return;
+      }
       ctx.fillStyle = '#fff';
       ctx.strokeStyle = '#555';
       ctx.lineWidth = 1.5;
@@ -2273,6 +2362,19 @@
     ripetiLati(p.x, 20, (x) => {
       ctx.save();
       ctx.translate(x, y);
+      const d = dipinto(p.tipo === 'stella' ? 'stella' : p.tipo === 'grandine' ? 'grandine' : 'pigna');
+      if (d) {
+        const h = altoDi(d);
+        if (p.tipo === 'stella') {
+          ctx.rotate(Math.sin(p.rot) * 0.08);
+          ctx.drawImage(d.im, -d.largo / 2, -h * d.centro, d.largo, h);
+        } else {
+          ctx.rotate(p.tipo === 'grandine' ? p.rot : Math.sin(p.rot) * 0.4);
+          ctx.drawImage(d.im, -d.largo / 2, -h / 2, d.largo, h);
+        }
+        ctx.restore();
+        return;
+      }
       if (p.tipo === 'stella') {
         // coda della stella cadente
         const gr = ctx.createLinearGradient(0, 0, 0, -70);
@@ -2336,9 +2438,14 @@
     const colori = ['#f2e2b6', '#cfe3f5', '#f6c9d0', '#e9e4d8', '#d6efc4'];
     const spessore = 15;
     const quante = Math.min(80, Math.ceil((alt + 20 - yPiedi) / spessore) + 1);
+    const pila = dipinto('pratiche');
     ripetiLati(C.x, CAPO.largo, (x) => {
       ctx.save();
-      for (let i = 0; i < quante; i++) {
+      if (pila) {
+        const hp = altoDi(pila);
+        for (let y = yPiedi; y < alt + 20; y += hp - 1) ctx.drawImage(pila.im, x - pila.largo / 2, y, pila.largo, hp);
+      }
+      for (let i = 0; i < (pila ? 0 : quante); i++) {
         const y = yPiedi + i * spessore;
         if (y > alt + 20) break;
         const off = (hash(i * 3 + 1) - 0.5) * 12;

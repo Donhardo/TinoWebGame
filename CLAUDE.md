@@ -1926,13 +1926,14 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
 - **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
   `stile.css`, `gioco.js` (con `ASSETS = 'assets/'`), `ghianda.svg`, `fondali/`, `rami/`,
-  `nuvole/`, `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files`
+  `nuvole/`, `oggetti/`, `poteri/`, `assets/tino/`, `assets/gino/`, `assets/agenti-tari/`; si pubblica con `files`
   e `root`.
 - **Stato**: prima versione unita in `main` (pull request 40), provata dal proprietario
   ("molto carino"). Passi 1-3 (pericoli, Gino giocabile, traguardi) provati dal
   proprietario con l'artifact ("bellissimo") e uniti in `main`. Passo 4 (grafica dipinta)
   in corso: fondali, rami e nuvole fatti, provati dal proprietario con l'artifact
-  ("splendido") e uniti in `main`; mancano oggetti e poteri.
+  ("splendido") e uniti in `main`; oggetti, poteri ed elicotterino dipinti fatti (da far
+  provare al proprietario).
 - **Prossimi passi (approvati tutti dal proprietario)**:
   1. *Più cose per strada*: fatto (pigne, ramo a molla, vento, ispettore capo: vedi sopra).
   2. *Gino giocabile*: fatto. Nel menu "Chi sale: Tino / Gino" (`localStorage`
@@ -1988,9 +1989,25 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
        (alte 46-50 invece di 30-32, 16 px in più per parte: quanto i piedi di Tino, quindi
        si vede dove ci si appoggia; la parte fisica non cambia); `cima` è la riga su cui si
        appoggia Tino; ombra corta sotto già nella tela. Il ramo a molla si specchia se lancia
-       a sinistra e si abbassa e schiaccia quando vibra. Il fungo resta disegnato nel codice.
-     Provati dal proprietario ("splendido") e uniti in `main`. **Prossima sessione**:
-     oggetti (O1-O7) e poteri (P1-P3), preparati allo stesso modo.
+       a sinistra e si abbassa e schiaccia quando vibra.
+     Provati dal proprietario ("splendido") e uniti in `main`.
+     - *Oggetti e poteri* (O1-O7, P1-P3 e l'elicotterino E1, prompt aggiunto dopo; novembre
+       2026): in `oggetti/` `fungo`, `pigna`, `grandine`, `stella`, `pratiche`, `bolletta`,
+       `luna`, in `poteri/` `berretto`, `pale`, `calamita`, `elicottero`; magenta tolto come
+       per i rami (anche i buchi chiusi, come quello tra i pattini), ritagliati, 256 colori,
+       larghi ~3 volte la misura in gioco. Tabella `DIPINTI` (`largo` in gioco, l'altezza
+       viene dall'immagine), `dipinto(nome)` dà l'immagine o null (allora resta il disegno
+       nel codice). Il fungo poggia sul ramo col bordo basso; pigna e grandine sono centrate
+       e girano come prima, la stella ha il centro all'86% dell'altezza (la coda sta sopra)
+       e oscilla appena; la pila di pratiche (`largo` = `CAPO.largo` + 22) si ripete dai piedi
+       dell'ispettore fino sotto lo schermo (l'immagine combacia in alto e in basso). Il
+       cappello a elica è il berretto con sopra le pale (`disegnaPale`: si stringono in
+       larghezza a ogni fotogramma, così sembrano girare viste di lato; Gemini le ha
+       disegnate viste dall'alto). Elicotterino (`elicotteroDipinto`): Gemini aveva fatto
+       anche le pale grandi, tagliate sopra l'albero; ci vanno le stesse `pale` (larghe 106).
+       La cabina (`cabina`: centro e raggio in frazioni) sta dove era quella del codice, con
+       dentro la foto di chi guida, un velo azzurro e un riflesso; canna e lenza come prima.
+       Da far provare al proprietario con l'artifact.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
