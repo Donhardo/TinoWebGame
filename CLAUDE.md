@@ -2010,6 +2010,133 @@ ramo in ramo e il giocatore lo sposta solo a destra e a sinistra. File: `index.h
        dentro la foto di chi guida, un velo azzurro e un riflesso; canna e lenza come prima.
        Provati dal proprietario con l'artifact ("splendido") e uniti in `main` (pull request 46).
 
+### Tino Golf (`games/tino-golf/`)
+Minigolf in 3D (meccaniche da classici del genere) in un "mondo giocattolo morbido":
+isole di prato arrotondate che galleggiano in uno spazio a tinta unita, sponde a
+cuscino, colori pastello, luce morbida. File: `index.html`, `stile.css`,
+`three.module.min.js` (Three.js r170, MIT, salvato nel repository: niente CDN),
+`motore.js` (fisica della pallina, senza Three.js), `campi.js` (le buche a dati),
+`costruisci.js` (dai dati alla scena 3D, palette, decorazioni), `ia.js` (il computer),
+`suoni.js` (suoni e musica Web Audio), `gioco.js` (partita, telecamera, comandi,
+personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il server.
+- **Decisioni prese**: titolo "Tino Golf"; Three.js va bene; stile morbido e tondeggiante
+  (ispirato all'atmosfera dei cartoni con lo spazio infinito a tinta unita, senza riprenderne
+  personaggi o elementi); **un mondo solo**, i livelli si distinguono con le **palette**
+  (gruppi di buche con colori propri); trappoline che bloccano la pallina, anelli magici
+  (teletrasporti) ed elevatori; modalità avventura, contro Gino e in due; le penalità le ha
+  lasciate decidere a Claude (vedi trappole). Sul telefono si gioca in verticale e in
+  orizzontale.
+- **Piano**: 18 buche in 6 gruppi da 3 (menta e crema: tiro e pendenze; pesca: trappoline;
+  lilla: anelli magici; cielo: elevatori; limone: pulsanti che muovono le cose; blu notte con
+  lucine: tutto insieme). **Prototipo fatto** (da far provare al proprietario): 6 buche,
+  1-3 menta (Il primo tiro col dosso, La curva coi funghi, La girandola), 4 pesca (Miele e
+  laghetto, con sabbia e campana), 5 lilla (Gli anelli magici: verde vicino alla buca, arancio
+  che riporta alla partenza), 6 cielo (L'ascensore, poi la molla per saltare il fosso).
+- **Fisica** (`motore.js`, tabella `FISICA`, passo 1/120 s): x destra, z verso chi guarda
+  (le buche vanno verso -z), y in alto; la y della pallina è il punto in cui tocca terra
+  (raggio `R` 0,13). Il campo è fatto di **blocchi**: prismi con contorno, fondo e cima
+  piana, a rampa (`rampa: [[x1, z1, h1], [x2, z2, h2]]`) o che sale e scende
+  (`ascensore`). La pallina sta sulla cima più alta sotto di lei raggiungibile con il
+  `gradino` (0,07); i lati di un blocco fanno da muro per chi sta più in basso; dove non c'è
+  niente sotto cade (sotto `fondo`: fuori). Le **sponde** sono tubi lungo i lati chiusi
+  (`aperti` = lati senza sponda, dove due blocchi si toccano), spostate all'interno del
+  raggio del tubo e con gli angoli arrotondati (`lineeSponde`, `arrotonda`); l'urto è una
+  capsula 3D (si può rimbalzare sopra). Rotolio con accelerazione 5/7 sui pendii, attrito
+  costante per materiale (`attrito`: erba, sabbia, miele) più uno proporzionale alla
+  velocità; la pallina si ferma solo se il pendio non la tira giù. Buca: entra sotto
+  `buca.vmax` (2,7), più veloce "salta il labbro" (deviata e frenata); vicino un poco la
+  attira. Tiro: `tira(b, ang, pot)`, velocità `vmax` × potenza (lineare: i colpi corti
+  sono più facili da dosare). `simula` gioca un tiro fino all'arresto; `strada` dice quanta
+  strada resta lungo la catena `ia` della buca.
+- **Elementi** (dati in `campi.js`, legenda in cima): `palo`, `fungo` (cuscino che
+  rimbalza e spinge), `girandola` (bracci a capsula che girano: l'urto tiene conto della
+  velocità del braccio; lasciano un varco troppo stretto lungo le sponde, quindi si passa a
+  tempo), zone a ellisse `sabbia` / `miele` / `acqua`, `campane`, `tele` (anelli magici: si
+  entra in `a` e si esce da `b` nella direzione `dir`, con la stessa velocità, almeno 1,8),
+  `molle` (salto verso l'alto), blocchi `ascensore` ({ giu, su, attesa, corsa, fase }: la
+  pallina sopra viene portata con sé; quando è su il suo lato è un muro per chi sta sotto e
+  quando è giù il blocco alto dopo fa da muro). Tutto quello che si muove è una funzione pura
+  del tempo (`altAscensore`, `altCampana`, `angGirandola`), così il computer può prevedere.
+- **Trappoline e penalità** (decise da Claude): laghetto e caduta giù dalle isole = un colpo
+  in più e si riparte da dove si era tirato; miele = la pallina si ferma e il tiro dopo ha
+  metà forza; sabbia = frena molto; campana = si abbassa a tempo (ciclo, `giu` secondi
+  giù), se prende la pallina la tiene finché non si rialza e poi la risputa verso il punto
+  del tiro (senza colpi in più); da chiusa è un ostacolo. Massimo 8 colpi a buca ("Basta
+  così!").
+  Il miele (`decoraMiele`) dopo la prima prova "non si capiva": ora è una pozza lucida e
+  gonfia con il vasetto rovesciato, il tappo caduto, le bollicine e un'ape che gira; la
+  pallina entrando fa uno schizzo (evento `miele`), resta coperta di miele finché è dentro,
+  compare "Appiccicata!" e in mira l'aiuto ricorda la metà forza.
+- **Grafica** (`costruisci.js`): blocchi = `ExtrudeGeometry` del contorno con gli spigoli
+  arrotondati e lo smusso (le rampe spostano i vertici della cima); sponde = `TubeGeometry`
+  su una curva morbida con le sfere ai capi; palette in `PALETTE` (spazio, prato, lati,
+  sponda, accento, bandiera, colori delle decorazioni); spazio con nebbia del suo colore;
+  decorazioni a seme (nuvolette, isolette con alberelli tondi, grandi colline lontane in
+  basso). Bandiera col numero della buca che sventola (si toglie quando la pallina è
+  vicina, salta quando entra). Una luce del sole con ombre morbide (mappa 2048, 1024 sul
+  telefono) che copre la buca, più la luce del cielo.
+- **Personaggi**: le foto originali su un piano che si gira verso la telecamera (solo
+  attorno all'asse verticale), con un'ombra tonda sotto; animati solo con trasformazioni
+  (saltello, tremolio, caduta ruotata, schiacciamento all'atterraggio, respiro). Chi tira sta
+  a sinistra della pallina con una mazza disegnata nel codice (la testa si tira indietro con
+  la potenza mentre si mira); quando la pallina si ferma la raggiunge con un salto. L'altro
+  aspetta vicino alla bandiera e fa il tifo (in avventura Gino fa da caddie). Tino:
+  arrabbiato (concentrato) col tiro decisivo vicino alla buca e quando la campana prende la
+  pallina, ferito quando la pallina va in acqua o cade, ko a "Basta così!" e quando perde
+  contro Gino; Gino trema, saltella, cade ruotato. Pallina-ghianda (texture col cappello),
+  quella di Gino più rossa.
+- **Comandi**: trascinare all'indietro partendo dalla pallina (entro ~80 px) e lasciare
+  (come una fionda: la direzione è opposta al trascinamento, vista dalla telecamera; potenza
+  = lunghezza / ~1/3 dello schermo); trascinare altrove, tasto destro o due dita girano la
+  vista, rotella o pizzico avvicinano; tastiera ← → mira, ↑ ↓ potenza (Maiusc per
+  piano), Spazio o Invio tira, A D (o Q E) girano la vista, W S avvicinano; V vista dall'alto
+  di tutta la buca; P o Esc pausa, M suoni, N musica. La freccia sul prato e la barra in basso
+  mostrano la potenza; i puntini mostrano solo i primi 0,6 s del tiro (con la fisica vera).
+- **Telecamera**: dietro la pallina (distanza 6,6, alzo 0,56), la segue morbida; quando la
+  pallina si ferma si gira verso il punto dopo della strada (`direzioneConsigliata`), se non
+  la si è girata a mano; con la tastiera sta dietro la mira. All'inizio di ogni buca un giro
+  dalla bandiera alla partenza (si salta con un clic). Campo visivo orizzontale ~64°, così in
+  verticale si vede abbastanza di lato.
+- **Computer** (`ia.js`, `cercaTiro` generatore, tabella `IA`): prova tutti gli angoli (ogni
+  3°) con 13 potenze, poi, se qualcosa si muove, anche aspettando fino a 3 s nelle direzioni
+  migliori; rifinisce attorno ai 3 migliori e alla fine sceglie, tra i 10 tiri migliori,
+  quello che va meglio in media con piccoli errori (così non sceglie sponde fortunate). Il voto
+  è una stima dei colpi che restano (0 in buca, 1 + strada/5, penalità comprese). Poi
+  sbaglia apposta (`sbaglia`, Gino: 2,6° e 7%). Sull'ascensore aspetta di essere in cima. Nel
+  gioco pensa 10 ms a fotogramma e tira al momento previsto (se niente si muove, appena
+  pronto). Partite simulate (node, 10 a buca): Gino fa ~1,7 / 3,1 / 2,3 / 3,0 / 2,6 / 3,0
+  colpi (par 2, 3, 3, 3, 2, 3), ~15,7 in tutto contro un par di 16; il giocatore perfetto
+  le fa quasi tutte al primo colpo.
+- **Partita**: avventura (Tino da solo; si apre la buca dopo finendo quella prima; stelle:
+  3 al par o meglio, 2 a par + 1, 1 altrimenti; `localStorage` `tino-golf:sbloccati`,
+  `stelle`, `migliori`, `novita`, `muto`, `musica-spenta`); contro Gino e in due tutte le
+  buche di fila, ogni giocatore fa la buca intera a turno, cartellino dopo ogni buca e alla
+  fine. Pannelli delle novità (`NOVITA` in `campi.js`) la prima volta che compaiono. Nel
+  menu Gino gioca da solo le buche (livello `bravo`, senza suoni).
+- **Suoni e musica** (`suoni.js`): tutto Web Audio con un compressore: tiro, sponde, bordi,
+  funghi, palo, labbro, buca, acqua, miele, anelli, molla, campana, atterraggio, premio
+  (arpeggio con più note per più stelle), rotolio continuo; musichetta in 3/4 in Fa
+  (marimba e basso, 100 bpm).
+- **Prove automatiche**: `window.tinoGolf` (`stato`, `iniziaPartita(modo, buca)`,
+  `caricaBuca`, `aggiorna`, `tiro(ang, pot)`, `direzioneConsigliata`, `strada`,
+  `schermoPalla`, `cambiaVista`, tabelle); `motore.js`, `campi.js` e `ia.js` si usano anche
+  da node (niente Three.js): `giocaBuca(m, livello)` gioca una buca intera. I copioni
+  (node per le partite simulate, Playwright con
+  `--use-gl=angle --use-angle=swiftshader` per le foto e una partita contro Gino) non sono
+  nel repository. Il browser di prova disegna senza scheda grafica (~14 fotogrammi al
+  secondo): le prestazioni vere sul telefono vanno ancora provate.
+- **Provarlo su Claude**: come per gli altri giochi, in una cartella di appoggio
+  `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
+  `stile.css`, tutti i `.js` (in `gioco.js` `ASSETS = 'assets/'`), `assets/tino/`,
+  `assets/gino/`; si pubblica con `files` e `root`.
+- **Tiro solo**: col giocatore simulato perfetto le buche 1-5 si fanno al primo colpo, la 6
+  (ascensore) no; è voluto (premio "Al primo colpo!"), per le persone è difficile.
+- **Stato**: prototipo con 6 buche, provato dal proprietario con l'artifact ("grafica e
+  colori molto carini"; il miele non si capiva: rifatto); unito in `main` per provarlo sul
+  telefono (telecamera). Prossimi passi: le 18
+  buche del piano (gruppi limone e blu notte con pulsanti che muovono le cose), robivecchi
+  nascosti, eventuali texture dipinte (erba, sabbia), prove di velocità sul telefono.
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   copiare dalle altre pagine le righe del `<head>` per l'app (manifest, meta, icona,

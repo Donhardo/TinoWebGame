@@ -399,3 +399,54 @@ main h2 { font-size: 1.4rem; color: var(--verde-scuro); margin: 1.2em 0 0.6em; }
   100% { translate: 0 0; scale: 1.15 0.85; }
 }
 .apt-gino { position: absolute; left: 6%; bottom: 3%; height: 18%; transform-origin: 50% 100%; animation: saltello 0.8s ease-in-out infinite; }
+
+/* Anteprima di Tino Golf: la pallina rotola sulla pista morbida fino alla buca */
+.anteprima-golf { background: radial-gradient(ellipse at 50% 30%, #ffffff, #d6f2e4 70%); }
+.apg-isola { position: absolute; border-radius: 50%; background: #8fdcaa; box-shadow: inset 0 -8px 0 #5fbf8d; }
+.apg-isola-a { left: 4%; top: 12%; width: 16%; height: 18%; }
+.apg-isola-b { right: 5%; top: 8%; width: 12%; height: 14%; background: #ffd0dc; box-shadow: inset 0 -6px 0 #f2a4b8; }
+.apg-pista {
+  position: absolute; left: 14%; right: 14%; top: 42%; height: 34%;
+  border-radius: 999px; background: #8fdcaa;
+  border: 5px solid #fff3da;
+  box-shadow: 0 9px 0 #5fbf8d, 0 14px 16px rgba(60, 90, 70, 0.25);
+}
+.apg-buca { position: absolute; right: 22%; top: 55%; width: 6%; height: 8%; border-radius: 50%; background: #2b3a2f; box-shadow: 0 0 0 2px #fff; }
+.apg-bandiera {
+  position: absolute; right: 24.6%; top: 22%; width: 2px; height: 37%; background: #fff;
+  transform-origin: 50% 100%; animation: oscilla 2.4s ease-in-out infinite;
+}
+.apg-bandiera::after {
+  content: ''; position: absolute; left: 2px; top: 0;
+  border-left: 18px solid #ff6f6f; border-top: 7px solid transparent; border-bottom: 7px solid transparent;
+}
+.apg-palla {
+  position: absolute; left: 27%; top: 56%; width: 4.5%; aspect-ratio: 1; border-radius: 50%;
+  background: linear-gradient(#7a4a22 0 38%, #e8b26a 38%);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.25);
+  animation: apg-palla 3.2s ease-out infinite;
+}
+@keyframes apg-palla {
+  0%, 12% { translate: 0 0; rotate: 0deg; opacity: 1; scale: 1; }
+  70% { translate: 870% 20%; rotate: 540deg; opacity: 1; scale: 1; }
+  78% { translate: 900% 25%; rotate: 600deg; opacity: 1; scale: 0.6; }
+  82%, 100% { translate: 900% 25%; opacity: 0; scale: 0.3; }
+}
+.apg-tino {
+  position: absolute; left: 14%; bottom: 22%; height: 46%;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.2));
+  transform-origin: 50% 100%; animation: apg-tino 3.2s ease-in-out infinite;
+}
+@keyframes apg-tino {
+  0%, 100% { rotate: 0deg; }
+  8% { rotate: -9deg; }
+  13% { rotate: 6deg; }
+  20% { rotate: 0deg; }
+}
+.apg-gino { position: absolute; right: 9%; bottom: 30%; height: 30%; transform-origin: 50% 100%; animation: apg-gino 3.2s ease-in-out infinite; }
+@keyframes apg-gino {
+  0%, 74%, 100% { translate: 0 0; }
+  80% { translate: 0 -22%; }
+  86% { translate: 0 0; }
+  92% { translate: 0 -14%; }
+}
