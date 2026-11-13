@@ -452,8 +452,10 @@ export function passo(m, b, ev) {
       if (b.y >= top - F.gradino) continue;
       const dx = b.x - qx, dz = b.z - qz;
       if (dx * l.nx + dz * l.nz < -1e-4 && dentroPoligono(blk.p, b.x, b.z)) {
+        // sopra una rampa che scende il bordo alto non è un muro
+        if (!blk.asc) { if (b.y >= cima(blk, b.x, b.z, t) - F.gradino) continue; }
         // la cima scende sopra la pallina (ascensore): la pallina sale con lei
-        if (top - b.y < 0.25) { b.y = top; continue; }
+        else if (top - b.y < 0.25) { b.y = top; continue; }
       }
       const d = Math.hypot(dx, dz);
       if (d >= R) continue;

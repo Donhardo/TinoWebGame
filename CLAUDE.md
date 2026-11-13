@@ -2028,10 +2028,23 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   orizzontale.
 - **Piano**: 18 buche in 6 gruppi da 3 (menta e crema: tiro e pendenze; pesca: trappoline;
   lilla: anelli magici; cielo: elevatori; limone: pulsanti che muovono le cose; blu notte con
-  lucine: tutto insieme). **Prototipo fatto** (da far provare al proprietario): 6 buche,
-  1-3 menta (Il primo tiro col dosso, La curva coi funghi, La girandola), 4 pesca (Miele e
-  laghetto, con sabbia e campana), 5 lilla (Gli anelli magici: verde vicino alla buca, arancio
-  che riporta alla partenza), 6 cielo (L'ascensore, poi la molla per saltare il fosso).
+  lucine: tutto insieme). **Fatte 12 buche** (i primi quattro gruppi completi; ogni buca ha
+  un `id` fisso, usato per i salvataggi):
+  - menta: 1 Il primo tiro (dosso), 2 La curva (funghi), 3 La girandola (buca spostata a
+    destra in cima alla rampa);
+  - pesca: 4 Miele e laghetto (sabbia e campana), 5 Il guado (due laghetti con un varco
+    stretto in mezzo, poi miele e sabbia), 6 Le campane (una fila di tre campane che chiude
+    tutto il corridoio e una di due con un varco in mezzo, a tempi diversi; fungo tra le
+    file, miele accanto alla buca);
+  - lilla: 7 Gli anelli magici (verde vicino alla buca, arancio che riporta alla partenza),
+    8 Tre anelli (verde verso un'isoletta da cui l'anello rosa porta alla buca, blu dritto
+    sull'isola della buca ma con un fungo davanti, quindi di sponda, arancio che riporta alla
+    partenza), 9 La scorciatoia (due corsie affiancate: in fondo alla prima l'anello verde
+    porta all'inizio della seconda, con la girandola; l'arancio a metà salta la girandola);
+  - cielo: 10 L'ascensore (poi la molla per saltare il fosso), 11 Le scale mobili (par 4: due
+    ascensori di fila, 0 → 0,9 e 0,9 → 1,8, sfasati in modo che scendendo dal primo il
+    secondo sia giù), 12 La discesa (ascensore fino a 2, poi una rampa in discesa coi funghi
+    fino all'isola della buca: va dosata la forza).
 - **Fisica** (`motore.js`, tabella `FISICA`, passo 1/120 s): x destra, z verso chi guarda
   (le buche vanno verso -z), y in alto; la y della pallina è il punto in cui tocca terra
   (raggio `R` 0,13). Il campo è fatto di **blocchi**: prismi con contorno, fondo e cima
@@ -2104,14 +2117,23 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   è una stima dei colpi che restano (0 in buca, 1 + strada/5, penalità comprese). Poi
   sbaglia apposta (`sbaglia`, Gino: 2,6° e 7%). Sull'ascensore aspetta di essere in cima. Nel
   gioco pensa 10 ms a fotogramma e tira al momento previsto (se niente si muove, appena
-  pronto). Partite simulate (node, 10 a buca): Gino fa ~1,7 / 3,1 / 2,3 / 3,0 / 2,6 / 3,0
-  colpi (par 2, 3, 3, 3, 2, 3), ~15,7 in tutto contro un par di 16; il giocatore perfetto
-  le fa quasi tutte al primo colpo.
+  pronto). Partite simulate (node, 10 a buca): Gino fa 1,4 / 3,7 / 2,4 · 3,8 / 2,7 / 2,7 ·
+  2,3 / 3,2 / 3,9 · 3,9 / 4,2 / 3,6 colpi (par 2, 3, 3 · 3, 3, 3 · 2, 3, 3 · 3, 4, 3), ~37,7
+  in tutto contro un par di 35 (battibile); il giocatore perfetto fa le buche 1-3 al primo
+  colpo, le altre in 2 (la 11 in 3). Copione: per ogni buca `creaMondo(CAMPI[i])` e
+  `giocaBuca(m, 'gino', rnd)` 10 volte, `'perfetto'` 3 volte; conviene una buca per processo
+  in parallelo (~20-50 s l'una).
+- **Rampe**: sopra una rampa che scende il bordo alto non fa da muro (prima la pallina veniva
+  riportata alla quota del bordo e sulla rampa lunga della buca 12 cadeva nel vuoto); solo
+  l'ascensore che scende sopra la pallina la porta su con sé.
 - **Partita**: avventura (Tino da solo; si apre la buca dopo finendo quella prima; stelle:
-  3 al par o meglio, 2 a par + 1, 1 altrimenti; `localStorage` `tino-golf:sbloccati`,
-  `stelle`, `migliori`, `novita`, `muto`, `musica-spenta`); contro Gino e in due tutte le
-  buche di fila, ogni giocatore fa la buca intera a turno, cartellino dopo ogni buca e alla
-  fine. Pannelli delle novità (`NOVITA` in `campi.js`) la prima volta che compaiono. Nel
+  3 al par o meglio, 2 a par + 1, 1 altrimenti; `localStorage` `tino-golf:stelle` e
+  `migliori` (oggetti per `id` della buca: quelli del prototipo, liste per numero, si
+  convertono da soli in `caricaProgressi`), `novita`, `muto`, `musica-spenta`; una buca è
+  aperta se quella prima ha almeno una stella, `bucaAperta`). L'elenco delle buche è diviso
+  per gruppi. Contro Gino e in due si sceglie il giro (`pannelloGiro`, `stato.giro` { da, a }:
+  la prima metà, la seconda o tutte), ogni giocatore fa la buca intera a turno, cartellino
+  (solo le buche del giro) dopo ogni buca e alla fine. Pannelli delle novità (`NOVITA` in `campi.js`) la prima volta che compaiono. Nel
   menu Gino gioca da solo le buche (livello `bravo`, senza suoni).
 - **Suoni e musica** (`suoni.js`): tutto Web Audio con un compressore: tiro, sponde, bordi,
   funghi, palo, labbro, buca, acqua, miele, anelli, molla, campana, atterraggio, premio
@@ -2129,13 +2151,14 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   `index.html` (senza doctype, html, head e body, percorsi `../../` tolti), `css/sito.css`,
   `stile.css`, tutti i `.js` (in `gioco.js` `ASSETS = 'assets/'`), `assets/tino/`,
   `assets/gino/`; si pubblica con `files` e `root`.
-- **Tiro solo**: col giocatore simulato perfetto le buche 1-5 si fanno al primo colpo, la 6
-  (ascensore) no; è voluto (premio "Al primo colpo!"), per le persone è difficile.
+- **Tiro solo**: col giocatore simulato perfetto le buche 1-3 si fanno al primo colpo; è
+  voluto (premio "Al primo colpo!"), per le persone è difficile.
 - **Stato**: prototipo con 6 buche, provato dal proprietario con l'artifact ("grafica e
   colori molto carini"; il miele non si capiva: rifatto); unito in `main` per provarlo sul
-  telefono (telecamera). Prossimi passi: le 18
-  buche del piano (gruppi limone e blu notte con pulsanti che muovono le cose), robivecchi
-  nascosti, eventuali texture dipinte (erba, sabbia), prove di velocità sul telefono.
+  telefono (telecamera): sul telefono va bene. Poi le buche 5-6, 8-9 e 11-12, provate dal
+  proprietario con l'artifact ("carino") e unite in `main`. Prossimi passi: i gruppi limone e blu notte (pulsanti che muovono
+  le cose, poi tutto insieme) fino a 18 buche, robivecchi nascosti, eventuali texture dipinte
+  (erba, sabbia).
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
