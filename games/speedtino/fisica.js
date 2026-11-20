@@ -45,7 +45,9 @@
 
   /*
    * Personaggi: corpo (scatola che urta) e ritocchi a FISICA e RAMPINO.
-   * Gino: pesante e grosso, corda più lunga e dondolo più potente.
+   * Gino: pesante e grosso (corre più piano, cade più veloce), corda più lunga e
+   * dondolo più potente. Salta come Tino: con un salto più pesante, nelle stanze
+   * con le punte sopra e sotto non c'era nessun salto giusto (è più alto e più largo).
    * Matteo: lungo, il più veloce a correre e salta più lontano, ma tiene il
    * rampino coi denti: corda corta e dondolo più nervoso.
    */
@@ -53,7 +55,7 @@
     tino: { corpo: CORPO, fisica: {}, rampino: {} },
     gino: {
       corpo: { w: 14, h: 15 },
-      fisica: { corsa: 135, accTerra: 1150, accAria: 800, salto: 270, g: 2050, gSu: 1000, caduta: 360, pareteX: 155, pareteY: 290 },
+      fisica: { corsa: 140, accTerra: 1150, accAria: 800, caduta: 360, pareteX: 155, pareteY: 290 },
       rampino: { portata: 128, massimo: 128, minimo: 22, gravita: 1050, spinta: 700, lancio: 130, avvolgi: 110 }
     },
     matteo: {
