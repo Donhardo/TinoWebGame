@@ -2219,12 +2219,26 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
   personaggio da sbloccare (proposta: pesante, corda più lunga e dondolo più potente, ma
   grosso, quindi passa a fatica nei varchi stretti). Gino così è approvato ("perfetto").
 - **Matteo** (personaggio nuovo, `assets/` non ancora): tirannosauro giocattolo amico di
-  Tino e Gino, verde oliva, testone coi denti, braccini corti, coda lunga; alto come Tino
+  Tino e Gino, verde oliva tendente al marrone (approvato), testone coi denti, braccini corti, coda lunga; alto come Tino
   ma molto più lungo. Giocabile, da sbloccare (proposta: il più veloce a correre e salta
   più lontano, ma tiene il rampino coi denti: corda corta e dondolo più nervoso).
 - **Bozzetti**: pubblicati come artifact (scena Amiga animata, Tino scelto: B1, coda a
-  pennacchio; Gino grande, Matteo, palette). Prossimo passo: il prototipo del nucleo (rampino coi
-  comandi, ripartenza istantanea, prime stanze).
+  pennacchio; Gino grande, Matteo, palette). Pagina dei bozzetti salvata in
+  `games/speedtino/bozzetti.html` (formato artifact: senza doctype; contiene i disegni a
+  pixel di Tino, Gino e Matteo come righe di caratteri e la scena animata). Proposte per Gino
+  pesante e Matteo veloce approvate.
+- **Prototipo iniziato** (da finire nella prossima sessione): `games/speedtino/fisica.js`
+  (scritta, non ancora provata): schermo 320 × 180, quadretti da 8, stanze alte 22 righe con
+  pavimento alla riga 17 all'inizio e alla fine (così si attaccano una all'altra); corsa,
+  salto tenuto più alto, coyote e memoria del salto, scivolata e salto dalla parete; rampino
+  che si aggancia da solo al piolo `o` più vicino davanti e sopra (portata 104), tenuto
+  premuto = appeso, ← → danno slancio, ↑ ↓ accorciano e allungano, salto = si lascia con
+  una spinta; pericoli `^ v < >` spuntoni, `*` seghe, caduta; tabelle `FISICA` e `RAMPINO`.
+  Funziona anche in node (`module.exports`). Da fare: `stanze.js` (stanze a caratteri,
+  generate con un aiuto in Python per non sbagliare le larghezze), giocatore simulato in node
+  (ricerca a fascio su comandi a tratti di 0,1 s) per verificare che ogni stanza si superi,
+  `gioco.js` (disegno Amiga come nei bozzetti, telecamera, morti e ripartenza, comandi
+  touch con ◀ ▶ SALTA RAMPINO), `index.html`, `stile.css`; poi artifact per la prova.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
