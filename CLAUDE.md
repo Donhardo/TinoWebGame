@@ -2200,6 +2200,26 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   2026: "va bene così"); scartati per ora robivecchi nascosti, texture dipinte e altre
   aggiunte.
 
+## Gioco in corso: Speedtino (`games/speedtino/`, non ancora iniziato)
+Platform a scorrimento orizzontale con ritmo frenetico, molto difficile ma giusto (sullo
+stile dei "rage game" di precisione): Tino ha un rampino che si aggancia ai pioli, dondola,
+si dà lo slancio e salta. Idea del proprietario (novembre 2026).
+- **Decisioni prese**: titolo "Speedtino"; corsa infinita con record in metri e conteggio
+  dei morti; ripartenza istantanea dall'ultimo punto sicuro; mondo fatto di stanze
+  disegnate a mano montate a caso (ognuna verificata col giocatore simulato, così è sempre
+  battibile); grafica in stile Amiga (bassa risoluzione ~320 × 180 ingrandita a pixel netti,
+  al massimo 32 colori per tappa, cielo a fasce, parallasse) e musica in stile tracker.
+- **Eccezione alla regola delle foto**: in questo gioco (solo qui) Tino e Gino sono
+  disegnati a pixel, nello stile dell'omino squadrato di Claude Code. Tino: corpo
+  arancione, pancia chiara, codona marrone piena che sale fin sopra le orecchie, collare
+  lungo tutto il collo con le perline e tre campanelli appesi (rosso, rosa, viola). Gino:
+  più piccolo e chiaro, naso rosso e dentoni.
+- **Gino**: rapito in una gabbietta alla fine di ogni tappa e, una volta liberato,
+  personaggio da sbloccare (più leggero, salta più in alto, corda più corta).
+- **Bozzetti**: pubblicati come artifact (scena Amiga animata, Tino B1 coda a pennacchio e
+  B2 coda a ricciolo, Gino, palette); da scegliere la coda, poi il prototipo del nucleo
+  (rampino coi comandi, ripartenza istantanea, prime stanze).
+
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
   copiare dalle altre pagine le righe del `<head>` per l'app (manifest, meta, icona,
