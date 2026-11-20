@@ -421,11 +421,14 @@
         raccogliGhiande();
       }
     }
-    // telecamera: Tino a poco più di un terzo dello schermo, un po' avanti a dove va
+    // telecamera con una zona morta: Tino resta tra il 28% e il 42% dello schermo;
+    // se si ferma la telecamera sta ferma (niente rinculo)
     const c = F.centro(stato.p);
-    const avanti = Math.max(-30, Math.min(50, stato.p.vx * 0.22));
-    const obiettivo = Math.max(0, c.x - W * 0.36 + avanti);
-    stato.cam += (obiettivo - stato.cam) * Math.min(1, dt * (p.morto ? 2 : 7));
+    let obiettivo = stato.cam;
+    if (c.x - stato.cam > W * 0.42) obiettivo = c.x - W * 0.42;
+    else if (c.x - stato.cam < W * 0.28) obiettivo = c.x - W * 0.28;
+    obiettivo = Math.max(0, obiettivo);
+    stato.cam += (obiettivo - stato.cam) * Math.min(1, dt * (p.morto ? 3 : 12));
     stato.scossa = Math.max(0, stato.scossa - dt);
     if (stato.avviso && (stato.avviso.t -= dt) <= 0) stato.avviso = null;
     aggiornaParticelle(dt);

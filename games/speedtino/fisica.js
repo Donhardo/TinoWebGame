@@ -25,7 +25,8 @@
     bloccoParete: 0.13,   // dopo il salto dalla parete i comandi di lato contano meno
     coyote: 0.08,         // si può ancora saltare appena lasciato il bordo
     memoria: 0.1,         // un salto premuto poco prima di toccare terra vale
-    massima: 430          // velocità massima in tutte le direzioni
+    massima: 430,         // velocità massima in tutte le direzioni
+    taglio: 0.4           // lasciando il salto mentre sale la velocità in su si moltiplica per questo
   };
 
   const RAMPINO = {
@@ -93,7 +94,7 @@
     return {
       x, y, vx: 0, vy: 0, verso: 1,
       aTerra: false, muro: 0, coyote: 0, memoria: 0, blocco: 0,
-      gancio: null, mancato: 0, tiro: null,
+      gancio: null, mancato: 0, tiro: null, saltando: false,
       morto: false, causa: null, tempo: 0
     };
   }
@@ -201,6 +202,7 @@
       const c = centro(p);
       if (q) {
         const d = Math.hypot(q.x - c.x, q.y - c.y);
+        p.saltando = false;
         p.gancio = { x: q.x, y: q.y, L: Math.max(RAMPINO.minimo, Math.min(RAMPINO.massimo, d)) };
       } else {
         p.mancato = 0.16;
@@ -252,11 +254,14 @@
 
       // salto, salto dalla parete
       if (p.memoria > 0 && p.coyote > 0) {
-        p.vy = -FISICA.salto; p.coyote = 0; p.memoria = 0; p.aTerra = false;
+        p.vy = -FISICA.salto; p.coyote = 0; p.memoria = 0; p.aTerra = false; p.saltando = true;
       } else if (p.memoria > 0 && p.muro && !p.aTerra) {
-        p.vy = -FISICA.pareteY; p.vx = -p.muro * FISICA.pareteX; p.verso = -p.muro;
+        p.vy = -FISICA.pareteY; p.vx = -p.muro * FISICA.pareteX; p.verso = -p.muro; p.saltando = true;
         p.blocco = FISICA.bloccoParete; p.memoria = 0;
       }
+      // lasciando il salto mentre sale si taglia la spinta: il salto si dosa
+      if (p.saltando && !k.salto && p.vy < 0) { p.vy *= FISICA.taglio; p.saltando = false; }
+      if (p.vy >= 0) p.saltando = false;
       const g = (k.salto && p.vy < 0) ? FISICA.gSu : FISICA.g;
       p.vy += g * dt;
       const max = (p.muro && p.vy > 0 && k.sx === p.muro) ? FISICA.scivolo : FISICA.caduta;

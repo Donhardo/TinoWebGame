@@ -2227,14 +2227,18 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
   `games/speedtino/bozzetti.html` (formato artifact: senza doctype; contiene i disegni a
   pixel di Tino, Gino e Matteo come righe di caratteri e la scena animata). Proposte per Gino
   pesante e Matteo veloce approvate.
-- **Prototipo giocabile** (novembre 2026, da far provare al proprietario con l'artifact).
+- **Prototipo giocabile** (novembre 2026), provato dal proprietario: la difficoltà va bene;
+  sistemati il rinculo della telecamera e il salto che non si dosava (seconda prova da fare).
   File: `index.html`, `stile.css` (stile Amiga: pannelli scuri, Press Start 2P e VT323,
   righe "copper"), `fisica.js`, `stanze.js`, `soluzioni.js` (generato), `suoni.js`,
   `gioco.js`, `tino-pixel.png` (Tino a pixel ×4 per l'anteprima della home),
   `prove/verifica.js` (nel repository), `bozzetti.html`.
   - *Fisica* (`fisica.js`, anche in node): schermo 320 × 180, quadretti da 8, corpo di Tino
     10 × 10; stanze di 22 righe con il pavimento alla riga 17 all'inizio e alla fine. Salto
-    ~35 px tenuto e ~70 px di lungo in piano (`FISICA`); coyote, memoria del salto,
+    ~35 px tenuto e ~70 px di lungo in piano (`FISICA`); lasciando il tasto mentre sale la
+    velocità in su si moltiplica per `taglio` 0,4 (solo nei salti, non dopo il rampino): un
+    tocco fa ~13-19 px, 0,12 s ~24, 0,25 s il massimo (prima, cambiando solo la gravità, un
+    tocco faceva già ~27 px e il salto non si dosava); coyote, memoria del salto,
     scivolata e salto dalla parete. Rampino (`RAMPINO`): si aggancia da solo al piolo `o`
     più vicino davanti e sopra (portata 104, `bersaglio`), tenuto premuto = appeso, ← →
     slancio lungo la tangente, ↑ ↓ accorciano e allungano (18-104), salto = si stacca con
@@ -2250,7 +2254,9 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
     Punto sicuro = l'ultima stanza in cui Tino ha toccato terra (torcia accesa all'inizio
     della stanza); morte: Tino va in pezzi (un pixel per pixel dello sprite), lampo rosso,
     0,55 s e si riparte. R ricomincia la stanza (conta come morte). HUD: morti, metri
-    (16 px = 1 m), record; nome della stanza all'arrivo. `localStorage` `speedtino:record`,
+    (16 px = 1 m), record; nome della stanza all'arrivo. Telecamera con zona morta: Tino
+    resta tra il 28% e il 42% dello schermo (prima guardava avanti secondo la velocità e
+    fermandosi tornava indietro: "rinculo"). `localStorage` `speedtino:record`,
     `morti-totali`, `muto`, `musica-spenta`. Il piolo a cui si aggancerebbe il rampino ha
     gli angolini bianchi che lampeggiano.
   - *Disegno*: tela di 180 righe larga 320-400 (secondo lo schermo), ingrandita a pixel
