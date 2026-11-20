@@ -2295,7 +2295,8 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
     in 60 s attraversa ~30 stanze.
   - *Prove*: `window.speedtino` (`stato`, `nuovaCorsa(demo)`, `passo(dt)`, `premi(azione,
     giu)`, `gioca`, `muori`); con `stato.test = true` il gioco non avanza da solo.
-  - *Tappe e gabbia di Gino* (fatte, da provare col proprietario): `TAPPE` e
+  - *Tappe e gabbia di Gino* (fatte, provate dal proprietario con l'artifact ("ok") e unite
+    in `main`): `TAPPE` e
     `STANZE_PER_TAPPA` (7) in `stanze.js`; dopo 7 stanze c'è la stanza `gabbia` (casella
     `G`, `m.gabbie` in `fisica.js`), poi la tappa dopo. Tappe: il bosco al tramonto
     (livelli 1-3), le grotte di cristallo (2-4), le rovine nel deserto (3-5), le cime di
