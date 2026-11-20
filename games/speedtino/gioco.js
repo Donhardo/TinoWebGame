@@ -690,8 +690,8 @@
   }
   // dov'è Gino: dentro la gabbia, poi un saltello fuori, poi un saltone via verso destra
   const BATTUTE = {
-    prima: ['AIUTO BABBO!', 'MI HANNO RIPRESO!', 'ANCORA IO, BABBO!', 'BABBO, SBRIGATI!'],
-    dopo: ['GRAZIE BABBO!', 'CORRO AVANTI!', 'CI VEDIAMO DOPO!', 'SEI IL MIGLIORE!']
+    prima: ['AIUTO PAPÀ!', 'MI HANNO RIPRESO!', 'ANCORA IO, PAPÀ!', 'PAPÀ, SBRIGATI!'],
+    dopo: ['GRAZIE PAPÀ!', 'CORRO AVANTI!', 'CI VEDIAMO DOPO!', 'SEI IL MIGLIORE!']
   };
   function posGino(g) {
     const base = { x: g.x + 18, y: g.y - 4, fumetto: null, verso: 1, salto: false, trema: 0, visibile: true };
@@ -854,7 +854,11 @@
   }
   function fumetto(t, x, y) {
     ctx.font = '8px "Press Start 2P", monospace';
-    const w = Math.ceil(ctx.measureText(t).width) + 8, h = 14;
+    // il font a pixel non ha la À maiuscola: si scrive A e l'accento si disegna a mano
+    const accenti = [];
+    for (let i = 0; i < t.length; i++) if (t[i] === 'À') accenti.push(i);
+    t = t.replace(/À/g, 'A');
+    const w = Math.ceil(ctx.measureText(t).width) + 8, h = 16;
     const bx = Math.round(Math.max(2, Math.min(W - w - 2, x - w / 2))), by = Math.round(y - h);
     ctx.fillStyle = '#000000'; ctx.fillRect(bx - 1, by - 1, w + 2, h + 2);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(bx, by, w, h);
@@ -862,7 +866,11 @@
     ctx.fillStyle = '#000000'; ctx.fillRect(px - 1, by + h, 5, 2); ctx.fillRect(px, by + h + 2, 3, 2);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(px, by + h, 3, 2); ctx.fillRect(px + 1, by + h + 2, 1, 1);
     ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-    ctx.fillStyle = '#1b0f0c'; ctx.fillText(t, bx + 4, by + 3);
+    ctx.fillStyle = '#1b0f0c'; ctx.fillText(t, bx + 4, by + 5);
+    for (const i of accenti) {
+      const ax = Math.round(bx + 4 + ctx.measureText(t.slice(0, i)).width) + 2;
+      ctx.fillRect(ax, by + 1, 2, 1); ctx.fillRect(ax + 1, by + 2, 2, 1); ctx.fillRect(ax + 2, by + 3, 2, 1);
+    }
   }
 
   function disegnaCaselle(cam) {

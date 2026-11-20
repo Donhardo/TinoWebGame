@@ -2308,11 +2308,12 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
     bpm]`, `A.tappa`, +6 bpm a giro). Le caselle si disegnano con la palette della stanza;
     il cielo sfuma da una tappa all'altra nei 160 px attorno al confine (`inizioTappa`).
     Gino (a pixel, dai bozzetti) trema nella gabbia e chiede aiuto quando Tino è vicino
-    (battute diverse per tappa: "AIUTO BABBO!", "MI HANNO RIPRESO!"…); toccandola la gabbia
+    (battute diverse per tappa: "AIUTO PAPÀ!", "MI HANNO RIPRESO!"…); toccandola la gabbia
     va in pezzi, Gino salta fuori, ringrazia e se ne va con un saltone verso destra.
     Avviso "GINO LIBERO!" con tempo e morti della tappa, poi "TAPPA N" col nome. In alto
     al centro i quadratini delle stanze della tappa con la gabbia in fondo. Il font a
-    pixel non ha le maiuscole accentate: niente accenti nelle scritte sul canvas.
+    pixel non ha le maiuscole accentate: nei fumetti la À si scrive A con l'accento
+    disegnato a mano (`fumetto`); Gino dice "papà", non "babbo".
     `localStorage` `gino-liberato` (per sbloccare Gino più avanti), `tappa-max`.
   - *Da decidere col proprietario dopo la prova*: Gino e Matteo giocabili, altre stanze
     (seghe che si muovono, piattaforme che crollano, stanze proprie di ogni tappa), punti
