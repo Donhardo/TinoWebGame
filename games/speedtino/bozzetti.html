@@ -1,0 +1,609 @@
+<title>Speedtino, bozzetti</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: una colonna stretta come uno schermo da 4:3, scena in alto, poi le tre versioni di Tino in schede, poi Gino e la palette. Look unico scuro (Amiga), voluto. */
+:root {
+  --fondo: #0b0a24;
+  --fondo2: #16133f;
+  --bordo: #3a3486;
+  --testo: #d9d6ff;
+  --tenue: #8d88c9;
+  --oro: #ffd23c;
+  --rame: #ff7a3c;
+  --titolo: 'Press Start 2P', 'Courier New', monospace;
+  --corpo: 'VT323', 'Courier New', monospace;
+  color-scheme: dark;
+}
+body {
+  background: var(--fondo);
+  color: var(--testo);
+  font-family: var(--corpo);
+  font-size: 21px;
+  line-height: 1.25;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+main { max-width: 880px; margin: 0 auto; display: grid; gap: 34px; }
+h1 {
+  font-family: var(--titolo);
+  font-size: clamp(30px, 8vw, 58px);
+  margin: 0;
+  letter-spacing: 2px;
+  background: linear-gradient(180deg, #fff 0 18%, #9fd8ff 18% 36%, #3a6fd8 36% 50%, #ffcf6a 50% 62%, #ff7a3c 62% 80%, #b8326a 80%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(3px 3px 0 #000);
+}
+h2 { font-family: var(--titolo); font-size: 15px; color: var(--oro); margin: 0 0 12px; letter-spacing: 1px; line-height: 1.5; }
+p { margin: 0; max-width: 68ch; }
+.sotto { color: var(--tenue); margin-top: 8px; }
+.copper { height: 6px; background: linear-gradient(90deg, #3a6fd8, #9fd8ff, #fff, #ffcf6a, #ff7a3c, #b8326a, #3a6fd8); }
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+#scena { width: 100%; max-width: 100%; aspect-ratio: 16 / 9; height: auto; border: 3px solid var(--bordo); background: #000; }
+.comandi { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+button {
+  font-family: var(--titolo); font-size: 11px; color: var(--testo);
+  background: var(--fondo2); border: 2px solid var(--bordo); padding: 9px 12px; cursor: pointer;
+}
+button[aria-pressed="true"] { background: var(--oro); color: #1b0f0c; border-color: var(--oro); }
+button:focus-visible { outline: 2px solid var(--rame); outline-offset: 2px; }
+.schede { display: grid; gap: 18px; }
+.scheda { background: var(--fondo2); border: 2px solid var(--bordo); padding: 16px; display: grid; gap: 12px; }
+.scheda.scelta { border-color: var(--oro); }
+.scheda h3 { font-family: var(--titolo); font-size: 13px; margin: 0; color: var(--testo); line-height: 1.5; }
+.pose { display: flex; flex-wrap: wrap; gap: 10px; }
+.posa { display: grid; gap: 4px; justify-items: center; }
+.posa canvas { width: 154px; height: 133px; background: #1d2a5c; border: 2px solid #0b0a24; }
+.posa span { color: var(--tenue); font-size: 18px; }
+.vera { display: flex; gap: 14px; align-items: end; flex-wrap: wrap; color: var(--tenue); font-size: 18px; }
+.vera canvas { background: #1d2a5c; }
+.palette { display: flex; flex-wrap: wrap; gap: 4px; }
+.palette i { width: 22px; height: 22px; display: block; border: 1px solid #000; }
+.note { display: grid; gap: 8px; }
+.note li { margin-left: -6px; }
+@media (prefers-reduced-motion: reduce) { .copper { animation: none; } }
+</style>
+
+<main>
+  <header>
+    <h1>SPEEDTINO</h1>
+    <div class="copper" aria-hidden="true"></div>
+    <p class="sotto">Bozzetti: Tino e Gino a pixel, e come potrebbe sembrare il gioco in stile Amiga (320 × 180 pixel, pochi colori, cielo a fasce).</p>
+  </header>
+
+  <section>
+    <h2>LA SCENA</h2>
+    <canvas id="scena" width="320" height="180" aria-label="Tino che si lancia col rampino da un piolo all'altro sopra gli spuntoni"></canvas>
+    <div class="comandi" role="group" aria-label="Versione di Tino nella scena">
+      <button data-v="B1" id="btn-b1">TINO</button>
+      <button data-v="GINO" id="btn-gino">GINO</button>
+      <button data-v="MATTEO" id="btn-matteo">MATTEO</button>
+    </div>
+    <p class="sotto">Qui Tino gioca da solo: si aggancia, si dà lo slancio, si stacca e cerca il piolo dopo. Ogni tanto sbaglia apposta, per far vedere la morte e la ripartenza immediata. I pioli si generano mentre avanza.</p>
+  </section>
+
+  <section>
+    <h2>TINO</h2>
+    <p class="sotto" style="margin-bottom:12px">Versione scelta: B1, coda a pennacchio e collare lungo tutto il collo.</p>
+    <div class="schede" id="schede"></div>
+  </section>
+
+  <section>
+    <h2>GINO</h2>
+    <div class="scheda">
+      <div class="pose" id="pose-gino"></div>
+      <div class="vera" id="confronto"></div>
+      <p>Molto più grande di Tino, come i peluche veri: color nocciola, muso chiaro coi dentoni, naso scuro, zampette marroni e la coda lunga e sottile. È rapito in una gabbia (grande!) alla fine di ogni tappa e, una volta liberato, diventa giocabile: pesante, con la corda più lunga e un dondolo più potente, ma grosso, quindi passa a fatica nei varchi stretti.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>MATTEO</h2>
+    <div class="scheda">
+      <div class="pose" id="pose-matteo"></div>
+      <p>Il tirannosauro amico di Tino e Gino: verde oliva tendente al marrone, testone coi denti, braccini corti e coda lunga. Alto più o meno come Tino ma molto più lungo. Si sblocca anche lui. Proposta: è il più veloce a correre e salta più lontano, ma con quei braccini il rampino lo tiene coi denti, quindi ha la corda corta e il dondolo più nervoso.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>LA PALETTE DELLA SCENA</h2>
+    <div class="palette" id="palette"></div>
+    <p class="sotto">Ogni tappa avrà 32 colori al massimo, come sull'Amiga. Tino e Gino tengono i loro colori in tutte le tappe.</p>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const PAL = {
+    O: '#e8763a', o: '#a9471f', C: '#f6d6a8', K: '#1b0f0c', T: '#5e2412', t: '#93451f',
+    R: '#e0303a', Y: '#ffd23c', M: '#e83ab8', W: '#ffffff', D: '#3a1408', V: '#6cc04a', P: '#9b4ad8', r: '#8e1a22', m: '#a41f7e', p: '#5e2690', G: '#c8935a', g: '#8a5a2e', N: '#6a2a22', H: '#5c3418', E: '#8f7f45', e: '#574622', L: '#bfae78'
+  };
+
+  const VARIANTI = {
+    B1: {
+      nome: 'B1 · Coda a pennacchio',
+      nota: 'La codona piena nasce in fondo alla schiena e sale fin sopra le orecchie, con le ciocche più chiare e il bordo scuro. Il collare corre per tutto il collo, con le perline e i tre campanelli appesi (rosso, rosa, viola) come nella foto.',
+      legs: [10, 12, 15, 17], legC: 'o',
+      righe: [
+        '..DDDD..............',
+        '.DTTtTD.............',
+        'DTtTTTTD............',
+        'DTTTtTTD............',
+        'DtTTTtTTD..O.....O..',
+        '.DTTtTTTDOOOOOOOOOO.',
+        '.DTtTTTTDOOOOOOKOKO.',
+        '..DTTtTTDOOOOOOKOKOO',
+        '...DTTtDKYKWKVKWKYKO',
+        '...DTtTDOORCCMCCPOO.',
+        '....DTTDOOrCCmCCpOO.',
+        '.....DD.oOOCCCCCOOo.'
+      ]
+    }
+  };
+
+  const GINO = {
+    legs: [8, 15, 9, 16], legC: 'H',
+    righe: [
+        '.......GG........GG.....',
+        '......GGGG......GGGG....',
+        '......GGGGGGGGGGGGGG....',
+        '.....GGGGGGGGGGGGGGGG...',
+        '....gGGGGGGGGGGGGGGGGG..',
+        '....gGGGGGGGGGGGGGGGGG..',
+        '....gGGGGGGGGGGGGGGGGG..',
+        '....gGGGGGGGGKGGGGKGGG..',
+        '....gGGGGGGGGKGGGGKGGG..',
+        '....gGGGGGGGGGGGGGGGGG..',
+        '....gGGGGGGGGCCNNCCCCG..',
+        '....gGGGGGGGCCCNNCCCCC..',
+        '....gGGGGGGGCCCCCCCCCC..',
+        '....gGGGGGGGCCCWWCCCCC..',
+        '.....GGGGGGGGCCWWCCCC...',
+        '.....GGGGGGGGGCWWCCCG...',
+        '.....gGGGGGGGGGWWGGGG...',
+        '.....gGGGGGGGGGGGGGGG...',
+        '.....gGGGGGCCCHHHGGGG...',
+        '.....gGGGGCCCCHHHCHHH...',
+        '.g...gGGGCCCCCCHCCHHH...',
+        '.g...gGGGCCCCCCCCCCHG...',
+        'g....gGGGCCCCCCCCCCGG...',
+        'g....gGGGCCCCCCCCCCGG...',
+        'g....gGGGCCCCCCCCCCGG...',
+        '.g...gGGGCCCCCCCCCCGG...',
+        '.g...gGGGGCCCCCCCCGG....',
+        '..ggg..ggggCCCCCCgg.....'
+    ]
+  };
+
+  function sprite(def) {
+    const h = def.righe.length, w = def.righe[0].length;
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const c = cv.getContext('2d');
+    def.righe.forEach((r, y) => {
+      for (let x = 0; x < w; x++) {
+        const k = r[x];
+        if (k !== '.') { c.fillStyle = PAL[k]; c.fillRect(x, y, 1, 1); }
+      }
+    });
+    const pix = [];
+    const d = c.getImageData(0, 0, w, h).data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3]) pix.push({ x, y, col: `rgb(${d[i]},${d[i + 1]},${d[i + 2]})` });
+    }
+    return { cv, w, h, legs: def.legs, legC: PAL[def.legC], pix };
+  }
+
+  const SPR = Object.fromEntries(Object.entries(VARIANTI).map(([k, v]) => [k, sprite(v)]));
+  const MATTEO = {
+    legs: [11, 15, 12, 16], legC: 'e',
+    righe: [
+        '...................EEEEeeeE.',
+        '.................EEEEEEEKEEe',
+        '.................EEEEEEEEEEE',
+        '.eEE.............EEEEEEEEEEE',
+        '..eeEEEE........EEEEEEEEEEEe',
+        '....eEEEEEEEEEEEEEEEW.W.W.W.',
+        '.....eeEEEEEEEEEEEEEEEEEee..',
+        '.......eEEeEEeEELLEeeeee....',
+        '........EEeEeeEELLeee.......',
+        '........eeeeeeELLe..e.......',
+        '..........eeeeLL............',
+        '............................'
+    ]
+  };
+  const SPR_GINO = sprite(GINO);
+  const SPR_MATTEO = sprite(MATTEO);
+  SPR.MATTEO = SPR_MATTEO;
+  SPR.GINO = SPR_GINO;
+
+  // Disegna un personaggio. (x, y) = piedi al centro, oppure cima della testa se appeso.
+  function disegna(ctx, s, x, y, stato, t, opz = {}) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    if (opz.ang) ctx.rotate(opz.ang);
+    if (opz.flip) ctx.scale(-1, 1);
+    const ox = -Math.floor(s.w / 2);
+    let oy = -(s.h + 2);
+    if (stato === 'appeso') oy = 0;
+    if (stato === 'ko') { ctx.rotate(Math.PI); oy = -Math.floor((s.h + 2) / 2); }
+    const passo = Math.floor(t * 14) % 2;
+    const bob = stato === 'fermo' && (t % 1.2) < 0.6 ? 1 : 0;
+    ctx.fillStyle = s.legC;
+    s.legs.forEach((lx, i) => {
+      let lun = 2, sy = 0;
+      if (stato === 'corre' && i % 2 === passo) lun = 1;
+      if (stato === 'salta') lun = 1;
+      if (stato === 'appeso') lun = 2 + ((i + passo) % 2);
+      if (stato === 'fermo') { lun = 2 - bob; sy = bob; }
+      ctx.fillRect(ox + lx, oy + s.h + sy, 1, lun);
+    });
+    ctx.drawImage(s.cv, ox, oy + bob);
+    ctx.restore();
+  }
+
+  // ---------- Palette della scena (al massimo 32 colori) ----------
+  const CIELO = ['#0b0a3a', '#1a1a6e', '#2c3a9e', '#4a5fc8', '#7a6fd0', '#b85fb8', '#e8689a', '#ff8a6a', '#ffb45a', '#ffd88a'];
+  const MONTI = ['#3a1f5e', '#5a2f7a'];
+  const ALBERI = ['#1a1240', '#2a1d5a'];
+  const TERRA = ['#2a140c', '#4a2414', '#6e3a1c'];
+  const PUNTE = ['#c8d0e8', '#7880a8', '#3a3f62'];
+  const ORO = ['#7a4a00', '#ffd23c', '#fff3b0'];
+  const SCENA_PAL = [...CIELO, ...MONTI, ...ALBERI, ...TERRA, ...PUNTE, ...ORO, '#ffffff', '#e0303a'];
+  const palDiv = document.getElementById('palette');
+  [...new Set([...SCENA_PAL, ...Object.values(PAL)])].forEach(c => {
+    const i = document.createElement('i'); i.style.background = c; i.title = c; palDiv.appendChild(i);
+  });
+
+  // ---------- Scena ----------
+  const W = 320, H = 180, SUOLO = 162;
+  const scena = document.getElementById('scena');
+  const sx = scena.getContext('2d');
+  sx.imageSmoothingEnabled = false;
+
+  // cielo a fasce con retinatura tra una fascia e l'altra (fatto una volta)
+  const cielo = document.createElement('canvas');
+  cielo.width = W; cielo.height = H;
+  (() => {
+    const c = cielo.getContext('2d');
+    const fascia = 14;
+    for (let y = 0; y < H; y++) {
+      const f = y / fascia, i = Math.min(CIELO.length - 1, Math.floor(f)), fr = f - i;
+      for (let x = 0; x < W; x++) {
+        const usaDopo = fr > 0.6 && ((x + y) % 2 === 0) || fr > 0.85;
+        c.fillStyle = CIELO[Math.min(CIELO.length - 1, i + (usaDopo ? 1 : 0))];
+        c.fillRect(x, y, 1, 1);
+      }
+    }
+  })();
+
+  // strisce che si ripetono ogni 320 pixel (monti e alberi)
+  function striscia(colori, base, alto, onde, blocco, alberi) {
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+    for (let x = 0; x < W; x += blocco) {
+      let h = base;
+      onde.forEach(([a, k, f]) => { h += a * Math.sin((x / W) * Math.PI * 2 * k + f); });
+      h = Math.round(h / 2) * 2;
+      c.fillStyle = colori[0];
+      c.fillRect(x, H - h, blocco, h);
+      c.fillStyle = colori[1];
+      c.fillRect(x, H - h, blocco, 2);
+      if (alberi && (x / blocco) % 3 === 0) {
+        for (let k = 0; k < alto; k++) {
+          const lw = Math.max(1, Math.floor((alto - k) / 2.2));
+          c.fillStyle = colori[k % 4 === 0 ? 1 : 0];
+          c.fillRect(x + 2 - lw, H - h - k, lw * 2 + 1, 1);
+        }
+      }
+    }
+    return cv;
+  }
+  const monti = striscia(MONTI, 70, 0, [[16, 2, 0.3], [9, 5, 1.7], [4, 11, 0.2]], 4, false);
+  const bosco = striscia(ALBERI, 34, 16, [[6, 3, 2.1], [3, 7, 0.4]], 5, true);
+
+  function strato(cv, cam, vel) {
+    const off = ((cam * vel) % W + W) % W;
+    sx.drawImage(cv, -off, 0);
+    sx.drawImage(cv, W - off, 0);
+  }
+
+  function linea(x0, y0, x1, y1, col, col2) {
+    x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sxs = x0 < x1 ? 1 : -1, sys = y0 < y1 ? 1 : -1;
+    let e = dx + dy, n = 0;
+    for (;;) {
+      sx.fillStyle = (n++ % 3 === 2) ? col2 : col;
+      sx.fillRect(x0, y0, 1, 1);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * e;
+      if (e2 >= dy) { e += dy; x0 += sxs; }
+      if (e2 <= dx) { e += dx; y0 += sys; }
+    }
+  }
+
+  function piolo(x, y, acceso) {
+    x = Math.round(x); y = Math.round(y);
+    sx.fillStyle = ORO[0]; sx.fillRect(x - 3, y - 3, 7, 7);
+    sx.fillStyle = ORO[1]; sx.fillRect(x - 2, y - 2, 5, 5);
+    sx.fillStyle = ORO[0]; sx.fillRect(x - 1, y - 1, 3, 3);
+    sx.fillStyle = ORO[2]; sx.fillRect(x - 2, y - 2, 2, 1);
+    if (acceso) {
+      sx.fillStyle = '#ffffff';
+      sx.fillRect(x, y - 6, 1, 2); sx.fillRect(x, y + 5, 1, 2);
+      sx.fillRect(x - 6, y, 2, 1); sx.fillRect(x + 5, y, 2, 1);
+    }
+  }
+
+  function sega(x, t) {
+    const cx = Math.round(x), cy = SUOLO - 2, r = 9;
+    sx.fillStyle = PUNTE[2];
+    for (let a = 0; a < 12; a++) {
+      const an = a / 12 * Math.PI * 2 + t * 9;
+      sx.fillRect(Math.round(cx + Math.cos(an) * (r + 1)) - 1, Math.round(cy + Math.sin(an) * (r + 1)) - 1, 3, 3);
+    }
+    for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) {
+      const d = xx * xx + yy * yy;
+      if (d <= r * r) {
+        sx.fillStyle = d > (r - 2) * (r - 2) ? PUNTE[1] : (d < 9 ? '#e0303a' : PUNTE[0]);
+        sx.fillRect(cx + xx, cy + yy, 1, 1);
+      }
+    }
+  }
+
+  function suolo(cam, t) {
+    const off = Math.floor(cam);
+    for (let x = -(off % 6) - 6; x < W + 6; x += 6) {
+      for (let k = 0; k < 6; k++) {
+        const hw = Math.floor(k / 2);
+        sx.fillStyle = k < 2 ? PUNTE[0] : PUNTE[1];
+        sx.fillRect(x + 3 - hw, SUOLO + k, hw * 2 + 1, 1);
+      }
+    }
+    sx.fillStyle = TERRA[1]; sx.fillRect(0, SUOLO + 6, W, H - SUOLO - 6);
+    sx.fillStyle = TERRA[2]; sx.fillRect(0, SUOLO + 6, W, 1);
+    sx.fillStyle = TERRA[0];
+    for (let y = SUOLO + 10; y < H; y += 5) {
+      const sh = ((y / 5) % 2) * 6;
+      for (let x = -((off + sh) % 12); x < W; x += 12) sx.fillRect(x, y, 1, 4);
+      sx.fillRect(0, y + 4, W, 1);
+    }
+    const passo = 230;
+    for (let k = Math.floor(cam / passo); k <= Math.floor((cam + W) / passo) + 1; k++) {
+      sega(k * passo + 140 - cam, t);
+    }
+  }
+
+  // ---------- Simulazione del rampino ----------
+  const G = 620, L = 44, SPINTA = 190;
+  let variante = 'B1';
+  let s, cam = 0, morti = 0, flash = 0, particelle = [], tempo = 0;
+
+  function nuovoGiro() {
+    const h0 = { x: 120, y: 58 };
+    s = { modo: 'appeso', gancio: h0, th: -0.7, om: 0, x: 0, y: 0, vx: 0, vy: 0, salti: 0, pioli: [h0], prossimo: null, tVolo: 0, tAggancio: 0, sbaglia: false, ultimo: h0, metri: 0 };
+    cam = h0.x - 120;
+  }
+  nuovoGiro();
+
+  function lancia() {
+    const v = s.om * L;
+    s.x = s.gancio.x + L * Math.sin(s.th);
+    s.y = s.gancio.y + L * Math.cos(s.th);
+    s.vx = v * Math.cos(s.th);
+    s.vy = -v * Math.sin(s.th);
+    s.modo = 'volo';
+    s.ultimo = s.gancio;
+    s.salti++;
+    s.sbaglia = s.salti % 6 === 0;
+    // dove sarà la ghianda... cioè Tino, quando ridiscende: lì nasce il piolo dopo
+    const quotaH = 40 + Math.random() * 40;
+    const cy = quotaH + L * Math.cos(0.55);
+    let x = s.x, y = s.y, vx = s.vx, vy = s.vy, t = 0, ok = false;
+    const dt = 1 / 240;
+    while (t < 2) {
+      vy += G * dt; x += vx * dt; y += vy * dt; t += dt;
+      if (vy > 0 && y >= cy) { ok = true; break; }
+    }
+    if (!ok) { t = 0.55; x = s.x + s.vx * t; y = s.y + s.vy * t + G * t * t / 2; }
+    const hx = x + L * Math.sin(0.55) + (s.sbaglia ? 34 : 0);
+    const hy = y - L * Math.cos(0.55) - (s.sbaglia ? 6 : 0);
+    s.prossimo = { x: hx, y: hy };
+    s.pioli.push(s.prossimo);
+    if (s.pioli.length > 6) s.pioli.shift();
+    s.tVolo = 0; s.tAggancio = t;
+  }
+
+  function muori() {
+    s.modo = 'morto';
+    s.tMorte = 0;
+    morti++;
+    flash = 3;
+    const sp = SPR[variante];
+    particelle = sp.pix.map(p => ({
+      x: s.x - sp.w / 2 + p.x, y: s.y - sp.h + p.y,
+      vx: (Math.random() - 0.5) * 220, vy: -60 - Math.random() * 200, col: p.col, vita: 0.9 + Math.random() * 0.5
+    }));
+    for (let i = 0; i < 18; i++) particelle.push({ x: s.x, y: s.y, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 260, col: '#e0303a', vita: 0.6 + Math.random() * 0.4 });
+  }
+
+  function passo(dt) {
+    tempo += dt;
+    if (s.modo === 'appeso') {
+      const spinge = Math.abs(s.th) < 0.95 ? Math.sign(s.om || 1) * SPINTA / L : 0;
+      const a = -(G / L) * Math.sin(s.th) + spinge;
+      s.om += a * dt;
+      s.th += s.om * dt;
+      if (s.th < -1.25) { s.th = -1.25; s.om = Math.abs(s.om) * 0.4; }
+      s.x = s.gancio.x + L * Math.sin(s.th);
+      s.y = s.gancio.y + L * Math.cos(s.th);
+      if (s.th > 0.6 && s.th < 1.2 && s.om > 0 && s.om * L > 200) lancia();
+    } else if (s.modo === 'volo') {
+      s.tVolo += dt;
+      s.vy += G * dt; s.x += s.vx * dt; s.y += s.vy * dt;
+      if (!s.sbaglia && s.tVolo >= s.tAggancio) {
+        const g = s.prossimo, dx = s.x - g.x, dy = s.y - g.y;
+        s.gancio = g;
+        s.th = Math.atan2(dx, dy);
+        s.om = (s.vx * Math.cos(s.th) - s.vy * Math.sin(s.th)) / L;
+        s.modo = 'appeso';
+      }
+      if (s.y > SUOLO + 2) { s.y = SUOLO + 2; muori(); }
+    } else if (s.modo === 'morto') {
+      s.tMorte += dt;
+      if (s.tMorte > 0.55) {
+        s.pioli = s.pioli.filter(p => p !== s.prossimo);
+        s.gancio = s.ultimo; s.th = -0.7; s.om = 0; s.modo = 'appeso';
+        s.x = s.gancio.x + L * Math.sin(s.th); s.y = s.gancio.y + L * Math.cos(s.th);
+      }
+    }
+    particelle.forEach(p => { p.vy += 700 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vita -= dt; if (p.y > SUOLO + 4) { p.y = SUOLO + 4; p.vy *= -0.3; p.vx *= 0.7; } });
+    particelle = particelle.filter(p => p.vita > 0);
+    const obiettivo = s.x - 110;
+    cam += (obiettivo - cam) * Math.min(1, dt * 4);
+    s.metri = Math.max(s.metri, Math.floor((s.x - 120) / 16));
+  }
+
+  function hud() {
+    sx.font = '8px "Press Start 2P", monospace';
+    sx.textBaseline = 'top';
+    const scrivi = (txt, x, y, al) => {
+      sx.textAlign = al;
+      sx.fillStyle = '#000'; sx.fillText(txt, x + 1, y + 1);
+      sx.fillStyle = '#fff'; sx.fillText(txt, x, y);
+    };
+    scrivi('MORTI ' + String(morti).padStart(3, '0'), 6, 6, 'left');
+    scrivi(String(s.metri).padStart(4, '0') + ' M', W - 6, 6, 'right');
+  }
+
+  function disegnaScena() {
+    sx.drawImage(cielo, 0, 0);
+    strato(monti, cam, 0.15);
+    strato(bosco, cam, 0.4);
+    suolo(cam, tempo);
+    s.pioli.forEach(p => piolo(p.x - cam, p.y, p === s.prossimo && s.modo === 'volo'));
+    const sp = SPR[variante];
+    if (s.modo === 'appeso') {
+      linea(s.gancio.x - cam, s.gancio.y, s.x - cam, s.y, PAL.C, PAL.t);
+      disegna(sx, sp, s.x - cam, s.y, 'appeso', tempo, { ang: -s.th });
+    } else if (s.modo === 'volo') {
+      const resto = s.tAggancio - s.tVolo;
+      if (!s.sbaglia && resto < 0.12) {
+        const f = 1 - resto / 0.12;
+        const tx = s.x + (s.prossimo.x - s.x) * f, ty = s.y - sp.h + (s.prossimo.y - (s.y - sp.h)) * f;
+        linea(s.x - cam, s.y - sp.h, tx - cam, ty, PAL.C, PAL.t);
+      }
+      disegna(sx, sp, s.x - cam, s.y, 'salta', tempo);
+    }
+    particelle.forEach(p => { sx.fillStyle = p.col; sx.fillRect(Math.round(p.x - cam), Math.round(p.y), 1, 1); });
+    hud();
+    if (flash > 0) { sx.fillStyle = 'rgba(224,48,58,0.35)'; sx.fillRect(0, 0, W, H); flash--; }
+  }
+
+  // ---------- Schede delle pose ----------
+  const POSE = [['fermo', 'fermo'], ['corre', 'corre'], ['salta', 'salta'], ['appeso', 'rampino'], ['ko', 'morto']];
+  const tele = [];
+
+  function tela(stato, s, cont) {
+    const box = document.createElement('div'); box.className = 'posa';
+    const cv = document.createElement('canvas'); cv.width = 44; cv.height = 38;
+    const lab = document.createElement('span'); lab.textContent = stato[1];
+    box.append(cv, lab); cont.appendChild(box);
+    const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+    tele.push({ c, s, stato: stato[0] });
+  }
+
+  const schede = document.getElementById('schede');
+  Object.entries(VARIANTI).forEach(([k, v]) => {
+    const sc = document.createElement('article'); sc.className = 'scheda'; sc.id = 'scheda-' + k;
+    const h = document.createElement('h3'); h.textContent = v.nome;
+    const pose = document.createElement('div'); pose.className = 'pose';
+    POSE.forEach(p => tela(p, SPR[k], pose));
+    const vera = document.createElement('div'); vera.className = 'vera';
+    [1, 2].forEach(z => {
+      const cv = document.createElement('canvas');
+      const sp = SPR[k];
+      cv.width = sp.w + 4; cv.height = sp.h + 6;
+      cv.style.width = cv.width * z + 'px'; cv.style.height = cv.height * z + 'px';
+      const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+      tele.push({ c, s: sp, stato: 'corre', fisso: true });
+      const w = document.createElement('div'); w.style.display = 'grid'; w.style.gap = '4px'; w.style.justifyItems = 'start';
+      const l = document.createElement('span'); l.textContent = z === 1 ? 'grandezza vera' : '× 2';
+      w.append(cv, l); vera.appendChild(w);
+    });
+    const p = document.createElement('p'); p.textContent = v.nota;
+    sc.append(h, pose, vera, p);
+    schede.appendChild(sc);
+  });
+  POSE.forEach(p => tela(p, SPR_GINO, document.getElementById('pose-gino')));
+  POSE.forEach(p => tela(p, SPR_MATTEO, document.getElementById('pose-matteo')));
+  (() => {
+    const cont = document.getElementById('confronto');
+    [1, 3].forEach(z => {
+      const cv = document.createElement('canvas');
+      cv.width = 84; cv.height = 34;
+      cv.style.width = cv.width * z + 'px'; cv.style.height = cv.height * z + 'px';
+      const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+      tele.push({ c, s: SPR.B1, s2: SPR_GINO, stato: 'fermo', coppia: true });
+      const w = document.createElement('div'); w.style.display = 'grid'; w.style.gap = '4px'; w.style.justifyItems = 'start';
+      const l = document.createElement('span'); l.textContent = z === 1 ? 'Tino, Gino e Matteo, grandezza vera' : '× 3';
+      w.append(cv, l); cont.appendChild(w);
+    });
+  })();
+
+  function disegnaTele(t) {
+    tele.forEach(o => {
+      const c = o.c, cw = c.canvas.width, ch = c.canvas.height;
+      c.fillStyle = '#1d2a5c'; c.fillRect(0, 0, cw, ch);
+      if (o.fisso) { disegna(c, o.s, cw / 2, ch - 2, o.stato, t); return; }
+      if (o.coppia) { c.fillStyle = '#2c3a9e'; c.fillRect(0, ch - 2, cw, 2); disegna(c, o.s, 13, ch - 2, 'fermo', t); disegna(c, o.s2, 36, ch - 2, 'fermo', t + 0.4); disegna(c, SPR_MATTEO, 66, ch - 2, 'fermo', t + 0.8); return; }
+      c.fillStyle = '#2c3a9e'; c.fillRect(0, ch - 3, cw, 3);
+      if (o.stato === 'appeso') {
+        const th = 0.5 * Math.sin(t * 3.2), Lr = Math.max(3, ch - o.s.h - 9), hx = 22, hy = 3;
+        const x = hx + Lr * Math.sin(th), y = hy + Lr * Math.cos(th);
+        c.fillStyle = PAL.Y; c.fillRect(hx - 1, hy - 1, 3, 3);
+        const n = 12;
+        for (let i = 0; i <= n; i++) { c.fillStyle = i % 3 === 2 ? PAL.t : PAL.C; c.fillRect(Math.round(hx + (x - hx) * i / n), Math.round(hy + (y - hy) * i / n), 1, 1); }
+        disegna(c, o.s, x, y, 'appeso', t, { ang: -th });
+      } else if (o.stato === 'salta') {
+        const f = (t * 1.4) % 1, alto = Math.round(Math.sin(f * Math.PI) * Math.min(10, ch - o.s.h - 6));
+        disegna(c, o.s, cw / 2, ch - 3 - alto, alto > 0 ? 'salta' : 'fermo', t);
+      } else if (o.stato === 'ko') {
+        disegna(c, o.s, cw / 2, ch - 3 - Math.ceil((o.s.h + 2) / 2), 'ko', t);
+      } else {
+        disegna(c, o.s, cw / 2, ch - 3, o.stato, t);
+      }
+    });
+  }
+
+  // ---------- Pulsanti ----------
+  function scegli(v) {
+    variante = v;
+    document.querySelectorAll('[data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    document.querySelectorAll('.scheda[id^="scheda-"]').forEach(sc => sc.classList.toggle('scelta', sc.id === 'scheda-' + v));
+  }
+  document.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => scegli(b.dataset.v)));
+  scegli('B1');
+
+  // ---------- Ciclo ----------
+  const fermo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let prima = performance.now(), acc = 0;
+  function ciclo(ora) {
+    const dt = Math.min(0.1, (ora - prima) / 1000); prima = ora;
+    acc += dt;
+    while (acc >= 1 / 120) { passo(1 / 120); acc -= 1 / 120; }
+    disegnaScena();
+    disegnaTele(ora / 1000);
+    if (!fermo) requestAnimationFrame(ciclo);
+  }
+  for (let i = 0; i < 30; i++) passo(1 / 60);
+  disegnaScena(); disegnaTele(0);
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { if (fermo) { disegnaScena(); } });
+  if (!fermo) requestAnimationFrame(ciclo);
+})();
+</script>
