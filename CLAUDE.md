@@ -2228,7 +2228,11 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
   pixel di Tino, Gino e Matteo come righe di caratteri e la scena animata). Proposte per Gino
   pesante e Matteo veloce approvate.
 - **Prototipo giocabile** (novembre 2026), provato dal proprietario: la difficoltà va bene;
-  sistemati il rinculo della telecamera e il salto che non si dosava (seconda prova da fare).
+  sistemati il rinculo della telecamera e il salto che non si dosava; poi (seconda prova) i
+  salti tra i muri con le punte erano troppo difficili: salto dalla parete più facile, muro
+  di punte (pozzo largo 5, tre punte da un quadretto) e torre (punte da un quadretto)
+  rifatti. Criterio: le stanze coi muri si superano anche con comandi ogni 0,2 s
+  (`--tratto 0.2`), prima solo il camino; ora tutte e 13 le stanze passano anche così.
   File: `index.html`, `stile.css` (stile Amiga: pannelli scuri, Press Start 2P e VT323,
   righe "copper"), `fisica.js`, `stanze.js`, `soluzioni.js` (generato), `suoni.js`,
   `gioco.js`, `tino-pixel.png` (Tino a pixel ×4 per l'anteprima della home),
@@ -2238,7 +2242,11 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
     ~35 px tenuto e ~70 px di lungo in piano (`FISICA`); lasciando il tasto mentre sale la
     velocità in su si moltiplica per `taglio` 0,4 (solo nei salti, non dopo il rampino): un
     tocco fa ~13-19 px, 0,12 s ~24, 0,25 s il massimo (prima, cambiando solo la gravità, un
-    tocco faceva già ~27 px e il salto non si dosava); coyote, memoria del salto,
+    tocco faceva già ~27 px e il salto non si dosava);
+    salto dalla parete (`pareteX` 165, `pareteY` 275, ~40 px in su): vale fino a 0,1 s
+    dopo aver lasciato il muro (`coyoteMuro`), e per 0,2 s dopo lo stacco (`bloccoParete`)
+    la freccia verso il muro di partenza non conta (prima riportava Tino contro lo stesso
+    muro e i salti "non si direzionavano"); coyote, memoria del salto,
     scivolata e salto dalla parete. Rampino (`RAMPINO`): si aggancia da solo al piolo `o`
     più vicino davanti e sopra (portata 104, `bersaglio`), tenuto premuto = appeso, ← →
     slancio lungo la tangente, ↑ ↓ accorciano e allungano (18-104), salto = si stacca con

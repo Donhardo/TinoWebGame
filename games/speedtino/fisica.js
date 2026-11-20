@@ -20,9 +20,10 @@
     g: 1900,              // gravità normale
     caduta: 340,          // velocità massima in caduta
     scivolo: 70,          // velocità massima scivolando lungo un muro
-    pareteX: 175,         // salto dalla parete: spinta di lato
-    pareteY: 250,         // e in su
-    bloccoParete: 0.13,   // dopo il salto dalla parete i comandi di lato contano meno
+    pareteX: 165,         // salto dalla parete: spinta di lato
+    pareteY: 275,         // e in su
+    bloccoParete: 0.2,    // dopo il salto dalla parete la freccia verso il muro di partenza non conta
+    coyoteMuro: 0.1,      // si può saltare dalla parete fino a 0,1 s dopo averla lasciata
     coyote: 0.08,         // si può ancora saltare appena lasciato il bordo
     memoria: 0.1,         // un salto premuto poco prima di toccare terra vale
     massima: 430,         // velocità massima in tutte le direzioni
@@ -94,7 +95,7 @@
     return {
       x, y, vx: 0, vy: 0, verso: 1,
       aTerra: false, muro: 0, coyote: 0, memoria: 0, blocco: 0,
-      gancio: null, mancato: 0, tiro: null, saltando: false,
+      gancio: null, mancato: 0, tiro: null, saltando: false, ultimoMuro: 0, tempoMuro: 0, versoBloccato: 0,
       morto: false, causa: null, tempo: 0
     };
   }
@@ -243,21 +244,24 @@
     } else {
       // corsa
       const acc = p.aTerra ? (k.sx ? FISICA.accTerra : FISICA.attrito) : FISICA.accAria;
-      const peso = p.blocco > 0 ? 0.25 : 1;
-      if (k.sx) {
-        const voluta = k.sx * FISICA.corsa;
-        if (Math.sign(p.vx) === k.sx && Math.abs(p.vx) > FISICA.corsa) {
+      // subito dopo il salto dalla parete, tenere la freccia verso il muro di partenza non
+      // riporta Tino indietro: così si può tenere premuto e il salto va comunque dall'altra parte
+      const sx = p.blocco > 0 && k.sx === p.versoBloccato ? 0 : k.sx;
+      if (sx) {
+        const voluta = sx * FISICA.corsa;
+        if (Math.sign(p.vx) === sx && Math.abs(p.vx) > FISICA.corsa) {
           if (p.aTerra) p.vx = avvicina(p.vx, voluta, FISICA.attrito * 0.5 * dt);
-        } else p.vx = avvicina(p.vx, voluta, acc * peso * dt);
+        } else p.vx = avvicina(p.vx, voluta, acc * dt);
       } else if (p.aTerra) p.vx = avvicina(p.vx, 0, acc * dt);
-      else p.vx = avvicina(p.vx, 0, 120 * dt);
+      else if (!(p.blocco > 0)) p.vx = avvicina(p.vx, 0, 120 * dt);
 
       // salto, salto dalla parete
       if (p.memoria > 0 && p.coyote > 0) {
         p.vy = -FISICA.salto; p.coyote = 0; p.memoria = 0; p.aTerra = false; p.saltando = true;
-      } else if (p.memoria > 0 && p.muro && !p.aTerra) {
-        p.vy = -FISICA.pareteY; p.vx = -p.muro * FISICA.pareteX; p.verso = -p.muro; p.saltando = true;
-        p.blocco = FISICA.bloccoParete; p.memoria = 0;
+      } else if (p.memoria > 0 && !p.aTerra && (p.muro || p.tempoMuro > 0)) {
+        const lato = p.muro || p.ultimoMuro;
+        p.vy = -FISICA.pareteY; p.vx = -lato * FISICA.pareteX; p.verso = -lato; p.saltando = true;
+        p.blocco = FISICA.bloccoParete; p.memoria = 0; p.tempoMuro = 0; p.versoBloccato = lato;
       }
       // lasciando il salto mentre sale si taglia la spinta: il salto si dosa
       if (p.saltando && !k.salto && p.vy < 0) { p.vy *= FISICA.taglio; p.saltando = false; }
@@ -294,6 +298,9 @@
       if (urtaSolido(m, p.x + 1, p.y + 2, CORPO.w, CORPO.h - 4)) p.muro = 1;
       else if (urtaSolido(m, p.x - 1, p.y + 2, CORPO.w, CORPO.h - 4)) p.muro = -1;
     }
+    if (p.muro) { p.ultimoMuro = p.muro; p.tempoMuro = FISICA.coyoteMuro; }
+    else if (p.aTerra || p.gancio) p.tempoMuro = 0;
+    else p.tempoMuro = Math.max(0, p.tempoMuro - dt);
 
     controllaPericoli(m, p);
   }
