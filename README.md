@@ -105,6 +105,13 @@ e poi si visita http://localhost:8000.
   campanelle, knocker); display a matrice di punti, illuminazione generale che si
   spegne col tilt, flasher, match a fine partita; sette robivecchi da guadagnare con
   le imprese del tavolo; classifica dei cinque migliori punteggi per tavolo.
+- **Speedtino** (`games/speedtino/`, prototipo): platform a scorrimento orizzontale in
+  stile Amiga (320 × 180 pixel ingranditi, cielo a fasce, musica da tracker sintetizzata).
+  Tino, disegnato a pixel, corre, salta (anche dalle pareti) e col rampino si aggancia ai
+  pioli d'oro, dondola, accorcia e allunga la corda e si stacca con un salto, tra spuntoni,
+  seghe e baratri. Corsa infinita fatta di stanze montate a caso, sempre più difficili;
+  morti contate, ripartenza istantanea dall'inizio della stanza, record in metri. Ogni
+  stanza è verificata da un giocatore simulato (`prove/verifica.js`).
 - **Salta, Tino!** (`games/salta-tino/`): Tino salta da solo di ramo in ramo su per la
   grande quercia e si sposta solo a destra e a sinistra (frecce, mouse o dito su una metà
   dello schermo; sul telefono si può scegliere anche l'inclinazione); uscendo da un lato
