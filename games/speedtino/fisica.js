@@ -45,7 +45,7 @@
 
   // ---------- mondo ----------
   function nuovoMondo() {
-    return { stanze: [], colonne: [], pioli: [], seghe: [], ghiande: [], larghezza: 0 };
+    return { stanze: [], colonne: [], pioli: [], seghe: [], ghiande: [], gabbie: [], larghezza: 0 };
   }
 
   // aggiunge una stanza (oggetto di stanze.js) in fondo al mondo
@@ -64,6 +64,7 @@
         if (k === 'o') m.pioli.push({ x: cx, y: cy, stanza: indice });
         else if (k === '*') m.seghe.push({ x: cx, y: cy, r: 6.5, stanza: indice });
         else if (k === 'a') m.ghiande.push({ x: cx, y: cy, stanza: indice, presa: false });
+        else if (k === 'G') m.gabbie.push({ x: (x0 + c) * T, y: (r + 1) * T, stanza: indice, aperta: -1 });
       }
     }
     // punto di partenza: sopra il pavimento della seconda colonna

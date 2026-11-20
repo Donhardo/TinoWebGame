@@ -2295,10 +2295,30 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
     in 60 s attraversa ~30 stanze.
   - *Prove*: `window.speedtino` (`stato`, `nuovaCorsa(demo)`, `passo(dt)`, `premi(azione,
     giu)`, `gioca`, `muori`); con `stato.test = true` il gioco non avanza da solo.
-  - *Da decidere col proprietario dopo la prova*: quanto è difficile (il giocatore simulato
-    è sovrumano; il rampino con portata 104 è molto generoso), tappe con palette diverse e
-    la gabbia di Gino alla fine, Gino e Matteo giocabili, altre stanze (seghe che si
-    muovono, piattaforme che crollano), punti sicuri a metà delle stanze lunghe.
+  - *Tappe e gabbia di Gino* (fatte, provate dal proprietario con l'artifact ("ok") e unite
+    in `main`): `TAPPE` e
+    `STANZE_PER_TAPPA` (7) in `stanze.js`; dopo 7 stanze c'è la stanza `gabbia` (casella
+    `G`, `m.gabbie` in `fisica.js`), poi la tappa dopo. Tappe: il bosco al tramonto
+    (livelli 1-3), le grotte di cristallo (2-4), le rovine nel deserto (3-5), le cime di
+    notte (4-5); poi si ricomincia dal bosco (secondo giro: livelli +2). Nella tappa il
+    livello massimo sale di uno ogni due stanze. Ogni tappa ha la sua palette (`PALETTE` in
+    `gioco.js`: cielo a fasce, monti, forma della parallasse (`alberi`, `cristalli`,
+    `colonne`, `pini`), soffitto di stalattiti nelle grotte, sole, luna o stelle che
+    brillano; terra, erba/muschio/sabbia/neve, mattoni, punte; le punte del deserto sono
+    rosse, altrimenti sparivano sul cielo chiaro) e la sua musica (`musica: [semitoni,
+    bpm]`, `A.tappa`, +6 bpm a giro). Le caselle si disegnano con la palette della stanza;
+    il cielo sfuma da una tappa all'altra nei 160 px attorno al confine (`inizioTappa`).
+    Gino (a pixel, dai bozzetti) trema nella gabbia e chiede aiuto quando Tino è vicino
+    (battute diverse per tappa: "AIUTO PAPÀ!", "MI HANNO RIPRESO!"…); toccandola la gabbia
+    va in pezzi, Gino salta fuori, ringrazia e se ne va con un saltone verso destra.
+    Avviso "GINO LIBERO!" con tempo e morti della tappa, poi "TAPPA N" col nome. In alto
+    al centro i quadratini delle stanze della tappa con la gabbia in fondo. Il font a
+    pixel non ha le maiuscole accentate: nei fumetti la À si scrive A con l'accento
+    disegnato a mano (`fumetto`); Gino dice "papà", non "babbo".
+    `localStorage` `gino-liberato` (per sbloccare Gino più avanti), `tappa-max`.
+  - *Da decidere col proprietario dopo la prova*: Gino e Matteo giocabili, altre stanze
+    (seghe che si muovono, piattaforme che crollano, stanze proprie di ogni tappa), punti
+    sicuri a metà delle stanze lunghe.
 - **Provarlo su Claude**: in una cartella di appoggio `index.html` (senza doctype, html,
   head e body, percorsi `../../` tolti), `css/sito.css`, `stile.css`, `fisica.js`,
   `stanze.js`, `soluzioni.js`, `suoni.js`, `gioco.js`; si pubblica con `files` e `root`.
