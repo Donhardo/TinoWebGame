@@ -120,6 +120,19 @@ body {
 .tasto-amiga:active { border-color: #7a4a00 #fff3b0 #fff3b0 #7a4a00; }
 .tasto-amiga:focus-visible { outline: 2px solid #ff7a3c; outline-offset: 3px; }
 .tasto-amiga.secondario { background: #3a3486; color: #d9d6ff; border-color: #6a63c8 #1a1650 #1a1650 #6a63c8; }
+/* scelta del personaggio */
+.personaggi { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0 4px; }
+.pg {
+  width: 150px; padding: 8px 6px 6px; background: #0b0a24; color: #d9d6ff;
+  border: 3px solid #3a3486; font-family: 'VT323', monospace; font-size: 17px; line-height: 1.05;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.pg canvas { image-rendering: pixelated; height: 48px; width: auto; }
+.pg .nome { font-family: 'Press Start 2P', monospace; font-size: 11px; color: #ffd23c; }
+.pg.scelto { border-color: #ffd23c; background: #2a2470; }
+.pg:disabled { cursor: default; opacity: 0.55; }
+.pg:disabled canvas { filter: brightness(0); opacity: 0.6; }
+.pg:focus-visible { outline: 2px solid #ff7a3c; outline-offset: 2px; }
 .comandi-testo { text-align: left; background: #0b0a24; border: 2px solid #3a3486; padding: 8px 12px; margin-top: 8px; font-size: 19px; }
 .comandi-testo b { color: #ffd23c; font-weight: normal; }
 .con-dita .comandi-testo { display: none; }

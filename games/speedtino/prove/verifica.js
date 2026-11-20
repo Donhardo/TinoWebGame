@@ -5,7 +5,8 @@
  *
  *   node games/speedtino/prove/verifica.js            tutte le stanze
  *   node games/speedtino/prove/verifica.js camino     una stanza
- *   opzioni: --fascio 3000  --tratto 0.1  --salva (scrive soluzioni.js)
+ *   opzioni: --fascio 3000  --tratto 0.1  --pg gino (tino, gino, matteo)
+ *            --salva (scrive soluzioni.js, per il personaggio scelto)
  */
 'use strict';
 const path = require('path');
@@ -21,7 +22,10 @@ const DT = 1 / 120;
 const PASSI = Math.round(TRATTO / DT);
 const MAX_TEMPO = opz('tempo', 14);
 const salva = arg.includes('--salva');
-const scelte = arg.filter(a => !a.startsWith('--') && isNaN(Number(a)));
+const iPg = arg.indexOf('--pg');
+const PG = iPg >= 0 ? arg[iPg + 1] : 'tino';
+if (!F.PERSONAGGI[PG]) throw new Error('personaggio sconosciuto: ' + PG);
+const scelte = arg.filter((a, i) => !a.startsWith('--') && isNaN(Number(a)) && arg[i - 1] !== '--pg');
 
 const PISTA = { id: 'pista', righe: Array.from({ length: 22 }, (_, i) => (i >= 17 ? '#' : '.').repeat(16)) };
 
@@ -66,7 +70,7 @@ function verifica(def) {
   F.aggiungiStanza(m, PISTA, 'pista');
   const dist = mappaDistanze(m, st);
   const fine = (st.x0 + st.larga) * F.T + 6;
-  const p0 = F.nuovoGiocatore(st.spawn.x, st.spawn.y);
+  const p0 = F.nuovoGiocatore(st.spawn.x, st.spawn.piedi, PG);
   for (let i = 0; i < 3; i++) F.passo(m, p0, { sx: 0 }, DT);
   let fascio = [{ p: p0, salto: 0, gancio: 0, strada: [] }];
   let visti = 0;
@@ -90,7 +94,7 @@ function verifica(def) {
         if (p.x > fine && p.aTerra) return { ok: true, tempo: (t + 1) * TRATTO, strada, visti };
         const g = p.gancio ? Math.round(p.gancio.x) + ':' + Math.round(p.gancio.L / 6) : '-';
         const chiave = [Math.round(p.x / 3), Math.round(p.y / 3), Math.round(p.vx / 30), Math.round(p.vy / 30), g, a.salto, a.gancio].join(',');
-        const voto = dist(p.x + F.CORPO.w / 2, p.y + F.CORPO.h / 2) - p.x * 0.001;
+        const voto = dist(p.x + p.w / 2, p.y + p.h / 2) - p.x * 0.001;
         const vecchio = nuovi.get(chiave);
         if (!vecchio || vecchio.voto > voto) nuovi.set(chiave, { p, salto: a.salto, gancio: a.gancio, strada, voto });
       }
@@ -108,14 +112,14 @@ function traccia(def, strada) {
   const st = F.aggiungiStanza(m, def, def.id);
   F.aggiungiStanza(m, PISTA, 'pista');
   const righe = def.righe.map(r => r.split(''));
-  const p = F.nuovoGiocatore(st.spawn.x, st.spawn.y);
+  const p = F.nuovoGiocatore(st.spawn.x, st.spawn.piedi, PG);
   for (let i = 0; i < 3; i++) F.passo(m, p, { sx: 0 }, DT);
   let prima = { salto: 0, gancio: 0 };
   strada.forEach((a, n) => {
     for (let i = 0; i < PASSI; i++) {
       F.passo(m, p, { sx: a.sx, su: a.su, giu: a.giu, salto: !!a.salto, gancio: !!a.gancio,
         saltoPremuto: i === 0 && a.salto && !prima.salto, gancioPremuto: i === 0 && a.gancio && !prima.gancio }, DT);
-      const c = Math.floor((p.x + 5) / F.T), r = Math.floor((p.y + 5) / F.T);
+      const c = Math.floor((p.x + p.w / 2) / F.T), r = Math.floor((p.y + p.h / 2) / F.T);
       if (righe[r] && righe[r][c] === '.') righe[r][c] = p.gancio ? '+' : String(n % 10);
     }
     prima = a;
@@ -129,7 +133,7 @@ for (const def of STANZE) {
   const t0 = Date.now();
   const r = verifica(def);
   const s = ((Date.now() - t0) / 1000).toFixed(1);
-  console.log((r.ok ? 'OK   ' : 'NO   ') + def.id.padEnd(16) + ' liv ' + def.livello + '  ' +
+  console.log(PG.padEnd(7) + (r.ok ? 'OK   ' : 'NO   ') + def.id.padEnd(16) + ' liv ' + def.livello + '  ' +
     (r.ok ? r.tempo.toFixed(1) + ' s di gioco' : r.motivo) + '  (' + s + ' s, ' + r.visti + ' prove)');
   if (r.ok && arg.includes('--traccia')) traccia(def, r.strada);
   if (r.ok) soluzioni[def.id] = r.strada.map(a => '' + (a.sx + 1) + a.salto + a.gancio + a.su + a.giu).join(' ');
@@ -138,8 +142,9 @@ if (salva) {
   const file = path.join(__dirname, '..', 'soluzioni.js');
   let vecchie = {};
   try { vecchie = require(file).SOLUZIONI; } catch (e) { /* niente */ }
-  Object.assign(vecchie, soluzioni);
-  fs.writeFileSync(file, '/* Speedtino: soluzioni delle stanze trovate da prove/verifica.js (tratti di ' + TRATTO +
+  if (!vecchie.tino) vecchie = { tino: vecchie };   // file di prima: solo Tino
+  vecchie[PG] = Object.assign(vecchie[PG] || {}, soluzioni);
+  fs.writeFileSync(file, '/* Speedtino: soluzioni delle stanze trovate da prove/verifica.js (per personaggio; tratti di ' + TRATTO +
     ' s; per ogni tratto: direzione 0-2, salto, rampino, su, giù). Servono alla partita dimostrativa. */\n' +
     '(function (radice) {\n  const SOLUZIONI = ' + JSON.stringify(vecchie, null, 2).replace(/\n/g, '\n  ') + ';\n' +
     "  if (typeof module !== 'undefined' && module.exports) module.exports = { SOLUZIONI, TRATTO: " + TRATTO + " };\n" +

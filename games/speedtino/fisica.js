@@ -43,6 +43,31 @@
 
   const CORPO = { w: 10, h: 10 };
 
+  /*
+   * Personaggi: corpo (scatola che urta) e ritocchi a FISICA e RAMPINO.
+   * Gino: pesante e grosso, corda più lunga e dondolo più potente.
+   * Matteo: lungo, il più veloce a correre e salta più lontano, ma tiene il
+   * rampino coi denti: corda corta e dondolo più nervoso.
+   */
+  const PERSONAGGI = {
+    tino: { corpo: CORPO, fisica: {}, rampino: {} },
+    gino: {
+      corpo: { w: 14, h: 18 },
+      fisica: { corsa: 135, accTerra: 1150, accAria: 800, salto: 270, g: 2050, gSu: 1000, caduta: 360, pareteX: 160, pareteY: 280 },
+      rampino: { portata: 128, massimo: 128, minimo: 22, gravita: 1050, spinta: 700, lancio: 130, avvolgi: 110 }
+    },
+    matteo: {
+      corpo: { w: 16, h: 10 },
+      fisica: { corsa: 185, accTerra: 1900, accAria: 1200, salto: 258, gSu: 900, massima: 460 },
+      rampino: { portata: 82, massimo: 82, minimo: 14, gravita: 1150, spinta: 640, avvolgi: 150, lancio: 100 }
+    }
+  };
+  for (const pg of Object.values(PERSONAGGI)) {
+    pg.F = Object.assign({}, FISICA, pg.fisica);
+    pg.R = Object.assign({}, RAMPINO, pg.rampino);
+  }
+  const pgDi = p => PERSONAGGI[p.pg] || PERSONAGGI.tino;
+
   // ---------- mondo ----------
   function nuovoMondo() {
     return { stanze: [], colonne: [], pioli: [], seghe: [], ghiande: [], gabbie: [], larghezza: 0 };
@@ -67,8 +92,8 @@
         else if (k === 'G') m.gabbie.push({ x: (x0 + c) * T, y: (r + 1) * T, stanza: indice, aperta: -1 });
       }
     }
-    // punto di partenza: sopra il pavimento della seconda colonna
-    st.spawn = { x: (x0 + 1) * T + 1, y: PAVIMENTO * T - CORPO.h };
+    // punto di partenza: sulla seconda colonna, coi piedi sul pavimento
+    st.spawn = { x: (x0 + 1) * T + 1, piedi: PAVIMENTO * T };
     m.larghezza += larga;
     return st;
   }
@@ -92,16 +117,19 @@
   }
 
   // ---------- giocatore ----------
-  function nuovoGiocatore(x, y) {
+  // x = lato sinistro, piedi = quota dei piedi; pg = 'tino', 'gino' o 'matteo'
+  function nuovoGiocatore(x, piedi, pg = 'tino') {
+    const c = (PERSONAGGI[pg] || PERSONAGGI.tino).corpo;
     return {
-      x, y, vx: 0, vy: 0, verso: 1,
+      pg, w: c.w, h: c.h,
+      x, y: piedi - c.h, vx: 0, vy: 0, verso: 1,
       aTerra: false, muro: 0, coyote: 0, memoria: 0, blocco: 0,
       gancio: null, mancato: 0, tiro: null, saltando: false, ultimoMuro: 0, tempoMuro: 0, versoBloccato: 0,
       morto: false, causa: null, tempo: 0
     };
   }
 
-  function centro(p) { return { x: p.x + CORPO.w / 2, y: p.y + CORPO.h / 2 }; }
+  function centro(p) { return { x: p.x + p.w / 2, y: p.y + p.h / 2 }; }
 
   function vediLinea(m, x0, y0, x1, y1) {
     const d = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(d / 3);
@@ -114,6 +142,7 @@
 
   // il piolo a cui si aggancerebbe il rampino adesso
   function bersaglio(m, p) {
+    const RAMPINO = pgDi(p).R;
     const c = centro(p);
     let meglio = null, voto = Infinity;
     for (const q of m.pioli) {
@@ -132,6 +161,7 @@
   }
 
   function muovi(m, p, dx, dy) {
+    const CORPO = p;
     // a passi piccoli, prima in orizzontale poi in verticale
     let urtoX = 0, urtoY = 0;
     const passiX = Math.ceil(Math.abs(dx) / 3) || 1;
@@ -161,6 +191,7 @@
 
   // pericoli: spuntoni, seghe, caduta
   function controllaPericoli(m, p) {
+    const CORPO = p;
     if (p.y > RIGHE * T + 24) { p.morto = true; p.causa = 'caduta'; return; }
     const x0 = p.x + 1, x1 = p.x + CORPO.w - 1, y0 = p.y + 1, y1 = p.y + CORPO.h - 0.5;
     const c0 = Math.floor(x0 / T), c1 = Math.floor(x1 / T), r0 = Math.floor(y0 / T), r1 = Math.floor(y1 / T);
@@ -176,7 +207,7 @@
     }
     const c = centro(p);
     for (const s of m.seghe) {
-      if (Math.abs(s.x - c.x) > 20) continue;
+      if (Math.abs(s.x - c.x) > 24) continue;
       const qx = Math.max(p.x, Math.min(s.x, p.x + CORPO.w));
       const qy = Math.max(p.y, Math.min(s.y, p.y + CORPO.h));
       if ((qx - s.x) ** 2 + (qy - s.y) ** 2 < (s.r - 0.5) ** 2) { p.morto = true; p.causa = 'sega'; return; }
@@ -191,6 +222,7 @@
    */
   function passo(m, p, k, dt) {
     if (p.morto) return;
+    const { F: FISICA, R: RAMPINO } = pgDi(p), CORPO = p;
     p.tempo += dt;
     if (k.sx) p.verso = k.sx;
     p.coyote = p.aTerra ? FISICA.coyote : Math.max(0, p.coyote - dt);
@@ -313,7 +345,7 @@
   }
 
   const API = {
-    T, RIGHE, PAVIMENTO, FISICA, RAMPINO, CORPO,
+    T, RIGHE, PAVIMENTO, FISICA, RAMPINO, CORPO, PERSONAGGI,
     nuovoMondo, aggiungiStanza, casella, solida, nuovoGiocatore, passo, bersaglio, centro, copia
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

@@ -10,7 +10,7 @@
   const SOLUZIONI = window.SpeedtinoSoluzioni || {};
   const TRATTO = window.SpeedtinoTratto || 0.1;
   const A = window.SpeedtinoSuoni;
-  const { T, CORPO } = F;
+  const { T } = F;
 
   const H = 180;               // altezza dello schermo logico
   let W = 320;                 // larghezza: da 320 a 400 secondo lo schermo
@@ -79,7 +79,7 @@
     O: '#e8763a', o: '#a9471f', C: '#f6d6a8', K: '#1b0f0c', T: '#5e2412', t: '#93451f',
     R: '#e0303a', Y: '#ffd23c', M: '#e83ab8', W: '#ffffff', D: '#3a1408', V: '#6cc04a', P: '#9b4ad8',
     r: '#8e1a22', m: '#a41f7e', p: '#5e2690',
-    G: '#c8935a', g: '#8a5a2e', N: '#6a2a22', H: '#5c3418'
+    G: '#c8935a', g: '#8a5a2e', N: '#6a2a22', H: '#5c3418', E: '#8f7f45', e: '#574622', L: '#bfae78'
   };
   const TINO = {
     gambe: [10, 12, 15, 17], coloreGambe: 'o',
@@ -111,11 +111,11 @@
         pix.push({ x, y, col: COLORI[k] });
       }
     });
-    return { cv, w, h, gambe: def.gambe, coloreGambe: COLORI[def.coloreGambe], pix };
+    return { cv, w, h, gambe: def.gambe, coloreGambe: COLORI[def.coloreGambe], pix, bocca: def.bocca || null };
   }
   // Gino (dai bozzetti): molto più grande di Tino
   const GINO = {
-    gambe: [8, 9, 15, 16], coloreGambe: 'H',
+    gambe: [8, 15, 9, 16], coloreGambe: 'H',
     righe: [
       '.......GG........GG.....',
       '......GGGG......GGGG....',
@@ -147,8 +147,38 @@
       '..ggg..ggggCCCCCCgg.....'
     ]
   };
+  // Matteo (dai bozzetti): tirannosauro giocattolo, alto come Tino ma molto più lungo;
+  // il rampino lo tiene coi denti (bocca = da dove parte la corda, in pixel dello sprite)
+  const MATTEO = {
+    gambe: [11, 15, 12, 16], coloreGambe: 'e', bocca: { x: 24, y: 6 },
+    righe: [
+      '...................EEEEeeeE.',
+      '.................EEEEEEEKEEe',
+      '.................EEEEEEEEEEE',
+      '.eEE.............EEEEEEEEEEE',
+      '..eeEEEE........EEEEEEEEEEEe',
+      '....eEEEEEEEEEEEEEEEW.W.W.W.',
+      '.....eeEEEEEEEEEEEEEEEEEee..',
+      '.......eEEeEEeEELLEeeeee....',
+      '........EEeEeeEELLeee.......',
+      '........eeeeeeELLe..e.......',
+      '..........eeeeLL............'
+    ]
+  };
   const SPR_TINO = preparaSprite(TINO);
   const SPR_GINO = preparaSprite(GINO);
+  const SPR_MATTEO = preparaSprite(MATTEO);
+  const SPRITE = { tino: SPR_TINO, gino: SPR_GINO, matteo: SPR_MATTEO };
+
+  // ---------- personaggi giocabili ----------
+  // Gino si sblocca liberandolo la prima volta, Matteo arrivando alla terza tappa
+  const PERSONAGGI = [
+    { id: 'tino', nome: 'TINO', dote: 'Equilibrato' },
+    { id: 'gino', nome: 'GINO', dote: 'Pesante: corda lunga e dondolo potente, ma è grosso', sblocco: 'Libera Gino dalla gabbia' },
+    { id: 'matteo', nome: 'MATTEO', dote: 'Velocissimo e salta lontano, ma la corda è corta', sblocco: 'Arriva alla tappa 3' }
+  ];
+  const aperto = id => id === 'tino' || (id === 'gino' && stato.liberati > 0) || (id === 'matteo' && stato.tappaMax >= 2);
+  const nomePg = id => PERSONAGGI.find(q => q.id === id).nome;
 
   // ---------- tela ----------
   const tela = document.getElementById('campo');
@@ -389,11 +419,13 @@
     tappa: 0,                  // tappa in cui si trova Tino
     tappaMorti: 0, tappaTempo: 0,
     liberati: leggi('gino-liberato', 0), tappaMax: leggi('tappa-max', 0),
+    pg: leggi('personaggio', 'tino'),   // chi corre
     dem: null, test: false
   };
 
   function nuovaCorsa(demo) {
     stato.demo = demo;
+    if (!SPRITE[stato.pg] || !aperto(stato.pg)) stato.pg = 'tino';
     stato.m = F.nuovoMondo();
     stato.stanzeFatte = 0; stato.ultime = [];
     stato.gen = { tappa: 0, n: 0 }; stato.inizioTappa = [0];
@@ -402,7 +434,7 @@
     aggiungiStanza();
     while (stato.m.larghezza * T < 900) aggiungiStanza();
     const s0 = stato.m.stanze[0];
-    stato.p = F.nuovoGiocatore(s0.spawn.x, s0.spawn.y);
+    stato.p = F.nuovoGiocatore(s0.spawn.x, s0.spawn.piedi, stato.pg);
     stato.cp = 0; stato.morti = 0; stato.metri = 0; stato.ghiande = 0;
     stato.cam = 0; stato.rinascita = 0; stato.particelle = []; stato.polvere = [];
     stato.tempoCorsa = 0; stato.recordSuonato = false; stato.vistaStanza = 0;
@@ -529,20 +561,24 @@
   if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('con-dita');
 
   // ---------- partita dimostrativa (le soluzioni del giocatore simulato) ----------
+  // soluzioni per personaggio: AZIONI_DEMO[pg][stanza]
   const AZIONI_DEMO = {};
-  for (const [id, s] of Object.entries(SOLUZIONI)) {
-    AZIONI_DEMO[id] = s.split(' ').map(t => ({ sx: +t[0] - 1, salto: +t[1], gancio: +t[2], su: +t[3], giu: +t[4] }));
+  for (const [pg, sol] of Object.entries(SOLUZIONI)) {
+    AZIONI_DEMO[pg] = {};
+    for (const [id, s] of Object.entries(sol)) {
+      AZIONI_DEMO[pg][id] = s.split(' ').map(t => ({ sx: +t[0] - 1, salto: +t[1], gancio: +t[2], su: +t[3], giu: +t[4] }));
+    }
   }
   const PASSI_TRATTO = Math.round(TRATTO / DT);
   function preparaDemoStanza(i) {
     const st = stato.m.stanze[i];
-    stato.p = F.nuovoGiocatore(st.spawn.x, st.spawn.y);
+    stato.p = F.nuovoGiocatore(st.spawn.x, st.spawn.piedi, stato.pg);
     for (let k = 0; k < 3; k++) F.passo(stato.m, stato.p, { sx: 0 }, DT);
     stato.dem = { stanza: i, passo: 0, prima: { salto: 0, gancio: 0 } };
   }
   function comandiDemo() {
     const d = stato.dem, st = stato.m.stanze[d.stanza];
-    const az = AZIONI_DEMO[st.id] || [];
+    const az = (AZIONI_DEMO[stato.pg] || AZIONI_DEMO.tino || {})[st.id] || [];
     const n = Math.floor(d.passo / PASSI_TRATTO), primo = d.passo % PASSI_TRATTO === 0;
     const a = az[n] || { sx: 1, salto: 0, gancio: 0, su: 0, giu: 0 };
     const k = {
@@ -573,7 +609,7 @@
       if (p.morto) muori(p.causa);
       else {
         // punto sicuro: la stanza in cui Tino tocca terra
-        const s = stanzaDi(p.x + CORPO.w / 2);
+        const s = stanzaDi(p.x + p.w / 2);
         if (p.aTerra && s > stato.cp) {
           stato.cp = s;
           if (stato.demo) preparaDemoStanza(s);
@@ -609,10 +645,10 @@
     if (!prima.gancio && p.gancio) A.effetto('rampino');
     if (k.gancioPremuto && !p.gancio) A.effetto('mancato');
     if (prima.gancio && !p.gancio) A.effetto('stacca');
-    if (prima.aTerra && !p.aTerra && p.vy < -100) { A.effetto('salto'); polvere(p.x + CORPO.w / 2, p.y + CORPO.h, 3); }
-    if (!prima.aTerra && prima.muro && p.vy < -100 && !p.gancio) { A.effetto('parete'); polvere(p.x + (prima.muro > 0 ? CORPO.w : 0), p.y + 5, 3); }
-    if (!prima.aTerra && p.aTerra && prima.vy > 150) { A.effetto('atterra'); polvere(p.x + CORPO.w / 2, p.y + CORPO.h, 4); }
-    if (p.muro && !p.aTerra && p.vy > 40 && Math.random() < 0.25) polvere(p.x + (p.muro > 0 ? CORPO.w : 0), p.y + 2, 1);
+    if (prima.aTerra && !p.aTerra && p.vy < -100) { A.effetto('salto'); polvere(p.x + p.w / 2, p.y + p.h, 3); }
+    if (!prima.aTerra && prima.muro && p.vy < -100 && !p.gancio) { A.effetto('parete'); polvere(p.x + (prima.muro > 0 ? p.w : 0), p.y + 5, 3); }
+    if (!prima.aTerra && p.aTerra && prima.vy > 150) { A.effetto('atterra'); polvere(p.x + p.w / 2, p.y + p.h, 4); }
+    if (p.muro && !p.aTerra && p.vy > 40 && Math.random() < 0.25) polvere(p.x + (p.muro > 0 ? p.w : 0), p.y + 2, 1);
   }
 
   // ---------- tappe e gabbia di Gino ----------
@@ -630,13 +666,13 @@
     const p = stato.p;
     for (const g of stato.m.gabbie) {
       if (g.aperta >= 0 || p.morto) continue;
-      if (p.x + CORPO.w < g.x - 1 || p.x > g.x + 40) continue;
+      if (p.x + p.w < g.x - 1 || p.x > g.x + 40) continue;
       g.aperta = stato.tempo;
       rompiGabbia(g);
       if (stato.demo) continue;
       A.effetto('gabbia'); A.effetto('liberato');
       stato.liberati++; scrivi('gino-liberato', stato.liberati);
-      stato.avviso = { testo: 'GINO LIBERO!', sotto: 'TAPPA IN ' + tempoTesto(stato.tappaTempo) + ' · MORTI ' + stato.tappaMorti, t: 2.8 };
+      stato.avviso = { testo: (stato.pg === 'gino' ? 'TINO' : 'GINO') + ' LIBERO!', sotto: 'TAPPA IN ' + tempoTesto(stato.tappaTempo) + ' · MORTI ' + stato.tappaMorti, t: 2.8 };
       stato.scossa = 0.15;
     }
   }
@@ -689,16 +725,20 @@
     }
   }
   // dov'è Gino: dentro la gabbia, poi un saltello fuori, poi un saltone via verso destra
+  // nella gabbia c'è Gino; se corre Gino, c'è Tino. Chiamano chi corre per nome.
+  const CHIAMA = { tino: 'PAPÀ', gino: 'GINO', matteo: 'MATTEO' };
   const BATTUTE = {
-    prima: ['AIUTO PAPÀ!', 'MI HANNO RIPRESO!', 'ANCORA IO, PAPÀ!', 'PAPÀ, SBRIGATI!'],
-    dopo: ['GRAZIE PAPÀ!', 'CORRO AVANTI!', 'CI VEDIAMO DOPO!', 'SEI IL MIGLIORE!']
+    prima: [n => 'AIUTO ' + n + '!', () => 'MI HANNO RIPRESO!', n => 'ANCORA IO, ' + n + '!', n => n + ', SBRIGATI!'],
+    dopo: [n => 'GRAZIE ' + n + '!', () => 'CORRO AVANTI!', () => 'CI VEDIAMO DOPO!', () => 'SEI IL MIGLIORE!']
   };
+  const battuta = (tipo, i) => BATTUTE[tipo][i](CHIAMA[stato.pg] || 'PAPÀ');
+  const prigioniero = () => (stato.pg === 'gino' ? SPR_TINO : SPR_GINO);
   function posGino(g) {
     const base = { x: g.x + 18, y: g.y - 4, fumetto: null, verso: 1, salto: false, trema: 0, visibile: true };
-    const p = stato.p, battuta = (stato.m.stanze[g.stanza].tappa) % 4;
+    const p = stato.p, n = (stato.m.stanze[g.stanza].tappa) % 4;
     if (g.aperta < 0) {
       const vicino = Math.abs(p.x - g.x) < 170 && !p.morto;
-      if (vicino) { base.fumetto = BATTUTE.prima[battuta]; base.trema = 1; base.verso = -1; }
+      if (vicino) { base.fumetto = battuta('prima', n); base.trema = 1; base.verso = -1; }
       return base;
     }
     const a = stato.tempo - g.aperta;
@@ -709,7 +749,7 @@
     }
     if (a < 2.4) {
       const hop = Math.abs(Math.sin((a - 0.75) * 7)) * 4;
-      return Object.assign(base, { x: base.x + 46, y: g.y - hop, verso: -1, fumetto: BATTUTE.dopo[battuta] });
+      return Object.assign(base, { x: base.x + 46, y: g.y - hop, verso: -1, fumetto: battuta('dopo', n) });
     }
     const t = a - 2.4;
     const y = g.y - 330 * t + 260 * t * t, x = base.x + 46 + 150 * t;
@@ -744,8 +784,8 @@
       stato.scossa = 0.25; stato.lampo = 0.12;
     }
     // Tino va in pezzi: un pixel per pixel dello sprite
-    const s = SPR_TINO, c = F.centro(p);
-    const x0 = c.x - s.w / 2, y0 = p.y + CORPO.h - s.h - 1;
+    const s = SPRITE[p.pg], c = F.centro(p);
+    const x0 = c.x - s.w / 2, y0 = p.y + p.h - s.h - 1;
     for (const q of s.pix) {
       const fx = p.verso > 0 ? q.x : s.w - 1 - q.x;
       stato.particelle.push({ x: x0 + fx, y: y0 + q.y, vx: (Math.random() - 0.5) * 220 + p.vx * 0.3, vy: -60 - Math.random() * 200, col: q.col, vita: 0.7 + Math.random() * 0.5, g: 700 });
@@ -762,11 +802,12 @@
       return;
     }
     const st = stato.m.stanze[stato.cp];
-    stato.p = F.nuovoGiocatore(st.spawn.x, st.spawn.y);
+    stato.p = F.nuovoGiocatore(st.spawn.x, st.spawn.piedi, stato.pg);
     A.effetto('rinasce');
+    const c = F.centro(stato.p);
     for (let i = 0; i < 10; i++) {
       const a = i / 10 * Math.PI * 2;
-      stato.particelle.push({ x: st.spawn.x + 5 + Math.cos(a) * 14, y: st.spawn.y + 5 + Math.sin(a) * 14, vx: -Math.cos(a) * 50, vy: -Math.sin(a) * 50, col: '#ffffff', vita: 0.25, g: 0 });
+      stato.particelle.push({ x: c.x + Math.cos(a) * 14, y: c.y + Math.sin(a) * 14, vx: -Math.cos(a) * 50, vy: -Math.sin(a) * 50, col: '#ffffff', vita: 0.25, g: 0 });
     }
   }
 
@@ -834,14 +875,14 @@
     }
   }
   function disegnaGino(pg, cam) {
-    const s = SPR_GINO;
+    const s = prigioniero();
     const tr = pg.trema && Math.floor(stato.tempo * 30) % 2 ? 1 : 0;
     ctx.save();
     ctx.translate(Math.round(pg.x - cam) + tr, Math.round(pg.y));
     if (pg.verso < 0) ctx.scale(-1, 1);
     const ox = -Math.floor(s.w / 2) - 2, oy = -(s.h + 2);
     ctx.fillStyle = s.coloreGambe;
-    s.gambe.forEach(lx => ctx.fillRect(ox + lx, oy + s.h, 2, pg.salto ? 1 : 2));
+    s.gambe.forEach(lx => ctx.fillRect(ox + lx, oy + s.h, 1, pg.salto ? 1 : 2));
     ctx.drawImage(s.cv, ox, oy);
     ctx.restore();
   }
@@ -849,7 +890,7 @@
     for (const g of stato.m.gabbie) {
       if (g.x - cam < -120 || g.x - cam > W + 60) continue;
       const pg = posGino(g);
-      if (pg.fumetto && pg.visibile) fumetto(pg.fumetto, pg.x - cam, pg.y - SPR_GINO.h - 8);
+      if (pg.fumetto && pg.visibile) fumetto(pg.fumetto, pg.x - cam, pg.y - prigioniero().h - 8);
     }
   }
   function fumetto(t, x, y) {
@@ -986,7 +1027,7 @@
   function disegnaTino(cam) {
     const p = stato.p;
     if (p.morto) return;
-    const s = SPR_TINO, c = F.centro(p);
+    const s = SPRITE[p.pg], c = F.centro(p);
     const cx = c.x - cam;
     // tiro mancato: la corda scatta avanti e torna
     if (p.mancato > 0 && !p.gancio) {
@@ -995,18 +1036,27 @@
     }
     let stato2 = 'fermo', ang = 0;
     if (p.gancio) {
-      lineaPixel(p.gancio.x - cam, p.gancio.y, cx, c.y);
       stato2 = 'appeso';
       ang = Math.atan2(p.gancio.x - c.x, -(p.gancio.y - c.y)) * 0.6;
+      // Matteo tiene la corda coi denti: parte dalla bocca
+      let bx = cx, by = c.y;
+      if (s.bocca) {
+        const v = p.gancio.x >= c.x ? 1 : -1;
+        const lx = (s.bocca.x - s.w / 2) * v, ly = s.bocca.y - (s.h + 2) + p.h / 2 + 2;
+        bx = cx + lx * Math.cos(ang) - ly * Math.sin(ang);
+        by = c.y + lx * Math.sin(ang) + ly * Math.cos(ang);
+      }
+      lineaPixel(p.gancio.x - cam, p.gancio.y, bx, by);
     } else if (!p.aTerra) stato2 = p.muro && p.vy > 0 ? 'parete' : 'salta';
     else if (Math.abs(p.vx) > 20) stato2 = 'corre';
     let verso = p.verso;
     if (stato2 === 'parete') verso = -p.muro;
+    if (stato2 === 'appeso' && s.bocca) verso = p.gancio.x >= c.x ? 1 : -1;
     ctx.save();
-    ctx.translate(Math.round(cx), Math.round(p.y + CORPO.h));
-    if (ang) { ctx.translate(0, -6); ctx.rotate(ang); ctx.translate(0, 6); }
+    ctx.translate(Math.round(cx), Math.round(p.y + p.h));
+    if (ang) { const m = Math.round(p.h / 2) + 1; ctx.translate(0, -m); ctx.rotate(ang); ctx.translate(0, m); }
     if (verso < 0) ctx.scale(-1, 1);
-    const ox = -Math.floor(s.w / 2) - 2;
+    const ox = -Math.floor(s.w / 2) - (p.pg === 'tino' ? 2 : 0);
     let oy = -(s.h + 2);
     const bob = stato2 === 'fermo' && (stato.tempo % 1.2) < 0.6 ? 1 : 0;
     const pas = Math.floor(stato.tempo * 16) % 2;
@@ -1080,11 +1130,42 @@
       <div class="copper" aria-hidden="true"></div>
       <p class="sotto">Corri, aggancia, dondola, salta. Gino è chiuso in una gabbia alla fine di ogni tappa: vai a liberarlo! Morirai tantissimo, ma si riparte subito.</p>
       <p class="numeri">Record <b>${stato.record} m</b> · Morti in tutto <b>${stato.mortiTotali}</b>${stato.liberati ? ` · Gino liberato <b>${stato.liberati}</b> ${stato.liberati === 1 ? 'volta' : 'volte'}` : ''}</p>
+      <div class="personaggi" id="personaggi"></div>
       <div class="scelte"><button class="tasto-amiga" id="b-gioca" type="button">GIOCA</button></div>
       ${COMANDI}
       <p class="piccolo">Sul telefono: ◀ ▶ a sinistra, SALTA e RAMPINO a destra, ▲ ▼ per la corda.</p>`);
     document.getElementById('b-gioca').addEventListener('click', gioca);
+    mostraPersonaggi();
     if (!stato.demo || !stato.m) nuovaCorsa(true);
+  }
+  // le schede dei personaggi: quelli ancora chiusi sono in ombra con la condizione
+  function mostraPersonaggi() {
+    const box = document.getElementById('personaggi');
+    if (!aperto(stato.pg)) stato.pg = 'tino';
+    box.innerHTML = '';
+    for (const q of PERSONAGGI) {
+      const ok = aperto(q.id), s = SPRITE[q.id];
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'pg' + (q.id === stato.pg ? ' scelto' : ''); b.disabled = !ok;
+      b.setAttribute('aria-pressed', q.id === stato.pg ? 'true' : 'false');
+      const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h + 2;
+      const c = cv.getContext('2d');
+      c.drawImage(s.cv, 0, 0);
+      c.fillStyle = s.coloreGambe;
+      s.gambe.forEach(lx => c.fillRect(lx, s.h, 1, 2));
+      cv.style.height = Math.round((s.h + 2) * (q.id === 'gino' ? 2 : 3)) + 'px';
+      b.appendChild(cv);
+      const n = document.createElement('span'); n.className = 'nome'; n.textContent = ok ? q.nome : '???';
+      const d = document.createElement('span'); d.textContent = ok ? q.dote : q.sblocco;
+      b.append(n, d);
+      b.addEventListener('click', () => {
+        if (!ok || stato.pg === q.id) return;
+        stato.pg = q.id; scrivi('personaggio', q.id);
+        mostraPersonaggi();
+        nuovaCorsa(true);
+      });
+      box.appendChild(b);
+    }
   }
   function gioca() {
     A.avvia();
