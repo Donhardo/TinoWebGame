@@ -2233,6 +2233,8 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
   di punte (pozzo largo 5, tre punte da un quadretto) e torre (punte da un quadretto)
   rifatti. Criterio: le stanze coi muri si superano anche con comandi ogni 0,2 s
   (`--tratto 0.2`), prima solo il camino; ora tutte e 13 le stanze passano anche così.
+  Dopo la terza prova il proprietario dice "ora va meglio": prototipo unito in `main`
+  (con la scheda nella home).
   File: `index.html`, `stile.css` (stile Amiga: pannelli scuri, Press Start 2P e VT323,
   righe "copper"), `fisica.js`, `stanze.js`, `soluzioni.js` (generato), `suoni.js`,
   `gioco.js`, `tino-pixel.png` (Tino a pixel ×4 per l'anteprima della home),
