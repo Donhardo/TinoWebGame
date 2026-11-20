@@ -2320,8 +2320,14 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
     in `fisica.js` (corpo e ritocchi a `FISICA` e `RAMPINO`, uniti in `pg.F` e `pg.R`);
     il giocatore ha `pg`, `w`, `h` (niente più `CORPO` fisso) e `nuovoGiocatore(x, piedi,
     pg)` (lo `spawn` delle stanze dà `piedi`). Gino: corpo 14 × 15 (più alto di 15 non
-    passa sotto l'entrata del camino, alta 16), corsa 135, più pesante (g 2050), corda
-    fino a 128 con dondolo più forte (gravità 1050, spinta 700). Matteo: corpo 16 × 10,
+    passa sotto l'entrata del camino, alta 16), corsa 140, cade più veloce (360), salta come
+    Tino, corda fino a 128 con dondolo più forte (gravità 1050, spinta 700). Prima saltava
+    più pesante (g 2050): il proprietario ha trovato impossibile "Punte in testa" con lui
+    (con le punte sopra e sotto nessun salto andava bene: è più alto e più largo). Ora quella
+    stanza ha il soffitto di punte un quadretto più in alto (riga 11 invece di 12): margine
+    sul tempo di pressione del salto per superare tre punte Tino 75-195 ms (prima 75-120),
+    Gino 110-140 ms (copione in `/tmp`, non nel repository). Tutte le stanze si superano
+    anche con comandi ogni 0,2 s con tutti e tre. Matteo: corpo 16 × 10,
     corsa 185 (massima 460), corda corta (82, minimo 14) e nervosa (gravità 1150), la
     corda parte dalla bocca (`bocca` nello sprite). Lo sprite si disegna più grande del
     corpo (Gino sporge in alto). Nel menu le schede dei personaggi (`mostraPersonaggi`,
