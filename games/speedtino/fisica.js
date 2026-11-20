@@ -52,8 +52,8 @@
   const PERSONAGGI = {
     tino: { corpo: CORPO, fisica: {}, rampino: {} },
     gino: {
-      corpo: { w: 14, h: 18 },
-      fisica: { corsa: 135, accTerra: 1150, accAria: 800, salto: 270, g: 2050, gSu: 1000, caduta: 360, pareteX: 160, pareteY: 280 },
+      corpo: { w: 14, h: 15 },
+      fisica: { corsa: 135, accTerra: 1150, accAria: 800, salto: 270, g: 2050, gSu: 1000, caduta: 360, pareteX: 155, pareteY: 290 },
       rampino: { portata: 128, massimo: 128, minimo: 22, gravita: 1050, spinta: 700, lancio: 130, avvolgi: 110 }
     },
     matteo: {

@@ -2316,7 +2316,23 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
     pixel non ha le maiuscole accentate: nei fumetti la À si scrive A con l'accento
     disegnato a mano (`fumetto`); Gino dice "papà", non "babbo".
     `localStorage` `gino-liberato` (per sbloccare Gino più avanti), `tappa-max`.
-  - *Da decidere col proprietario dopo la prova*: Gino e Matteo giocabili, altre stanze
+  - *Gino e Matteo giocabili* (fatto, da provare col proprietario): tabella `PERSONAGGI`
+    in `fisica.js` (corpo e ritocchi a `FISICA` e `RAMPINO`, uniti in `pg.F` e `pg.R`);
+    il giocatore ha `pg`, `w`, `h` (niente più `CORPO` fisso) e `nuovoGiocatore(x, piedi,
+    pg)` (lo `spawn` delle stanze dà `piedi`). Gino: corpo 14 × 15 (più alto di 15 non
+    passa sotto l'entrata del camino, alta 16), corsa 135, più pesante (g 2050), corda
+    fino a 128 con dondolo più forte (gravità 1050, spinta 700). Matteo: corpo 16 × 10,
+    corsa 185 (massima 460), corda corta (82, minimo 14) e nervosa (gravità 1150), la
+    corda parte dalla bocca (`bocca` nello sprite). Lo sprite si disegna più grande del
+    corpo (Gino sporge in alto). Nel menu le schede dei personaggi (`mostraPersonaggi`,
+    `localStorage` `personaggio`): Gino si apre liberandolo la prima volta
+    (`gino-liberato`), Matteo arrivando alla tappa 3 (`tappa-max` ≥ 2); chiusi in ombra con
+    la condizione. Se corre Gino, nella gabbia c'è Tino ("TINO LIBERO!"); le battute chiamano
+    per nome chi corre (`CHIAMA`: PAPÀ, GINO, MATTEO). `verifica.js --pg gino` verifica con
+    un personaggio; `soluzioni.js` ha le soluzioni per personaggio (`SOLUZIONI[pg][stanza]`)
+    e la partita dimostrativa usa il personaggio scelto. Tutte le stanze si superano con
+    tutti e tre.
+  - *Da decidere col proprietario dopo la prova*: altre stanze
     (seghe che si muovono, piattaforme che crollano, stanze proprie di ogni tappa), punti
     sicuri a metà delle stanze lunghe.
 - **Provarlo su Claude**: in una cartella di appoggio `index.html` (senza doctype, html,
