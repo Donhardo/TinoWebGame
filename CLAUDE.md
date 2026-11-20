@@ -2212,13 +2212,15 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
 - **Eccezione alla regola delle foto**: in questo gioco (solo qui) Tino e Gino sono
   disegnati a pixel, nello stile dell'omino squadrato di Claude Code. Tino: corpo
   arancione, pancia chiara, codona marrone piena che sale fin sopra le orecchie, collare
-  lungo tutto il collo con le perline e tre campanelli appesi (rosso, rosa, viola). Gino:
-  più piccolo e chiaro, naso rosso e dentoni.
-- **Gino**: rapito in una gabbietta alla fine di ogni tappa e, una volta liberato,
-  personaggio da sbloccare (più leggero, salta più in alto, corda più corta).
-- **Bozzetti**: pubblicati come artifact (scena Amiga animata, Tino B1 coda a pennacchio e
-  B2 coda a ricciolo, Gino, palette); da scegliere la coda, poi il prototipo del nucleo
-  (rampino coi comandi, ripartenza istantanea, prime stanze).
+  lungo tutto il collo con le perline e tre campanelli appesi (rosso, rosa, viola). Gino (come i
+  peluche veri) è molto più grande di Tino, circa il doppio in altezza: color nocciola, muso
+  chiaro coi dentoni, naso scuro, zampette marroni, coda lunga e sottile.
+- **Gino**: rapito in una gabbia (grande) alla fine di ogni tappa e, una volta liberato,
+  personaggio da sbloccare (proposta: pesante, corda più lunga e dondolo più potente, ma
+  grosso, quindi passa a fatica nei varchi stretti).
+- **Bozzetti**: pubblicati come artifact (scena Amiga animata, Tino scelto: B1, coda a
+  pennacchio; Gino grande, palette). Prossimo passo: il prototipo del nucleo (rampino coi
+  comandi, ripartenza istantanea, prime stanze).
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
