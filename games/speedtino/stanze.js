@@ -11,6 +11,7 @@
  *   >  spuntoni sulla parete a sinistra (puntano a destra)
  *   <  spuntoni sulla parete a destra (puntano a sinistra)
  *   *  sega circolare ferma      a  ghianda da raccogliere
+ *   G  gabbia di Gino (casella in basso a sinistra; solo nella stanza 'gabbia')
  *
  * livello: da 0 (la prima stanza) a 5; il gioco sceglie a caso tra le stanze
  * di livello giusto per i metri fatti. Ogni stanza è verificata dal giocatore
@@ -19,7 +20,32 @@
 (function (radice) {
   'use strict';
 
+  /*
+   * Tappe: ogni tappa ha la sua palette (in gioco.js) e la sua musica; dopo
+   * STANZE_PER_TAPPA stanze c'è la gabbia di Gino. Le stanze si scelgono con il
+   * livello che sale da livelli[0] a livelli[1] nel corso della tappa. Dopo
+   * l'ultima tappa si ricomincia dalla prima (secondo giro, più difficile).
+   */
+  const STANZE_PER_TAPPA = 7;
+  const TAPPE = [
+    { id: 'bosco', nome: 'Il bosco al tramonto', livelli: [1, 3] },
+    { id: 'grotte', nome: 'Le grotte di cristallo', livelli: [2, 4] },
+    { id: 'deserto', nome: 'Le rovine nel deserto', livelli: [3, 5] },
+    { id: 'cime', nome: 'Le cime di notte', livelli: [4, 5] }
+  ];
+
   const STANZE = [
+    {
+      id: 'gabbia', nome: 'La gabbia di Gino', livello: 0,
+      righe: [
+        '', '', '', '', '', '', '', '', '', '', '', '', '',
+        '..........a.a.a',
+        '',
+        '',
+        '.......................G',
+        '##############################################'
+      ]
+    },
     {
       id: 'via', nome: 'Il via', livello: 0,
       righe: [
@@ -224,7 +250,7 @@
     for (let i = 0; i < 22; i++) {
       if (i >= 17 && r[i].length < larga) return 'riga ' + i + ' corta (' + r[i].length + ' su ' + larga + ')';
       r[i] = r[i].padEnd(larga, '.');
-      if (/[^.#%o^v<>*a]/.test(r[i])) return 'carattere sconosciuto alla riga ' + i;
+      if (/[^.#%o^v<>*aG]/.test(r[i])) return 'carattere sconosciuto alla riga ' + i;
     }
     for (const c of [0, 1, larga - 2, larga - 1]) {
       for (let i = 13; i < 17; i++) if (r[i][c] !== '.') return 'bordo occupato (colonna ' + c + ', riga ' + i + ')';
@@ -239,7 +265,7 @@
     if (e) throw new Error('Stanza ' + s.id + ': ' + e);
   }
 
-  const API = { STANZE };
+  const API = { STANZE, TAPPE, STANZE_PER_TAPPA };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else radice.SpeedtinoStanze = API;
 })(this);

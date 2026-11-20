@@ -8,6 +8,8 @@
 
   let ac = null, uscita = null, busMusica = null, busEffetti = null, rumore = null, quadre = {};
   let muto = false, musicaSpenta = false, livelloMusica = 'menu';
+  // ogni tappa sposta il brano di tono e ne cambia la velocità
+  let trasporto = 1, bpmGioco = 150;
 
   function avvia() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return ac; }
@@ -81,6 +83,12 @@
     },
     rinasce() { tono(400, 800, 0.1, { onda: 0.5, vol: 0.1 }); },
     stanza() { const t = ora(); ['E5', 'A5', 'C6'].forEach((n, i) => tono(nota(n), nota(n), 0.09, { onda: 0.25, vol: 0.09, t: t + i * 0.05 })); },
+    liberato() {
+      const t = ora();
+      ['C5', 'E5', 'G5', 'C6', 'G5', 'C6', 'E6'].forEach((n, i) => tono(nota(n), nota(n), i === 6 ? 0.4 : 0.1, { onda: 0.5, vol: 0.13, t: t + i * 0.07 }));
+      ['C4', 'G4'].forEach((n, i) => tono(nota(n), nota(n), 0.5, { onda: 0.25, vol: 0.12, t: t + 0.42 + i * 0.001 }));
+    },
+    gabbia() { soffio(0.25, { vol: 0.3, filtro: 'bandpass', f: 1200, f1: 3000, q: 2 }); tono(220, 880, 0.25, { onda: 0.125, vol: 0.12 }); },
     record() { const t = ora(); ['C5', 'E5', 'G5', 'C6'].forEach((n, i) => tono(nota(n), nota(n), 0.14, { onda: 0.5, vol: 0.12, t: t + i * 0.08 })); }
   };
 
@@ -107,25 +115,27 @@
     gioco: { bpm: 150, batteria: true, melodia: 0.1, arpeggio: 0.05, basso: 0.22 }
   };
   let passoMusica = 0, prossima = 0, timer = null;
+  const bpm = () => (livelloMusica === 'gioco' ? bpmGioco : STILI[livelloMusica].bpm);
 
   function suonaPasso(i, t) {
-    const st = STILI[livelloMusica], s16 = 60 / st.bpm / 4;
+    const st = STILI[livelloMusica], s16 = 60 / bpm() / 4;
+    const k = livelloMusica === 'gioco' ? trasporto : 1;
     const battuta = Math.floor(i / 16) % 8, p = i % 16;
     const acc = BRANO.accordi[battuta];
     // basso: ottavi che saltano d'ottava
     if (p % 2 === 0) {
-      const f = nota(BRANO.bassi[acc]) * (p % 4 === 2 ? 2 : 1);
+      const f = nota(BRANO.bassi[acc]) * (p % 4 === 2 ? 2 : 1) * k;
       tono(f, f, s16 * 1.7, { onda: 0.25, vol: st.basso, bus: busMusica, t });
     }
     // arpeggio veloce, un'ottava sopra
-    const ar = BRANO.toni[acc][p % 3];
-    tono(nota(ar) * 2, nota(ar) * 2, s16 * 0.9, { onda: 0.125, vol: st.arpeggio, bus: busMusica, t });
+    const ar = nota(BRANO.toni[acc][p % 3]) * k;
+    tono(ar * 2, ar * 2, s16 * 0.9, { onda: 0.125, vol: st.arpeggio, bus: busMusica, t });
     // melodia
     const m = BRANO.melodia[battuta][p];
     if (m !== '-') {
       let lun = 1;
       while (p + lun < 16 && BRANO.melodia[battuta][p + lun] === '-') lun++;
-      const f = nota(m);
+      const f = nota(m) * k;
       tono(f, f, s16 * lun * 0.95, { onda: 0.5, vol: st.melodia, bus: busMusica, t, attacco: 0.01 });
     }
     if (st.batteria) {
@@ -140,7 +150,7 @@
     prossima = ora() + 0.1;
     timer = setInterval(() => {
       if (!ac || ac.state !== 'running') return;
-      const s16 = 60 / STILI[livelloMusica].bpm / 4;
+      const s16 = 60 / bpm() / 4;
       if (prossima < ora()) prossima = ora() + 0.05;
       while (prossima < ora() + 0.2) {
         if (!musicaSpenta && !muto) suonaPasso(passoMusica, prossima);
@@ -154,6 +164,8 @@
     avvia,
     effetto(nome) { if (!ac || muto || ac.state !== 'running') return; EFFETTI[nome](); },
     musica(livello) { if (livello !== livelloMusica) { livelloMusica = livello; passoMusica = 0; } },
+    // tappa: semitoni di trasporto e velocità della musica in corsa
+    tappa(semitoni, velocita) { trasporto = Math.pow(2, semitoni / 12); bpmGioco = velocita; },
     muto(v) { muto = v; if (uscita) uscita.gain.value = v ? 0 : 0.8; },
     musicaSpenta(v) { musicaSpenta = v; if (busMusica) busMusica.gain.value = v ? 0 : 0.42; },
     pausa(v) { if (!ac) return; if (v) ac.suspend(); else ac.resume(); }
