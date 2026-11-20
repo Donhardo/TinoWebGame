@@ -2200,7 +2200,7 @@ personaggi, pannelli). Tutti moduli ES (`<script type="module">`): serve il serv
   2026: "va bene così"); scartati per ora robivecchi nascosti, texture dipinte e altre
   aggiunte.
 
-## Gioco in corso: Speedtino (`games/speedtino/`, non ancora iniziato)
+## Gioco in corso: Speedtino (`games/speedtino/`, prototipo giocabile)
 Platform a scorrimento orizzontale con ritmo frenetico, molto difficile ma giusto (sullo
 stile dei "rage game" di precisione): Tino ha un rampino che si aggancia ai pioli, dondola,
 si dà lo slancio e salta. Idea del proprietario (novembre 2026).
@@ -2227,18 +2227,81 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
   `games/speedtino/bozzetti.html` (formato artifact: senza doctype; contiene i disegni a
   pixel di Tino, Gino e Matteo come righe di caratteri e la scena animata). Proposte per Gino
   pesante e Matteo veloce approvate.
-- **Prototipo iniziato** (da finire nella prossima sessione): `games/speedtino/fisica.js`
-  (scritta, non ancora provata): schermo 320 × 180, quadretti da 8, stanze alte 22 righe con
-  pavimento alla riga 17 all'inizio e alla fine (così si attaccano una all'altra); corsa,
-  salto tenuto più alto, coyote e memoria del salto, scivolata e salto dalla parete; rampino
-  che si aggancia da solo al piolo `o` più vicino davanti e sopra (portata 104), tenuto
-  premuto = appeso, ← → danno slancio, ↑ ↓ accorciano e allungano, salto = si lascia con
-  una spinta; pericoli `^ v < >` spuntoni, `*` seghe, caduta; tabelle `FISICA` e `RAMPINO`.
-  Funziona anche in node (`module.exports`). Da fare: `stanze.js` (stanze a caratteri,
-  generate con un aiuto in Python per non sbagliare le larghezze), giocatore simulato in node
-  (ricerca a fascio su comandi a tratti di 0,1 s) per verificare che ogni stanza si superi,
-  `gioco.js` (disegno Amiga come nei bozzetti, telecamera, morti e ripartenza, comandi
-  touch con ◀ ▶ SALTA RAMPINO), `index.html`, `stile.css`; poi artifact per la prova.
+- **Prototipo giocabile** (novembre 2026), provato dal proprietario: la difficoltà va bene;
+  sistemati il rinculo della telecamera e il salto che non si dosava; poi (seconda prova) i
+  salti tra i muri con le punte erano troppo difficili: salto dalla parete più facile, muro
+  di punte (pozzo largo 5, tre punte da un quadretto) e torre (punte da un quadretto)
+  rifatti. Criterio: le stanze coi muri si superano anche con comandi ogni 0,2 s
+  (`--tratto 0.2`), prima solo il camino; ora tutte e 13 le stanze passano anche così.
+  Dopo la terza prova il proprietario dice "ora va meglio": prototipo unito in `main`
+  (con la scheda nella home).
+  File: `index.html`, `stile.css` (stile Amiga: pannelli scuri, Press Start 2P e VT323,
+  righe "copper"), `fisica.js`, `stanze.js`, `soluzioni.js` (generato), `suoni.js`,
+  `gioco.js`, `tino-pixel.png` (Tino a pixel ×4 per l'anteprima della home),
+  `prove/verifica.js` (nel repository), `bozzetti.html`.
+  - *Fisica* (`fisica.js`, anche in node): schermo 320 × 180, quadretti da 8, corpo di Tino
+    10 × 10; stanze di 22 righe con il pavimento alla riga 17 all'inizio e alla fine. Salto
+    ~35 px tenuto e ~70 px di lungo in piano (`FISICA`); lasciando il tasto mentre sale la
+    velocità in su si moltiplica per `taglio` 0,4 (solo nei salti, non dopo il rampino): un
+    tocco fa ~13-19 px, 0,12 s ~24, 0,25 s il massimo (prima, cambiando solo la gravità, un
+    tocco faceva già ~27 px e il salto non si dosava);
+    salto dalla parete (`pareteX` 165, `pareteY` 275, ~40 px in su): vale fino a 0,1 s
+    dopo aver lasciato il muro (`coyoteMuro`), e per 0,2 s dopo lo stacco (`bloccoParete`)
+    la freccia verso il muro di partenza non conta (prima riportava Tino contro lo stesso
+    muro e i salti "non si direzionavano"); coyote, memoria del salto,
+    scivolata e salto dalla parete. Rampino (`RAMPINO`): si aggancia da solo al piolo `o`
+    più vicino davanti e sopra (portata 104, `bersaglio`), tenuto premuto = appeso, ← →
+    slancio lungo la tangente, ↑ ↓ accorciano e allungano (18-104), salto = si stacca con
+    una spinta in su. Si muore sotto i 200 px (baratro), su spuntoni e seghe.
+  - *Stanze* (`stanze.js`, legenda in cima; `prepara` allunga le righe con '.' e copia il
+    pavimento della riga 17 nelle righe vuote dalla 18; controlla che inizio e fine abbiano
+    pavimento e 4 righe libere sopra): 13 stanze, livello 0-5: il via, i gradini, il pozzo
+    dei pioli, punte in testa, il camino (salti dalla parete), le seghe, l'altalena, il muro
+    di punte, il salto nel buio, il soffitto basso (pioli sotto un soffitto sopra il
+    baratro), pioli e seghe, la torre, la corsa. `a` = ghianda da raccogliere.
+  - *Corsa* (`gioco.js`): si parte dal via, poi stanze a caso (non tra le ultime 4) con
+    livello massimo `1 + stanze/2` (fino a 5), più probabili quelle del livello più alto.
+    Punto sicuro = l'ultima stanza in cui Tino ha toccato terra (torcia accesa all'inizio
+    della stanza); morte: Tino va in pezzi (un pixel per pixel dello sprite), lampo rosso,
+    0,55 s e si riparte. R ricomincia la stanza (conta come morte). HUD: morti, metri
+    (16 px = 1 m), record; nome della stanza all'arrivo. Telecamera con zona morta: Tino
+    resta tra il 28% e il 42% dello schermo (prima guardava avanti secondo la velocità e
+    fermandosi tornava indietro: "rinculo"). `localStorage` `speedtino:record`,
+    `morti-totali`, `muto`, `musica-spenta`. Il piolo a cui si aggancerebbe il rampino ha
+    gli angolini bianchi che lampeggiano.
+  - *Disegno*: tela di 180 righe larga 320-400 (secondo lo schermo), ingrandita a pixel
+    netti (intero se si può); cielo del tramonto a fasce con retino, stelle, sole a righe,
+    monti e bosco a parallasse; caselle 8 × 8 preparate una volta (terra con l'erba sui lati
+    liberi, mattoni `%`, spuntoni nelle 4 direzioni), seghe che girano, pioli, ghiande,
+    corda a pixel. Tino dai bozzetti (B1), con zampette animate, specchiato secondo la
+    direzione, inclinato sulla corda.
+  - *Comandi*: ← → (A D) corsa; Spazio, Z, K salto (↑ / W salta quando non è appeso);
+    X, J, L, Maiusc rampino; ↑ ↓ corda; P / Esc pausa, M suoni, N musica. Telefono (solo in
+    orizzontale): ◀ ▶ e ▲ ▼ a sinistra, RAMPINO e SALTA a destra (pulsanti DOM, ogni dito
+    segue il pulsante su cui scivola).
+  - *Suoni* (`suoni.js`): Web Audio con compressore; effetti (salto, parete, atterraggio,
+    rampino, tiro mancato, stacco, ghianda, morte con la musica che si abbassa, rinascita,
+    stanza, record). Musica da tracker in La minore (Am F C G Am F G E), 4 canali: basso a
+    impulso a ottavi, arpeggio veloce, melodia a onda quadra, batteria di rumore; menu 118
+    bpm senza batteria, corsa 150 bpm.
+  - *Verifica* (`node games/speedtino/prove/verifica.js [id…] [--fascio 2000] [--traccia]
+    [--salva]`): ricerca a fascio con comandi che cambiano ogni 0,1 s (15 azioni da appeso,
+    12 da libero), guidata dalla distanza dall'uscita sulle caselle libere; `--traccia`
+    disegna la strada sulla stanza, `--salva` scrive `soluzioni.js`. Tutte le 13 stanze si
+    superano (1,3-3,6 s di gioco). Va rifatta (con `--salva`) a ogni stanza nuova o
+    modificata e a ogni modifica della fisica.
+  - *Partita dimostrativa*: nel menu Tino rigioca le soluzioni di `soluzioni.js`, una stanza
+    alla volta (all'arrivo in una stanza riparte dal suo inizio; se muore passa alla dopo):
+    in 60 s attraversa ~30 stanze.
+  - *Prove*: `window.speedtino` (`stato`, `nuovaCorsa(demo)`, `passo(dt)`, `premi(azione,
+    giu)`, `gioca`, `muori`); con `stato.test = true` il gioco non avanza da solo.
+  - *Da decidere col proprietario dopo la prova*: quanto è difficile (il giocatore simulato
+    è sovrumano; il rampino con portata 104 è molto generoso), tappe con palette diverse e
+    la gabbia di Gino alla fine, Gino e Matteo giocabili, altre stanze (seghe che si
+    muovono, piattaforme che crollano), punti sicuri a metà delle stanze lunghe.
+- **Provarlo su Claude**: in una cartella di appoggio `index.html` (senza doctype, html,
+  head e body, percorsi `../../` tolti), `css/sito.css`, `stile.css`, `fisica.js`,
+  `stanze.js`, `soluzioni.js`, `suoni.js`, `gioco.js`; si pubblica con `files` e `root`.
 
 ## Per il prossimo gioco
 - Cartella `games/<nome-gioco>/` con `index.html`, `stile.css`, `gioco.js`;
