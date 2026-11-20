@@ -2217,9 +2217,13 @@ si dà lo slancio e salta. Idea del proprietario (novembre 2026).
   chiaro coi dentoni, naso scuro, zampette marroni, coda lunga e sottile.
 - **Gino**: rapito in una gabbia (grande) alla fine di ogni tappa e, una volta liberato,
   personaggio da sbloccare (proposta: pesante, corda più lunga e dondolo più potente, ma
-  grosso, quindi passa a fatica nei varchi stretti).
+  grosso, quindi passa a fatica nei varchi stretti). Gino così è approvato ("perfetto").
+- **Matteo** (personaggio nuovo, `assets/` non ancora): tirannosauro giocattolo amico di
+  Tino e Gino, verde oliva, testone coi denti, braccini corti, coda lunga; alto come Tino
+  ma molto più lungo. Giocabile, da sbloccare (proposta: il più veloce a correre e salta
+  più lontano, ma tiene il rampino coi denti: corda corta e dondolo più nervoso).
 - **Bozzetti**: pubblicati come artifact (scena Amiga animata, Tino scelto: B1, coda a
-  pennacchio; Gino grande, palette). Prossimo passo: il prototipo del nucleo (rampino coi
+  pennacchio; Gino grande, Matteo, palette). Prossimo passo: il prototipo del nucleo (rampino coi
   comandi, ripartenza istantanea, prime stanze).
 
 ## Per il prossimo gioco
